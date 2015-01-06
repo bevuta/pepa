@@ -54,9 +54,9 @@ right document.
 - Self-learning tagging
 - Additional document types
   - JPG, PNG, TIFF
-  - Plain-Text
+  - Plain text
   - HTML
-  - E-Mail
+  - Email
 
 ### Features not planned
 
