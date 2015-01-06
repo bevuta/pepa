@@ -1,0 +1,3 @@
+#!/bin/sh
+
+sudo nixos-container run pepa-dev sudo -- -u pepa psql -U pepa pepa

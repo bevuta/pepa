@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e
+
+root=$(dirname -- "$0")
+
+if nixos-container create pepa-dev --config "$(cat $root/dev.nix)"; then
+    initial=$?
+fi
+
+nixos-container start pepa-dev
+
+if [ $initial ]; then
+    $root/psql < "$root/../db/schema.sql"
+fi

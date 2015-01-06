@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+nix-shell -p poppler leiningen cuneiform tesseract --command "lein $*"

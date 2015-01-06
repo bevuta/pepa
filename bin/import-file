@@ -1,0 +1,3 @@
+#!/bin/sh
+
+curl -v http://localhost:4035/files/scanner -H 'content-type: application/pdf' --data-binary "@$1"

@@ -1,0 +1,54 @@
+#+TITLE: TODOs for Pepa
+
+#+STARTUP: nologdone
+
+* Frontend+Backend
+** DONE Pagination for search-results
+** TODO Sorting/Filtering of Search Results
+** TODO Different Inbox-Workflows (Scanner, Uploaded Files, etc.)
+** TODO Saved Searches
+** TODO Event-Stream
+** TODO User Management / Sharing (via tags?)
+** TODO List/Modify Uploaded *Files*
+* Frontend
+** TODO Fix Inbox
+** DONE Document-Upload (+UI)
+** TODO "Quick"-Search (like Mockups)
+** TODO Tag-Completion
+** TODO Auto-Save for more operations
+** TODO Resizable Sidebars
+** TODO Nested Tags(?)
+* Backend
+** DONE Thumbnail Rendering
+   We can't use 150DPI images as thumbnails
+** DONE Full-Text-Search
+   Client sends =(any <string>)= in a search-query
+** DONE OCR
+    Already implemented in the DB - we just need to extract the data
+    via cuneiform/tesseract
+
+** DONE Pipelining to handle documents (Email, Scanner, Upload, etc.)
+** DONE Tag files/documents with its origin
+** DONE Auto-Tagging with source names (scanner, upload, etc.)
+** DONE Email-Import
+   - Differend endpoints
+     - scanner@pepa.dms
+     - import@pepa.dms
+   - Parsing of MIME stuff
+   - Provide a SMTP server?
+     - https://code.google.com/p/subethasmtp/
+     - https://github.com/ghubber/bote
+** DONE Configurable tags for "New" documents (like notmuch)
+** TODO Configurable languages for full-text search
+** TODO Subword matching for full-text search
+** TODO DB Indexes
+* Later
+** TODO Command Line Client
+   - Output like Notmuch (human-readable or JSON/S-Exp)
+   - Support for search, download, tagging, etc. - like notmuch
+** TODO Virtual Printer (maybe via network?)
+** TODO Better OCR
+   - More training data?
+   - Save coordinates of found words (hOCR)
+** TODO Machine Learning
+   - Classify document language
