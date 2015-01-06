@@ -1,8 +1,7 @@
 (ns user
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh]]
-            [pepa.core :as pepa])
-  (:gen-class))
+            [pepa.core :as pepa]))
 
 (defonce system nil)
 
@@ -20,10 +19,6 @@
 (defn go []
   (init)
   (start))
-
-
-(defn -main [& args]
-  (go))
 
 (defn reload []
   (stop)

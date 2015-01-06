@@ -6,7 +6,8 @@
             [pepa.web :as web]
             [pepa.smtp :as smtp]
             [pepa.processor.file-page-extractor :as fpe]
-            [pepa.processor.page-ocr :as page-ocr]))
+            [pepa.processor.page-ocr :as page-ocr])
+  (:gen-class))
 
 (defn make-system []
   (component/system-map
@@ -27,3 +28,6 @@
    :smtp (component/using
            (smtp/make-component)
            [:config :db])))
+
+(defn -main [& args]
+  (component/start (make-system)))

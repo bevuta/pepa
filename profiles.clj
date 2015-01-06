@@ -4,8 +4,10 @@
                                                   :optimizations :advanced
                                                   :pretty-print false
                                                   :source-map nil}}}}}
- :uberjar {:main user
-           :aot [user]
+ :uberjar {:aot [pepa.core
+                 ;; Hack to fix NoClassDefFoundErrors when uberjar-ing
+                 com.stuartsierra.component
+                 com.stuartsierra.dependency]
            ;; :omit-source true
            :hooks [leiningen.cljsbuild]
            :jar-exclusions [#"^public/out"
