@@ -117,9 +117,9 @@ This script is idempotent so you can run it whenever you want to start
 the Pepa environment. Now we need to create a `config.clj` so Pepa
 knows where to find the PostgreSQL database server. Since it is
 running inside the container, we can programmatically generate the
-file from `config.sample.clj` like this:
+file from `resources/config.sample.clj` like this:
 
-    sed "s,<db-host>,$(nixos-container show-ip pepa-dev)," config.sample.clj > config.clj
+    sed "s,<db-host>,$(nixos-container show-ip pepa-dev)," resources/config.sample.clj > config.clj
 
 Next, compile the ClojureScript:
 
@@ -165,12 +165,12 @@ Create a role and database for Pepa:
 
 Using that new role, import the database schema:
 
-    psql -h localhost -U pepa pepa < db/schema.sql
+    psql -h localhost -U pepa pepa < resources/schema.sql
 
 Create a config file (`pepa` is the default role and database name so
 we only need to set the hostname):
 
-    sed "s,<db-host>,localhost," config.sample.clj > config.clj
+    sed "s,<db-host>,localhost," resources/config.sample.clj > config.clj
 
 Next, compile the ClojureScript:
 
