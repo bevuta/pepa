@@ -6,7 +6,11 @@
             [pepa.web :as web]
             [pepa.smtp :as smtp]
             [pepa.processor.file-page-extractor :as fpe]
-            [pepa.processor.page-ocr :as page-ocr]))
+            [pepa.processor.page-ocr :as page-ocr]
+            [pepa.init :as init]
+
+            [clojure.core.match :refer [match]])
+  (:gen-class))
 
 (defn make-system []
   (component/system-map
@@ -27,3 +31,12 @@
    :smtp (component/using
            (smtp/make-component)
            [:config :db])))
+
+(defn -main [& args]
+  (match [(vec args)]
+    [["--init"]] (do (println "Writing config files...")
+                     (init/write-schema)
+                     (init/write-config))
+    [[]] (component/start (make-system))
+    :else (println "Unsupported command line flags:" args))
+  )
