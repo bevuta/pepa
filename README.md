@@ -9,24 +9,6 @@ goes without saying - you can view all your documents there.
 
 ### How does Pepa work?
 
-#### Files, pages and documents
-
-Pepa distinguishes between files, pages and documents. When uploading
-a PDF, you can choose whether to upload it as a file or as a
-document. A PDF uploaded as a file is then split into single
-pages. These pages can be grouped together to form a document. A
-document has pages, a title and can be tagged. When you upload a PDF
-file as a document directly, Pepa splits this file into pages as well,
-but automatically groups them together to create a document.
-
-This approach makes it possible to create virtual documents containing
-pages from different files. It also enables the user of Pepa to add a
-page to multiple documents or to remove pages from documents.
-
-Pepa can also receive emails and extract attached documents from them.
-
-#### Working with Pepa
-
 Any document management system (any archive whatsoever really) would
 be pretty useless if it would only store documents. To be more than
 just a black hole for documents, a DMS should aid you in organizing
@@ -52,6 +34,18 @@ Pepa is available for full-text search. You can combine this search
 with the tag search to increase your chances of finding just the
 right document.
 
+
+### Current features
+
+- Supported formats
+  - PDF
+- Import channels
+  - SMTP / email (attachments are extracted)
+  - HTTP (API and upload via web interface)
+- Manual tagging
+- Full-text search
+- OCR (via Tesseract and/or CuneiForm)
+- Interactive document dissection
 
 ### Planned features
 
@@ -91,7 +85,7 @@ from sources to run it (see setup instructions below).
 
 ## Build instructions
 
-To build and run Pepa on your system, you'll need `Java` (at least
+To build and run Pepa on your system, you'll need Java (at least
 version 7), [Leinigen](https://github.com/technomancy/leiningen/),
 [PostgreSQL](http://www.postgresql.org/),
 [Poppler](http://poppler.freedesktop.org/). For OCR you'll need
