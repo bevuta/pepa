@@ -7,7 +7,7 @@ pom.xml.asc
 *.class
 /.lein-*
 /.nrepl-port
-config.clj
+/config.clj
 /resources/public/pepa.js
 /resources/public/out
 /.repl/
