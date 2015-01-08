@@ -65,28 +65,11 @@
      (catch js/Error e nil))
    1))
 
+(def +per-page+ 20)
+
 (defn ^:private page-ids [state]
   (let [page (parse-page state)]
-    (pagination/page-items (document-ids state)
-                           page)))
-
-(defn ^:private change-page-buttons [state owner _]
-  (om/component
-   (let [page (parse-page state)
-         page-count (pagination/pages (document-ids state))
-         navigation (:navigation state)
-         route-fn (fn [page]
-                    (-> navigation
-                        (assoc-in [:query-params :page] page)
-                        (nav/nav->route)))]
-     (html
-      [:nav.page
-       [:a.button.prev {:class [(when (<= page 1)
-                                  "disabled")]
-                        :href (route-fn (dec page))}]
-       [:a.button.next {:class [(when (>= page page-count)
-                                  "disabled")]
-                        :href (route-fn (inc page))}]]))))
+    (take (* +per-page+ page) (document-ids state))))
 
 (defn ^:private fetch-missing-documents!
   "Fetches all missing documents which will be visible in the
@@ -108,25 +91,30 @@
     (go (search/clear-results! state))))
 
 (defn ^:private dashboard-title [state]
-  (let [documents (document-ids state)
-        page (parse-page state)
-        [start end] (pagination/page-range documents page)]
+  (let [documents (document-ids state)]
     (cond
      (search/search-query state)
      "Search Results"
     
      true
-     "Dashboard ")))
+     "Dashboard")))
 
-(defn ^:private document-page-count-label [state _ _]
-  (om/component
-   (html
-    (let [documents (document-ids state)
-          page (parse-page state)
-          [start end] (pagination/page-range documents page)]
-      [:span.document-count
-       (when (and start end)
-         (str "(" start "-" end " of " (count documents) ")"))]))))
+;;; Should be twice the document-height or so.
+(def +scroll-margin+ 400)
+
+(defn on-documents-scroll [state owner e]
+  (let [container e.currentTarget
+        scroll-top (.-scrollTop container)
+        scroll-height (.-scrollHeight container)
+        outer-height (.-clientHeight container)
+        bottom-distance (Math/abs (- scroll-height
+                                     (+ scroll-top outer-height)))]
+    (when (< bottom-distance +scroll-margin+)
+      (let [page (parse-page state)]
+        (nav/navigate! (-> (:navigation state)
+                           (assoc-in [:query-params :page] (inc page))
+                           (nav/nav->route)
+                           (nav/navigate!)))))))
 
 (defn dashboard [state owner]
   (reify
@@ -142,8 +130,7 @@
         (<! (fetch-missing-documents! state owner))))
     om/IInitState
     (init-state [_]
-      {:sort/key :id
-       :filter-width css/default-right-sidebar-width})
+      {:filter-width css/default-right-sidebar-width})
     om/IRenderState
     (render-state [_ local-state]
       ;; Show all documents with ids found in :dashboard/document-ids
@@ -152,14 +139,12 @@
          [:.workflow.dashboard
           [:.pane {:style {:width (str "calc(100% - " (:filter-width local-state) "px - 2px)")}}
            [:header
-            (dashboard-title state)
-            (om/build document-page-count-label state)
-            (om/build change-page-buttons state)]
-           [:.documents {:class ["col-3"]}
+            (dashboard-title state)]
+           [:.documents {:class ["col-3"]
+                         :on-scroll (partial on-documents-scroll state owner)}
             (let [documents (->> document-ids
                                  (map (partial get (:documents state)))
-                                 (remove nil?)
-                                 (sort-by (:sort/key local-state)))]
+                                 (remove nil?))]
               (om/build-all document-preview documents
                             {:key :id}))]]
           [:.pane {:style {:width (:filter-width local-state)}}
