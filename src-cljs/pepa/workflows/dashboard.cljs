@@ -113,12 +113,14 @@
         outer-height (.-clientHeight container)
         bottom-distance (Math/abs (- scroll-height
                                      (+ scroll-top outer-height)))
-        progress (/ scroll-top scroll-height)]
+        progress (/ scroll-top scroll-height)
+        elements (document-ids state)]
     (let [[num scroll] (parse-count-scroll state)
           scroll (Math/ceil (* progress num))
           num (if (< bottom-distance +scroll-margin+)
                 (+ num +to-load+)
-                num)]
+                num)
+          num (min num (count elements))]
       (-> (:navigation state)
           (assoc-in [:query-params :count] (str num))
           (assoc-in [:query-params :scroll] (str scroll))
@@ -129,10 +131,11 @@
 (defn scroll-to-offset! [state owner]
   (let [el (om/get-node owner "documents")
         scroll-height (.-scrollHeight el)
-        [num scroll] (parse-count-scroll state)]
+        [num scroll] (parse-count-scroll state)
+        elements (page-ids state)]
     (when (= 0 (.-scrollTop el))
       (set! (.-scrollTop el) (* scroll-height
-                                (/ scroll num))))))
+                                (/ scroll (count elements)))))))
 
 (defn dashboard [state owner]
   (reify
