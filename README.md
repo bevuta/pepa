@@ -21,13 +21,13 @@ label that the user adds to a document. This could be anything from
 `invoice` to `university` or `work` or `doctor` or `contracts` or
 `papers` or ... Of course you can add more than one tag to a document.
 A document tagged with `invoice` can additionally be tagged with
-`invoice` or `paid` for example.
+`unpaid` or `paid` for example.
 
 Those tags can be used to find a document. You want to find every
-documents that's an unpaid invoice? Easy, let Pepa search for
-documents which are tagged with `invoice` and `unpaid` - once you have
-paid those invoice, you can remove the `unpaid` tag and add the `paid`
-tag instead.
+document that's an unpaid invoice? Easy, let Pepa search for documents
+which are tagged with `invoice` and `unpaid` - once you have paid
+those invoice, you can remove the `unpaid` tag and add the `paid` tag
+instead.
 
 Of course, Pepa allows not only searching by tag. Every document in
 Pepa is available for full-text search. You can combine this search
@@ -80,7 +80,7 @@ changes still. You are very welcome to give it a try, though, and we
 are happy to receive feedback either via GitHub issues or
 [by email via pepa@bevuta.com](mailto:pepa@bevuta.com). Note that
 since there is no official release, yet, you will have to build Pepa
-from sources to run it (see setup instructions below).
+from sources to run it (see build instructions below).
 
 
 ## Build instructions
