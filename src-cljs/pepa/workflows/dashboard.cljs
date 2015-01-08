@@ -53,24 +53,27 @@
       ;; Default to all documents
       (keys (:documents state))))
 
-(defn ^:private parse-page
-  "Returns the current page (according to the page query-param
-  of :navigation) or 1, if none given."
-  [state]
+(def +initial-elements+ 50)
+(def +to-load+ 50)
+
+(defn ^:private parse-query-number [state name & [default]]
   (or
    (try
-     (let [n (some-> state
-                     :navigation :query-params :page
+     (let [n (some-> (get-in state [:navigation :query-params name])
                      (js/parseInt 10))]
        (and (integer? n) n))
      (catch js/Error e nil))
-   1))
+   default
+   0))
 
-(def +per-page+ 20)
+(defn ^:private parse-count-scroll
+  [state]
+  [(parse-query-number state :count +initial-elements+)
+   (parse-query-number state :scroll 0)])
 
 (defn ^:private page-ids [state]
-  (let [page (parse-page state)]
-    (take (* +per-page+ page) (document-ids state))))
+  (let [[n _] (parse-count-scroll state)]
+    (take n (document-ids state))))
 
 (defn ^:private fetch-missing-documents!
   "Fetches all missing documents which will be visible in the
@@ -109,17 +112,23 @@
         scroll-height (.-scrollHeight container)
         outer-height (.-clientHeight container)
         bottom-distance (Math/abs (- scroll-height
-                                     (+ scroll-top outer-height)))]
-    (when (< bottom-distance +scroll-margin+)
-      (let [state @state
-            page (or (parse-page state) 0)]
-        (-> (:navigation state)
-            (assoc-in [:query-params :page] (str (inc page)))
-            (nav/nav->route)
-            (nav/navigate! :ignore-history))))))
+                                     (+ scroll-top outer-height)))
+        progress (/ scroll-top scroll-height)]
+    (let [state @state
+          [num scroll] (parse-count-scroll state)
+          scroll (Math/floor (* progress num))
+          num (if (< bottom-distance +scroll-margin+)
+                (+ num +to-load+)
+                num)]
+      (-> (:navigation state)
+          (assoc-in [:query-params :count] (str num))
+          (assoc-in [:query-params :scroll] (str scroll))
+          (nav/nav->route)
+          (nav/navigate! :ignore-history)))))
 
 (defn dashboard [state owner]
   (reify
+    om/ICheckState
     om/IWillMount
     (will-mount [_]
       (go
