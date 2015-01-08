@@ -37,11 +37,12 @@
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
   :profiles {:repl {:plugins [[cider/cider-nrepl "0.8.2"]]
-                    :repl-options {:timeout 300000}}
+                    :repl-options {:timeout 300000
+                                   :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
              :provided {:dependencies [[org.clojure/clojurescript "0.0-2511"]
                                        [com.cemerick/piggieback "0.1.3"]
-                                       [com.cognitect/transit-cljs "0.8.194"]
+                                       [com.cognitect/transit-cljs "0.8.199"]
                                        [om "0.8.0-beta5"]
                                        [garden "1.2.5"]
                                        [sablono "0.2.22"]
