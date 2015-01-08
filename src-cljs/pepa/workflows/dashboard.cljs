@@ -114,9 +114,8 @@
         bottom-distance (Math/abs (- scroll-height
                                      (+ scroll-top outer-height)))
         progress (/ scroll-top scroll-height)]
-    (let [state @state
-          [num scroll] (parse-count-scroll state)
-          scroll (Math/floor (* progress num))
+    (let [[num scroll] (parse-count-scroll state)
+          scroll (Math/ceil (* progress num))
           num (if (< bottom-distance +scroll-margin+)
                 (+ num +to-load+)
                 num)]
@@ -124,7 +123,16 @@
           (assoc-in [:query-params :count] (str num))
           (assoc-in [:query-params :scroll] (str scroll))
           (nav/nav->route)
-          (nav/navigate! :ignore-history)))))
+          (nav/navigate! :ignore-history :no-dispatch))
+      (om/update! state [:navigation :query-params :count] num))))
+
+(defn scroll-to-offset! [state owner]
+  (let [el (om/get-node owner "documents")
+        scroll-height (.-scrollHeight el)
+        [num scroll] (parse-count-scroll state)]
+    (when (= 0 (.-scrollTop el))
+      (set! (.-scrollTop el) (* scroll-height
+                                (/ scroll num))))))
 
 (defn dashboard [state owner]
   (reify
@@ -133,12 +141,14 @@
     (will-mount [_]
       (go
         (<! (search-maybe! state owner))
-        (<! (fetch-missing-documents! state owner))))
+        (<! (fetch-missing-documents! state owner))
+        (scroll-to-offset! state owner)))
     om/IDidUpdate
     (did-update [_ _ _]
       (go
         (<! (search-maybe! state owner))
-        (<! (fetch-missing-documents! state owner))))
+        (<! (fetch-missing-documents! state owner))
+        (scroll-to-offset! state owner)))
     om/IInitState
     (init-state [_]
       {:filter-width css/default-right-sidebar-width})
@@ -152,6 +162,7 @@
            [:header
             (dashboard-title state)]
            [:.documents {:class ["col-3"]
+                         :ref "documents"
                          :on-scroll (partial on-documents-scroll state owner)}
             (let [documents (->> document-ids
                                  (map (partial get (:documents state)))

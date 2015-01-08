@@ -14,11 +14,12 @@
            goog.crypt
            goog.crypt.base64))
 
-(defn navigate! [route & [ignore-history]]
+(defn navigate! [route & [ignore-history no-dispatch]]
   (if-not ignore-history
     (set! (-> js/window .-location .-hash) route)
     (do (js/window.history.replaceState nil "" route)
-        (secretary/dispatch! (.substring route 1)))))
+        (when-not no-dispatch
+          (secretary/dispatch! (.substring route 1))))))
 
 (defn navigation-ref []
   (some-> data/state
