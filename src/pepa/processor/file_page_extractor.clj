@@ -35,17 +35,22 @@
                          :dpi dpi
                          :image image})))))))
 
+
+(defn ^:private inbox-origin? [config origin]
+  (contains? (set (get-in config [:inbox :origins])) origin))
+
 (extend-type FilePageExtractor
   IProcessor
   (next-item [component]
-    "SELECT id, content_type, data FROM files WHERE status = 'pending' ORDER BY id LIMIT 1")
+    "SELECT id, content_type, data, origin FROM files WHERE status = 'pending' ORDER BY id LIMIT 1")
 
   (process-item [component file]
-    (let [{content-type :content_type :keys [id data]} file]
-      (log "start processing of file" id)
+    (let [{content-type :content_type :keys [id data origin]} file
+          config (:config component)]
+      (log "start processing of file" id (str "(" (count data) " bytes, origin: " origin ")"))
       (db/with-transaction [db (:db component)]
         (let [update (try
-                       (extract-pages (:config component) db id data)
+                       (extract-pages config db id data)
                        (db/notify! db :pages/new)
                        {:status :processing-status/processed
                         :report "OK"}
@@ -55,11 +60,15 @@
                          {:status :processing-status/failed
                           :report (str e)}))]
           (db/update! db :files update ["id = ?" id])
-          ;; For every linked document, add all pages
           (when (= :processing-status/processed (:status update))
+            ;; For every linked document, add all pages
             (doseq [document (m/file-documents db id)]
               (println "Adding pages from file" id "to document" document)
-              (m/link-file! db document id)))))
+              (m/link-file! db document id))
+            ;; Move to inbox if the file's origin dictates that
+            (when (inbox-origin? config origin)
+              (println "Moving pages from file" id "to inbox")
+              (m/add-to-inbox! db (m/page-ids db id))))))
       (log "finish processing of file" id)))
 
   component/Lifecycle

@@ -248,10 +248,6 @@
 
 ;;; Misc. Functions
 
-(defn ^:private inbox-origins [db]
-  ;; HACK: Returns config value from DB
-  (get-in db [:config :inbox :origins]))
-
 (defn inbox
   "Returns a vector of pages in the Inbox."
   [db]
