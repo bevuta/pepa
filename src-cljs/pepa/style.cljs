@@ -382,8 +382,8 @@
                  :padding {:left (px page-padding)
                            :right (px page-padding)}
                  :position :absolute
-                 :top "50%"}
-                ^:prefix {:transform "translateY(-50%)"}
+                 :top "50%", :right "50%"}
+                ^:prefix {:transform "translate(50%,-50%)"}
                 (calc-property :max-width ["100%" - (* 2 page-padding)]))]]
         (let [title-padding 5
               title-height (em 2)]
