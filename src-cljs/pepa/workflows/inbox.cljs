@@ -293,6 +293,10 @@
                ;; HACK
                :document {:id :inbox}}))
 
+(defn ^:private document-delete-pages! [document owner e]
+  (async/put! (om/get-state owner :events)
+              {:event :inbox/delete-pages}))
+
 (defn document [document owner _]
   (reify
     om/IDisplayName (display-name [_] "DocumentColumn")
@@ -300,8 +304,8 @@
     (init-state [_]
       {:page-events (async/chan 1 (map #(let [d @document]
                                           (assoc %
-                                            :document-id (-> d :id om/value)
-                                            :pages (-> d :pages om/value)))))})
+                                                 :document-id (-> d :id om/value)
+                                                 :pages (-> d :pages om/value)))))})
     om/IWillMount
     (will-mount [_]
       (async/pipe (om/get-state owner :page-events)
@@ -329,7 +333,7 @@
                        :class [ ;; (when (and drag-target? (nil? target-page)) "target")
                                (when (inbox? document) "inbox")
                                ;; Footer Visibility
-                               (when (and (not (inbox? document)) (seq selected-pages))
+                               (when (seq selected-pages)
                                  "footer-visible")]}
            (let [init-state (select-keys state [:events])]
              (if (inbox? document)
@@ -354,12 +358,16 @@
                                     ;;                target-position)
                                     }}))))]
            [:footer
-            (when (not= selected-document (:id document))
-              [:button.move {:on-click (partial document-pull-pages! document owner)}
-               "Move Pages"])
-            (when (= selected-document (:id document))
-              [:button.remove {:on-click (partial document-remove-pages! document owner)}
-               "Remove Pages"])]]])))))
+            (if (inbox? document)
+              [:button.delete {:on-click (partial document-delete-pages! document owner)}
+               "Delete Pages"]
+              (list
+               (when (not= selected-document (:id document))
+                 [:button.move {:on-click (partial document-pull-pages! document owner)}
+                  "Move Pages"])
+               (when (= selected-document (:id document))
+                 [:button.remove {:on-click (partial document-remove-pages! document owner)}
+                  "Remove Pages"])))]]])))))
 
 ;;; The "Drag Target" Column
 
@@ -468,6 +476,18 @@
       (let [pages (:pages document)]
         (when (<! (api/delete-from-inbox! pages))
           (om/transact! state [:documents :inbox :pages] #(remove (set pages) %)))))))
+
+(defn ^:private delete-pages!
+  "Deletes selected pages from the inbox on the server."
+  [state pages]
+  (go
+    (try
+      (om/update! state [:documents :inbox ::working] true)
+      (println "Deleting pages" pages "from inbox...")
+      (when (<! (api/delete-from-inbox! pages))
+        (om/transact! state [:documents :inbox :pages] #(remove (set pages) %)))
+      (finally
+        (om/transact! state [:documents :inbox] #(dissoc % ::working))))))
 
 (defn group-pages-workflow [state owner]
   (reify
@@ -598,7 +618,14 @@
             (update-inbox! state)
 
             [{:event :document/save, :document document}]
-            (save-document! state document))
+            (save-document! state document)
+
+            [{:event :inbox/delete-pages}]
+            (try
+              (let [pages (get-in @state [:selection :pages])]
+                (delete-pages! state pages))
+              (finally
+                (om/update! state :selection {})))) 
           (recur))))
     om/IRenderState
     (render-state [_ {:keys [events]}]
