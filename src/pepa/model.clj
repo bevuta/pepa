@@ -258,8 +258,11 @@
 
 (defn add-to-inbox!
   "Unconditionally adds PAGES to inbox."
-  [db pages]
-  (db/insert-coll! db :inbox (for [id pages] {:page id})))
+  [db page-ids]
+  (db/insert-coll! db :inbox (for [id page-ids] {:page id})))
+
+(defn remove-from-inbox! [db page-ids]
+  (db/delete! db :inbox (db/sql+placeholders "page IN (%s)" page-ids)))
 
 ;;; TODO(mu): We need to cache this stuff.
 ;;; TODO(mu): We need to handle (= document file) more efficient
