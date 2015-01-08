@@ -30,14 +30,15 @@
     (render [_]
       (let [href (nav/document-route document)]
         (html
-         [:.document {:on-drag-over tags/accept-tags-drop
-                      :on-drop (partial handle-tags-drop document)}
-          [:.preview
-           [:a {:href href}
-            (om/build page/thumbnail (-> document :pages first))]]
-          [:a.title {:href href}
-           (:title document)]
-          (om/build tags/tags-list (:tags document))])))))
+         [:.container
+          [:.document {:on-drag-over tags/accept-tags-drop
+                       :on-drop (partial handle-tags-drop document)}
+           [:.preview
+            [:a {:href href}
+             (om/build page/thumbnail (-> document :pages first))]]
+           [:a.title {:href href}
+            (:title document)]
+           (om/build tags/tags-list (:tags document))]])))))
 
 (defn filter-sidebar [state]
   (reify
@@ -154,7 +155,7 @@
             (dashboard-title state)
             (om/build document-page-count-label state)
             (om/build change-page-buttons state)]
-           [:.documents
+           [:.documents {:class ["col-3"]}
             (let [documents (->> document-ids
                                  (map (partial get (:documents state)))
                                  (remove nil?)

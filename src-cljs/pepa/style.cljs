@@ -360,9 +360,14 @@
       [:.documents (list
                     {:overflow-y :auto}
                     (calc-property :height ["100%" - header-height]))
-       [:.document {:display :inline-block
-                    :width (px document-width)
-                    :height (px document-height)
+       ;; Specify pages per row via .col-N
+       (for [n (range 1 10)]
+         [(keyword (str "&.col-" n))
+          [:.container
+           (list {:display :inline-block
+                  :height (px (+ document-height (* 2 document-padding)))}
+                 (calc-property :width ["100%" / (str n)]))]])
+       [:.document {:height (px document-height)
                     :padding (px document-padding)}
         [:&:hover {:background-color dark-background}]
         [:.preview {:height (px preview-height)
@@ -370,9 +375,10 @@
                              :style :solid
                              :color border-light}
                     :background-color light-background
-                    :position :relative}
+                    :position :relative
+                    :overflow :hidden}
          [:img (list
-                {:max-height :auto
+                {:max-height "100%"
                  :padding {:left (px page-padding)
                            :right (px page-padding)}
                  :position :absolute
