@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS documents;
 DROP TABLE IF EXISTS pages CASCADE;
 DROP TABLE IF EXISTS page_images CASCADE;
 DROP TABLE IF EXISTS files CASCADE;
+DROP TABLE IF EXISTS inbox;
 
 DROP TYPE IF EXISTS PROCESSING_STATUS;
 
@@ -57,19 +58,6 @@ CREATE TABLE page_images (
 
 ALTER TABLE page_images ALTER COLUMN image SET STORAGE EXTERNAL;
 
-DROP INDEX IF EXISTS pages_fulltext_idx;
-CREATE INDEX pages_fulltext_idx ON pages
-    USING gin(to_tsvector('simple', coalesce(text, '') || ' ' || coalesce(ocr_text, '')));
-
-DROP FUNCTION IF EXISTS pages_fulltext(text);
-CREATE OR REPLACE FUNCTION pages_fulltext(val text) RETURNS setof pages AS $$
-  BEGIN
-    RETURN QUERY (SELECT *
-                  FROM pages
-                  WHERE (to_tsvector('simple', coalesce(text, '') || ' ' || coalesce(ocr_text, '')) @@ to_tsquery('simple', val)));
-  END;
-$$  LANGUAGE PLPGSQL;
-
 
 CREATE TABLE document_pages (
        document INT NOT NULL REFERENCES documents,
@@ -89,6 +77,12 @@ CREATE TABLE document_tags (
        tag INT NOT NULL REFERENCES tags,
        UNIQUE (document, tag)
 );
+
+CREATE TABLE inbox (
+       page INT NOT NULL REFERENCES pages
+);
+
+-- Triggers used to update the 'modified' property of documents
 
 DROP TRIGGER IF EXISTS touch_document on documents;
 DROP FUNCTION IF EXISTS touch_document_func();
@@ -136,5 +130,20 @@ CREATE TRIGGER touch_document_tags_delete
   ON document_tags
   FOR EACH ROW
   EXECUTE PROCEDURE touch_document_tags_delete_func();
+
+-- Full Text Search
+
+DROP INDEX IF EXISTS pages_fulltext_idx;
+CREATE INDEX pages_fulltext_idx ON pages
+    USING gin(to_tsvector('simple', coalesce(text, '') || ' ' || coalesce(ocr_text, '')));
+
+DROP FUNCTION IF EXISTS pages_fulltext(text);
+CREATE OR REPLACE FUNCTION pages_fulltext(val text) RETURNS setof pages AS $$
+  BEGIN
+    RETURN QUERY (SELECT *
+                  FROM pages
+                  WHERE (to_tsvector('simple', coalesce(text, '') || ' ' || coalesce(ocr_text, '')) @@ to_tsquery('simple', val)));
+  END;
+$$  LANGUAGE PLPGSQL;
 
 COMMIT;
