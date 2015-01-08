@@ -53,7 +53,8 @@ CREATE TABLE pages (
 CREATE TABLE page_images (
        page INT NOT NULL REFERENCES pages,
        dpi INT NOT NULL CHECK (dpi > 0),
-       image BYTEA NOT NULL
+       image BYTEA NOT NULL,
+       hash TEXT NOT NULL
 );
 
 ALTER TABLE page_images ALTER COLUMN image SET STORAGE EXTERNAL;

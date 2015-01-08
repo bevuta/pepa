@@ -58,10 +58,12 @@
                    dpi (or
                         (get-in config [:rendering :png :dpi size])
                         (get-in config [:web :default-page-dpi]))
-                   [{:keys [image]}] (db/query db ["SELECT image FROM page_images WHERE page = ? AND dpi = ?"
-                                                   (Integer/parseInt id) dpi])]
+                   [{:keys [image hash]}] (db/query db ["SELECT image, hash FROM page_images WHERE page = ? AND dpi = ?"
+                                                        (Integer/parseInt id) dpi])]
                (when image
-                 {::page (ByteArrayInputStream. image)})))
+                 {::page (ByteArrayInputStream. image)
+                  ::hash hash})))
+  :etag ::hash
   :handle-ok ::page)
 
 (defresource document [id]

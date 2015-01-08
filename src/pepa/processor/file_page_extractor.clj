@@ -4,12 +4,24 @@
             [pepa.model :as m]
             [pepa.pdf :as pdf]
             [pepa.processor :as processor :refer [IProcessor]]
-            [clojure.string :as s]))
+            [clojure.string :as s])
+  (:import java.security.MessageDigest
+           java.math.BigInteger))
 
 (defrecord FilePageExtractor [config db processor])
 
 (defn make-component []
   (map->FilePageExtractor {}))
+
+(def +hashing-algorithm+ (MessageDigest/getInstance "SHA-256"))
+
+(defn ^:private hash-data
+  "Hashes the byte-array BS (returns a string)."
+  [bs]
+  (try
+    (let [md (.clone +hashing-algorithm+)]
+      (.update md bs)
+      (format "%032x" (BigInteger. 1 (.digest md))))))
 
 (defn ^:private log [& args]
   (apply println args))
@@ -33,7 +45,8 @@
             (db/insert! db :page_images
                         {:page id
                          :dpi dpi
-                         :image image})))))))
+                         :image image
+                         :hash (hash-data image)})))))))
 
 
 (defn ^:private inbox-origin? [config origin]
