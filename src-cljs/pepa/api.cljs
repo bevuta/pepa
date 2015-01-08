@@ -21,9 +21,10 @@
     (let [text (.getResponseText xhr)
           transit (try
                     ;; Only parse body when it's transit
-                    (when (re-find #"application/transit\+json"
-                                   (.getResponseHeader xhr "content-type"))
-                     (transit/read reader text))
+                    (when (and (seq text)
+                               (re-find #"application/transit\+json"
+                                        (.getResponseHeader xhr "content-type")))
+                      (transit/read reader text))
                     (catch js/Error e
                       (js/console.error "Couldn't parse Transit" text)
                       nil))]
@@ -39,7 +40,6 @@
     ([uri method content-type data]
        (let [ch (async/chan)]
          (assert uri)
-         (assert (contains? #{:post :get} method))
          (xhr/send uri
                    (fn [e]
                      (async/put! ch (parse-xhr-response e.target)))
@@ -117,6 +117,11 @@
       (let [files (partition-by :file inbox)
             files (mapcat (partial sort-by :number) files)]
         files))))
+
+(defn delete-from-inbox! [pages]
+  (go
+    (when-let [res (<! (xhr-request! "/inbox" :delete (map :id pages)))]
+      (<! (fetch-inbox)))))
 
 (defn ^:private document->api-document [document]
   (-> document

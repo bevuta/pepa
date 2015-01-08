@@ -28,7 +28,6 @@
                             "application/json"
                             "application/transit+json"])
 
-
 (defresource file-scanner
   :allowed-methods #{:post}
   :available-media-types +default-media-types+
@@ -132,8 +131,12 @@
   :handle-ok ::pdf-file)
 
 (defresource inbox
-  :allowed-methods #{:get}
+  :allowed-methods #{:get :delete}
   :available-media-types +default-media-types+
+  :delete! (fn [ctx]
+             (let [db (get-in ctx [:request ::db])]
+               (when-let [pages (seq (get-in ctx [:request :body]))]
+                 (m/remove-from-inbox! db pages))))
   :handle-ok (fn [ctx]
                (let [pages (m/inbox (get-in ctx [:request ::db]))]
                  (condp = (get-in ctx [:representation :media-type])
