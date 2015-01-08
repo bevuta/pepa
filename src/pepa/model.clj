@@ -255,15 +255,15 @@
 (defn inbox
   "Returns a vector of pages in the Inbox."
   [db]
-  (vec (db/query db (db/sql+placeholders
-                     "SELECT p.id, p.file, p.number 
-                      FROM pages AS p
-                      LEFT JOIN document_pages AS dp 
-                        ON dp.page = p.id 
-                      GROUP BY p.id, p.file, p.number, dp.page 
-                        HAVING dp.page IS NULL AND (SELECT origin FROM files WHERE id = p.file) IN (%s)
-                      ORDER BY p.file, p.number"
-                     (inbox-origins db)))))
+  (vec (db/query db ["SELECT p.id, p.file, p.number 
+                      FROM inbox AS i
+                      LEFT JOIN pages AS p
+                        ON i.page = p.id"])))
+
+(defn add-to-inbox!
+  "Unconditionally adds PAGES to inbox."
+  [db pages]
+  (db/insert-coll! db :inbox (for [id pages] {:page id})))
 
 ;;; TODO(mu): We need to cache this stuff.
 ;;; TODO(mu): We need to handle (= document file) more efficient
