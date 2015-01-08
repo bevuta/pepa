@@ -464,7 +464,10 @@
     (assert (seq (:pages document)))
     (println "Saving document" document)
     (when (<! (api/save-new-document! document))
-      (om/transact! state [:documents] #(dissoc % (:id document))))))
+      (om/transact! state :documents #(dissoc % (:id document)))
+      (let [pages (:pages document)]
+        (when (<! (api/delete-from-inbox! pages))
+          (om/transact! state [:documents :inbox :pages] #(remove (set pages) %)))))))
 
 (defn group-pages-workflow [state owner]
   (reify

@@ -30,7 +30,8 @@
                       nil))]
       {:status (.getStatus xhr)
        :response/transit transit
-       :response/text (when-not transit text)})))
+       :response/text (when-not transit text)
+       :successful? (.isSuccess xhr)})))
 
 (let [writer (transit/writer :json)]
   (defn xhr-request!
@@ -120,8 +121,8 @@
 
 (defn delete-from-inbox! [pages]
   (go
-    (when-let [res (<! (xhr-request! "/inbox" :delete (map :id pages)))]
-      (<! (fetch-inbox)))))
+    (let [res (<! (xhr-request! "/inbox" :delete (map :id pages)))]
+      (:successful? res))))
 
 (defn ^:private document->api-document [document]
   (-> document
