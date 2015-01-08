@@ -471,7 +471,7 @@
     (assert (:title document))
     (assert (seq (:pages document)))
     (println "Saving document" document)
-    (when (<! (api/save-new-document! document))
+    (when (<! (api/save-new-document! document "inbox"))
       (om/transact! state :documents #(dissoc % (:id document)))
       (let [pages (:pages document)]
         (when (<! (api/delete-from-inbox! pages))

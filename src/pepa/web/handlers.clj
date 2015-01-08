@@ -166,7 +166,10 @@
              (let [params (:body request)
                    file (:upload/file params)
                    pages (seq (:pages params))
-                   origin (or (:origin file) "web")]
+                   origin (or
+                           (:origin params)
+                           (:origin file)
+                           "web")]
                ;; XOR: Either pages OR file
                (assert (and (or pages file)
                             (not (and pages file))))

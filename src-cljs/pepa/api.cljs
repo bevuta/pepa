@@ -135,17 +135,20 @@
 (defn save-new-document!
   "Saves DOCUMENT. Returns a channel. Channel will contain the saved
   document in case of success, nil in case of error."
-  [document]
-  (go
-    (when-let [res (<! (xhr-request! "/documents" :post
-                                     (document->api-document document)))]
-      (when (:successful? res)
-        (let [document (-> (:response/transit res)
-                           (db-document->Document))]
-          (om/update! (om/root-cursor data/state)
-                      [:documents (:id document)]
-                      document)
-          document)))))
+  ([document origin]
+   (go
+     (when-let [res (<! (xhr-request! "/documents" :post
+                                      (assoc (document->api-document document)
+                                             :origin origin)))]
+       (when (:successful? res)
+         (let [document (-> (:response/transit res)
+                            (db-document->Document))]
+           (om/update! (om/root-cursor data/state)
+                       [:documents (:id document)]
+                       document)
+           document)))))
+  ([document]
+   (save-new-document! document "web")))
 
 (defn update-document!
   "Diffs the document with the same id on the server with DOCUMENT and
