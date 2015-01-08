@@ -59,9 +59,10 @@
   [state]
   (or
    (try
-     (some-> state
-             :navigation :query-params :page
-             (js/parseInt 10))
+     (let [n (some-> state
+                     :navigation :query-params :page
+                     (js/parseInt 10))]
+       (and (integer? n) n))
      (catch js/Error e nil))
    1))
 
@@ -100,7 +101,7 @@
      "Dashboard")))
 
 ;;; Should be twice the document-height or so.
-(def +scroll-margin+ 400)
+(def +scroll-margin+ 500)
 
 (defn on-documents-scroll [state owner e]
   (let [container e.currentTarget
@@ -110,11 +111,12 @@
         bottom-distance (Math/abs (- scroll-height
                                      (+ scroll-top outer-height)))]
     (when (< bottom-distance +scroll-margin+)
-      (let [page (parse-page state)]
-        (nav/navigate! (-> (:navigation state)
-                           (assoc-in [:query-params :page] (inc page))
-                           (nav/nav->route)
-                           (nav/navigate!)))))))
+      (let [state @state
+            page (or (parse-page state) 0)]
+        (-> (:navigation state)
+            (assoc-in [:query-params :page] (str (inc page)))
+            (nav/nav->route)
+            (nav/navigate! :ignore-history))))))
 
 (defn dashboard [state owner]
   (reify
