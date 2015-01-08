@@ -139,7 +139,7 @@
   (go
     (when-let [res (<! (xhr-request! "/documents" :post
                                      (document->api-document document)))]
-      (when (= 201 (:status res))
+      (when (:successful? res)
         (let [document (-> (:response/transit res)
                            (db-document->Document))]
           (om/update! (om/root-cursor data/state)
