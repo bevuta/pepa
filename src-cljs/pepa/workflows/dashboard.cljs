@@ -30,15 +30,14 @@
     (render [_]
       (let [href (nav/document-route document)]
         (html
-         [:.container
-          [:.document {:on-drag-over tags/accept-tags-drop
-                       :on-drop (partial handle-tags-drop document)}
-           [:.preview
-            [:a {:href href}
-             (om/build page/thumbnail (-> document :pages first))]]
-           [:a.title {:href href}
-            (:title document)]
-           (om/build tags/tags-list (:tags document))]])))))
+         [:.document {:on-drag-over tags/accept-tags-drop
+                      :on-drop (partial handle-tags-drop document)}
+          [:.preview
+           [:a {:href href}
+            (om/build page/thumbnail (-> document :pages first))]]
+          [:a.title {:href href}
+           (:title document)]
+          (om/build tags/tags-list (:tags document))])))))
 
 (defn filter-sidebar [state]
   (reify
@@ -102,6 +101,11 @@
     
      true
      "Dashboard")))
+
+(defn ^:private document-count [state]
+  (om/component
+   (html
+    [:span.document-count (str "(" (count (document-ids state)) ")")])))
 
 ;;; Should be twice the document-height or so.
 (def +scroll-margin+ 500)
@@ -171,9 +175,9 @@
          [:.workflow.dashboard
           [:.pane {:style {:width (str "calc(100% - " (:filter-width local-state) "px - 2px)")}}
            [:header
-            (dashboard-title state)]
-           [:.documents {:class ["col-3"]
-                         :ref "documents"
+            (dashboard-title state)
+            (om/build document-count state)]
+           [:.documents {:ref "documents"
                          :on-scroll (partial on-documents-scroll state owner)}
             (let [documents (->> document-ids
                                  (map (partial get (:documents state)))
