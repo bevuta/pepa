@@ -75,7 +75,7 @@
                (when id {::page-id id})))
   :can-post-to-missing? false
   :malformed? (fn [ctx]
-                (let [rotation (get-in ctx [:request :body "rotation"])]
+                (let [rotation (get-in ctx [:request :body :rotation])]
                   (if (and (integer? rotation)
                            (zero? (mod rotation 90)))
                     [false {::rotation rotation}]
