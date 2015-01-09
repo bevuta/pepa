@@ -133,9 +133,17 @@
         scroll-height (.-scrollHeight el)
         [num scroll] (parse-count-scroll state)
         elements (page-ids state)]
-    (when (= 0 (.-scrollTop el))
+    
+    (cond
+      (= 0 (.-scrollTop el))
       (set! (.-scrollTop el) (* scroll-height
-                                (/ scroll (count elements)))))))
+                                (/ scroll (count elements))))
+
+      ;; TODO: :count isn't always nil (the query-params won't get
+      ;; updated). Need another way to change the url without changing
+      ;; history
+      (every? nil? ((juxt :count :scroll) (get-in state [:navigation :query-params])))
+      (set! (.-scrollTop el) 0))))
 
 (defn dashboard [state owner]
   (reify
