@@ -66,6 +66,26 @@
   :etag ::hash
   :handle-ok ::page)
 
+(defresource page-rotation [id]
+  :allowed-methods #{:post}
+  :available-media-types +default-media-types+
+  :exists? (fn [ctx]
+             (let [db (get-in ctx [:request ::db])
+                   [{:keys [id]}] (db/query db ["SELECT id FROM pages WHERE id = ?" (Integer/parseInt id)])]
+               (when id {::page-id id})))
+  :can-post-to-missing? false
+  :malformed? (fn [ctx]
+                (let [rotation (get-in ctx [:request :body "rotation"])]
+                  (if (and (integer? rotation)
+                           (zero? (mod rotation 90)))
+                    [false {::rotation rotation}]
+                    [true "Invalid rotation"])))
+  :post! (fn [ctx]
+           (let [db (get-in ctx [:request ::db])
+                 id (::page-id ctx)
+                 rotation (::rotation ctx)]
+             (m/rotate-page db id rotation))))
+
 (defresource document [id]
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
@@ -252,6 +272,8 @@
                (page-image id size))
           (ANY "/pages/:id/image" [id]
                (page-image id "full"))
+          (ANY "/pages/:id/rotation" [id]
+               (page-rotation id))
 
           (ANY "/documents" [] documents)
           (ANY "/documents/bulk" [] documents-bulk)
