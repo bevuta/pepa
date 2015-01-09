@@ -374,10 +374,7 @@
          [:img (list
                 {:max-height :auto
                  :padding {:left (px page-padding)
-                           :right (px page-padding)}
-                 :position :absolute
-                 :top "50%"}
-                ^:prefix {:transform "translateY(-50%)"}
+                           :right (px page-padding)}}
                 (calc-property :max-width ["100%" - (* 2 page-padding)]))]]
         (let [title-padding 5
               title-height (em 2)]

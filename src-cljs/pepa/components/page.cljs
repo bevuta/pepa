@@ -6,8 +6,12 @@
 
 (defn thumbnail [page owner _]
   (om/component
-   (dom/img #js {:src (str "/pages/" (:id page) "/image/thumbnail")})))
+   (dom/img #js {:src (str "/pages/" (:id page) "/image/thumbnail")
+                 :style (when-let [r (:rotation page)]
+                          #js {:transform (str "rotate(" r "deg)")})})))
 
 (defn full [page owner _]
   (om/component
-   (dom/img #js {:src (str "/pages/" (:id page) "/image")})))
+   (dom/img #js {:src (str "/pages/" (:id page) "/image")
+                 :style (when-let [r (:rotation page)]
+                          #js {:transform (str "rotate(" r "deg)")})})))
