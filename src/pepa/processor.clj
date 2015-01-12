@@ -16,7 +16,7 @@
 
 (defn start [component notify-topic]
   (let [control-chan (async/chan)
-        notify-chan (bus/subscribe (:bus component) notify-topic)
+        notify-chan (bus/subscribe (:bus component) notify-topic (async/sliding-buffer 1))
         ;; TODO: Turn into a thread-pool?
         worker (async/thread
                  (loop []
