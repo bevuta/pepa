@@ -24,7 +24,7 @@
 
 (defn subscribe-all
   "Returns a channel receiving all messages sent over the bus."
-  [bus & [buf]]
+  [bus buf]
   (let [ch (async/chan buf)]
     (async/tap (:mult bus) ch)))
 

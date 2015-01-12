@@ -3,6 +3,7 @@
             [pepa.bus :as bus]
             [pepa.db :as db]
             [pepa.model :as m]
+            [pepa.async :refer [collapsing-buffer]]
             [clojure.core.async :as async :refer [<!!]]))
 
 (defrecord Notificator [db bus output])
@@ -43,7 +44,8 @@
   component/Lifecycle
   (start [component]
     (println ";; Starting web notificator")
-    (let [messages (bus/subscribe-all (:bus component))
+    (let [messages (bus/subscribe-all (:bus component)
+                                      (collapsing-buffer 20 (constantly {:message/topic :resync})))
           input (async/chan)
           output (async/mult input)]
       (async/thread
