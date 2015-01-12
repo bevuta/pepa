@@ -99,7 +99,8 @@
                 :on-click (fn [e]
                             (async/put! events (om/value page))
                             (.preventDefault e))}
-           (om/build page/thumbnail page)])]))))
+           (om/build page/thumbnail page
+                     {:opts {:enable-rotate? true}})])]))))
 
 (defn ^:private pages-pane-header [document]
   (om/component

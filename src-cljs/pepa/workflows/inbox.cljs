@@ -646,7 +646,9 @@
             (list
              (om/build-all document (concat [inbox] (vals documents))
                            {:key :id
-                            :init-state {:view page/thumbnail
+                            :init-state {:view (fn [page owner opts]
+                                                 (page/thumbnail page owner
+                                                                 (assoc opts :enable-rotate? true)))
                                          :events events}
                             ;; We pass the drag/state information down
                             ;; the render tree via :state
