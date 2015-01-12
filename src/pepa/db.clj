@@ -54,6 +54,8 @@
 
 (def advisory-lock-prefix 1952539)
 
+;;; TODO(mu): It might be helpful in the future if we use table-names
+;;; (here: keyword namespaces) as lock names
 (def advisory-locks
   [:files/new
    :pages/new])

@@ -64,7 +64,9 @@
       (db/with-transaction [db (:db component)]
         (let [update (try
                        (extract-pages config db id data)
-                       (db/notify! db :pages/new)
+                       ;; TODO(mu): notify! :pages/new *before*
+                       ;; rendering, :pages/rendered *afterwards*
+                       (db/notify! db :pages/new {:file/id id})
                        {:status :processing-status/processed
                         :report "OK"}
                        (catch Exception e

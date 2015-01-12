@@ -28,6 +28,9 @@
   (let [ch (async/chan buf)]
     (async/tap (:mult bus) ch)))
 
+(defn topic [message]
+  (::topic message))
+
 (defrecord Bus [input mult output]
   component/Lifecycle
   (start [component]

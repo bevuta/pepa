@@ -29,7 +29,7 @@
                             :origin origin
                             :name name
                             :data data})]
-    (db/notify! db :files/new {:file/id (:id file)})
+    (db/notify! db :files/new {:files [(:id file)]})
     file))
 
 (defn store-files! [db files extra-attrs]
