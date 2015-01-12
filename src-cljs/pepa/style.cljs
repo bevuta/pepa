@@ -170,6 +170,23 @@
          [:&:after {:width (px 10)
                     :float :right}]]]])]])
 
+(def page-css
+  [:.thumbnail {:position :relative}
+   (let [rotate-height 25]
+     [:.rotate {:position :absolute
+                :top 0
+                :width "100%", :height (px rotate-height)
+                :z-index 500}
+      [:.left :.right (list
+                       {:float :right
+                        :width (px rotate-height)
+                        :height (px rotate-height)
+                        :line-height (px rotate-height)
+                        :text-align :center}
+                       ^:prefix {:user-select :none})
+       [:&:hover {:background-color "gray"
+                  :cursor :pointer}]]])])
+
 ;; [:&.inbox {:background
 ;; [:&.active {:background-color blue-background}
 ;;         [:&.inbox {:background {:image (image-url "menu-icons/inbox-active.svg")}}]]
@@ -255,6 +272,9 @@
                   {:width "100%"
                    :list-style-type :none}
                   ^:prefix {:user-select :none})
+
+        page-css
+        
         [:&.dragging {:display :none}]
         ;; Bars for drop targets above/below
         [:&.above :&.below {:position :relative}
@@ -365,6 +385,9 @@
                     :height (px document-height)
                     :padding (px document-padding)}
         [:&:hover {:background-color dark-background}]
+
+        page-css
+        
         [:.preview {:height (px preview-height)
                     :border {:width (px 1)
                              :style :solid
@@ -409,6 +432,7 @@
             :overflow :auto}
     [:.thumbnails :.full :.sidebar {:height "100%"
                                     :border-right (str "1px solid " border-dark)}
+     page-css
      [:header {:font-weight 500}]
      [:ul.pages (list
                  (calc-property :height ["100%" - header-height])
