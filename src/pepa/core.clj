@@ -7,6 +7,7 @@
             [pepa.smtp :as smtp]
             [pepa.processor.file-page-extractor :as fpe]
             [pepa.processor.page-ocr :as page-ocr]
+            [pepa.web.notifications :as notifications]
             [pepa.init :as init]
 
             [clojure.core.match :refer [match]])
@@ -30,7 +31,10 @@
           [:config :db :file-page-extractor])
    :smtp (component/using
            (smtp/make-component)
-           [:config :db])))
+           [:config :db])
+   :notifications (component/using
+                   (notifications/make-component)
+                   [:db :bus])))
 
 (defn -main [& args]
   (match [(vec args)]
@@ -38,5 +42,4 @@
                      (init/write-schema)
                      (init/write-config))
     [[]] (component/start (make-system))
-    :else (println "Unsupported command line flags:" args))
-  )
+    :else (println "Unsupported command line flags:" args)))
