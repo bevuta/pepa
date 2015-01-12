@@ -23,14 +23,14 @@
   (assert content-type)
   (assert origin)
   (assert data)
-  (let [file (db/insert! db
-                         :files
-                         {:content_type content-type
-                          :origin origin
-                          :name name
-                          :data data})]
-    (db/notify! db :files/new)
-    (first file)))
+  (let [[file] (db/insert! db
+                           :files
+                           {:content_type content-type
+                            :origin origin
+                            :name name
+                            :data data})]
+    (db/notify! db :files/new {:file/id (:id file)})
+    file))
 
 (defn store-files! [db files extra-attrs]
   (db/with-transaction [db db]

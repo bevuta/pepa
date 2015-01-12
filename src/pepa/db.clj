@@ -71,9 +71,12 @@
 (def advisory-xact-lock-shared!
   (make-advisory-lock-query-fn "pg_advisory_xact_lock_shared"))
 
-(defn notify! [db topic]
-  (advisory-xact-lock! db topic)
-  (bus/notify! (:bus db) topic))
+(defn notify!
+  ([db topic data]
+   (advisory-xact-lock! db topic)
+   (bus/notify! (:bus db) topic data))
+  ([db topic]
+   (notify! db topic nil)))
 
 ;;; Extend namespaced keywords to map to PostgreSQL enums
 
