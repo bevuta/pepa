@@ -58,7 +58,11 @@
 ;;; (here: keyword namespaces) as lock names
 (def advisory-locks
   [:files/new
-   :pages/new])
+   :pages/new
+   :inbox/new
+   :inbox/removed
+   :documents/new
+   :documents/updated])
 
 (defn make-advisory-lock-query-fn [lock-fn]
   (let [statement (format "SELECT %s(?::int, ?::int)" lock-fn)]

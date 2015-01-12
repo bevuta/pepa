@@ -33,7 +33,10 @@
                                 (let [id (m/create-document! db {:file (:id file)
                                                                  :title (:name file)})
                                       tagging (get-in component [:config :tagging])]
-                                  (m/auto-tag! db id tagging
+                                  ;; NOTE: auto-tag*! so we don't
+                                  ;; trigger an update on the
+                                  ;; notification bus
+                                  (m/auto-tag*! db id tagging
                                                {:origin origin
                                                 :mail/from from
                                                 :mail/to to}))))))))

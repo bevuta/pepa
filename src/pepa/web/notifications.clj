@@ -13,7 +13,8 @@
 
 (defmethod bus->web :default
   [notificator message]
-  (println "Got unhandled bus message:" (bus/topic message)))
+  (println "Got unhandled bus message:" (bus/topic message))
+  (prn message))
 
 (defmethod bus->web :pages/new [notificator message]
   (let [db (:db notificator)
@@ -22,9 +23,30 @@
     {:message/topic :pages/new
      :pages (m/page-ids db file)}))
 
+;;; TODO: Auto-dissoc :pepa.bus/topic
 (defmethod bus->web :files/new [notificator message]
-  {:message/topic :files/new
-   :files (:files message)})
+  (-> message
+      (select-keys [:files])
+      (assoc :message/topic :files/new)))
+
+(defmethod bus->web :inbox/new [notificator message]
+  (-> message
+      (select-keys [:pages])
+      (assoc :message/topic :inbox/new)))
+
+(defmethod bus->web :inbox/removed [notificator message]
+  (-> message
+      (select-keys [:pages])
+      (assoc :message/topic :inbox/removed)))
+
+(defmethod bus->web :documents/new [notificator message]
+  (-> message
+      (dissoc :pepa.bus/topic)))
+
+(defmethod bus->web :documents/updated [notificator message]
+  (-> message
+      (dissoc :pepa.bus/topic)
+      (assoc :message/topic :document/updated)))
 
 (extend-type Notificator
   component/Lifecycle
