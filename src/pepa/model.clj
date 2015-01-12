@@ -40,11 +40,13 @@
 
 (defn store-files! [db files extra-attrs]
   (db/with-transaction [db db]
-    (let [files (mapv (fn [file]
-                        (store-file*! db (merge extra-attrs file)))
-                      files)]
-      (db/notify! db :files/new {:files (mapv :id files)})
-      files)))
+    ;; TODO(mu): Add warn/log here when topic-logging is merged
+    (when-let [files (seq files)]
+      (let [files (mapv (fn [file]
+                          (store-file*! db (merge extra-attrs file)))
+                        files)]
+        (db/notify! db :files/new {:files (mapv :id files)})
+        files))))
 
 (defn file-documents
   "Returns a list of document-ids which are linked to FILE."
