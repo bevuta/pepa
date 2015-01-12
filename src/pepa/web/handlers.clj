@@ -212,7 +212,8 @@
                              (assoc attrs :page-ids pages))
                      id (m/create-document! conn (assoc attrs :origin origin))
                      tagging (get-in request [::config :tagging])]
-                 (m/auto-tag! conn id tagging
+                 ;; NOTE: auto-tag*! so we don't trigger updates on the notification bus
+                 (m/auto-tag*! conn id tagging
                               {:origin origin})
                  {::document (m/get-document conn id)}))))
   :handle-created ::document

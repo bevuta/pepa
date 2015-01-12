@@ -52,7 +52,7 @@
                        (do (db/insert-coll! db :page_images images)
                            :processing-status/processed)
                        :processing-status/failed)]
-          (db/notify! db :pages/rendered)
+          (db/notify! db :pages/updated)
           (db/update! db
                       :pages
                       {:render_status status}

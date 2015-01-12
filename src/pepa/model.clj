@@ -119,7 +119,7 @@
 
 ;;; Modify Documents
 
-(defn add-pages! [db document page-ids]
+(defn add-pages*! [db document page-ids]
   (assert (every? number? page-ids))
   (db/insert-coll! db :document_pages
                    (map (fn [page number]
@@ -129,7 +129,12 @@
                         page-ids
                         (range))))
 
-(defn link-file!
+(defn add-pages! [db document page-ids]
+  (db/with-transaction [db db]
+    (add-pages*! db document page-ids)
+    (db/notify! db :documents/updated {:id document})))
+
+(defn ^:private link-file*!
   "Sets a db-attribute to tell the processor to link all pages from
   FILE to DOCUMENT. Also handles already processed files."
   [db document file]
@@ -137,9 +142,14 @@
     (db/update! conn :documents {:file file} ["id = ?" document])
     ;; Link pages if file is already processed
     (when (= :processing-status/processed (processing-status conn file))
-      (add-pages! conn document (page-ids conn file)))))
+      (add-pages*! conn document (page-ids conn file)))))
 
-(declare add-tags! remove-tags!)
+(defn link-file! [db document file]
+  (db/with-transaction [db db]
+    (link-file*! db document file)
+    (db/notify! db :documents/updated {:id document})))
+
+(declare add-tags*! remove-tags*!)
 
 (defn create-document!
   [db {:keys [title tags notes
@@ -156,11 +166,12 @@
                                      {:title title
                                       :notes notes})]
       (when (seq tags)
-        (add-tags! conn id tags))
+        (add-tags*! conn id tags))
       (when (seq page-ids)
-        (add-pages! conn id page-ids))
+        (add-pages*! conn id page-ids))
       (when file
-        (link-file! conn id file))
+        (link-file*! conn id file))
+      (db/notify! db :documents/new {:id id})
       id)))
 
 (defn update-document!
@@ -180,13 +191,14 @@
             ;; Subtract removed-tags from added-tags so we don't
             ;; create tags which will be removed instantly
             added-tags (set/difference added-tags removed-tags)]
-        (remove-tags! conn id removed-tags)
-        (add-tags! conn id added-tags)
+        (remove-tags*! conn id removed-tags)
+        (add-tags*! conn id added-tags)
         ;; Update document title if necessary
         (when (seq props)
           (db/update! conn :documents
                       props
-                      ["id = ?" id])))
+                      ["id = ?" id]))
+        (db/notify! conn :documents/updated {:id id}))
       (throw (ex-info (str "Couldn't find document with id " id)
                       {:document/id id
                        :db db})))))
@@ -208,6 +220,9 @@
   (when-not (s/blank? origin)
     (str "origin/" origin)))
 
+(defn document-tags [db document-id]
+  (map :tag (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])))
+
 (defn get-or-create-tags!
   "Gets tags for TAG-VALUES from DB. Creates them if necessary."
   [db tag-values]
@@ -223,20 +238,25 @@
             new (db/insert-coll! conn :tags new)]
         (concat existing new)))))
 
-(defn add-tags! [db document-id tags]
+(defn ^:private add-tags*! [db document-id tags]
   (assert (number? document-id))
   (assert (every? string? tags))
   (db/with-transaction [db db]
     (let [db-tags (get-or-create-tags! db tags)
-          document-tags (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])
+          old-tags (document-tags db document-id)
           new-tags (set/difference (set (map :id db-tags))
-                                   (set (map :tag document-tags)))]
+                                   (set old-tags))]
       (when (seq new-tags)
         (db/insert-coll! db :document_tags
                          (for [tag new-tags]
                            {:document document-id :tag tag}))))))
 
-(defn remove-tags! [db document-id tags]
+(defn add-tags! [db document-id tags]
+  (db/with-transaction [db db]
+    (add-tags*! db document-id tags)
+    (db/notify! db :documents/updated {:id document-id, :tags/new tags})))
+
+(defn ^:private remove-tags*! [db document-id tags]
   (assert (every? string? tags))
   (assert (number? document-id))
   (when (seq tags)
@@ -247,8 +267,13 @@
                     (concat (db/sql+placeholders "tag IN (%s) AND document = ?" (map :id tags))
                             [document-id]))))))
 
-(defn auto-tag! [db document-id tagging-config
-                 {:keys [origin] :as data}]
+(defn remove-tags! [db document-id tags]
+  (db/with-transaction [db db]
+    (remove-tags*! db document-id tags)
+    (db/notify! db :documents/updated {:id document-id, :tags/removed tags})))
+
+(defn auto-tag*! [db document-id tagging-config
+                  {:keys [origin] :as data}]
   (let [tags (concat
               ;; Add origin-tag if enabled
               (when (:add-origin? tagging-config)
@@ -261,7 +286,12 @@
               ;; Add 'automatic' initial tags
               (when-let [tags (-> tagging-config :new-document seq)]
                 (set tags)))]
-    (add-tags! db document-id (remove s/blank? tags))))
+    (add-tags*! db document-id (remove s/blank? tags))))
+
+(defn auto-tag! [db document-id tagging-config data]
+  (db/with-transaction [db db]
+    (auto-tag*! db document-id tagging-config data)
+    (db/notify! db :documents/updated {:id document-id})))
 
 ;;; Misc. Functions
 
@@ -277,10 +307,14 @@
 (defn add-to-inbox!
   "Unconditionally adds PAGES to inbox."
   [db page-ids]
-  (db/insert-coll! db :inbox (for [id page-ids] {:page id})))
+  (db/with-transaction [db db]
+    (db/notify! db :inbox/added {:pages page-ids})
+    (db/insert-coll! db :inbox (for [id page-ids] {:page id}))))
 
 (defn remove-from-inbox! [db page-ids]
-  (db/delete! db :inbox (db/sql+placeholders "page IN (%s)" page-ids)))
+  (db/with-transaction [db db]
+    (db/notify! db :inbox/removed {:pages page-ids})
+    (db/delete! db :inbox (db/sql+placeholders "page IN (%s)" page-ids))))
 
 ;;; TODO(mu): We need to cache this stuff.
 ;;; TODO: Handle render-status here

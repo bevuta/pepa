@@ -62,9 +62,13 @@
   [:files/new
    :pages/new
    :documents/new
+   
    :files/updated
    :pages/updated
-   :documents/updated])
+   :documents/updated
+   
+   :inbox/added
+   :inbox/removed])
 
 (defn make-advisory-lock-query-fn [lock-fn]
   (let [statement (format "SELECT %s(?::int, ?::int)" lock-fn)]
