@@ -25,28 +25,19 @@
 
 ;;; TODO: Auto-dissoc :pepa.bus/topic
 (defmethod bus->web :files/new [notificator message]
-  (-> message
-      (select-keys [:files])
-      (assoc :message/topic :files/new)))
+  (assoc message :message/topic :files/new))
 
 (defmethod bus->web :inbox/new [notificator message]
-  (-> message
-      (select-keys [:pages])
-      (assoc :message/topic :inbox/new)))
+  (assoc message :message/topic :inbox/new))
 
 (defmethod bus->web :inbox/removed [notificator message]
-  (-> message
-      (select-keys [:pages])
-      (assoc :message/topic :inbox/removed)))
+  (assoc message :message/topic :inbox/removed))
 
 (defmethod bus->web :documents/new [notificator message]
-  (-> message
-      (dissoc :pepa.bus/topic)))
+  (assoc message :message/topic :document/new))
 
 (defmethod bus->web :documents/updated [notificator message]
-  (-> message
-      (dissoc :pepa.bus/topic)
-      (assoc :message/topic :document/updated)))
+  (assoc message :message/topic :document/updated))
 
 (extend-type Notificator
   component/Lifecycle
@@ -61,7 +52,8 @@
             (when-let [lock ((set db/advisory-locks) (bus/topic message))]
               (db/with-transaction [db (:db component)]
                 (db/advisory-xact-lock! db lock)))
-            (when-let [web-message (bus->web component message)]
+            (when-let [web-message (some-> (bus->web component message)
+                                           (dissoc :pepa.bus/topic))]
               (println "sending web message..." (pr-str web-message)))
             (recur))))
       (assoc component
