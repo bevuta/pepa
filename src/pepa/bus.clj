@@ -14,7 +14,7 @@
      (async/sub (:output bus) topic chan)
      chan))
   ([bus topic]
-   (subscribe bus topic nil)))
+   (subscribe bus topic (async/sliding-buffer 1))))
 
 (defn notify!
   ([bus topic data]
@@ -26,7 +26,8 @@
   "Returns a channel receiving all messages sent over the bus."
   [bus buf]
   (let [ch (async/chan buf)]
-    (async/tap (:mult bus) ch)))
+    (async/tap (:mult bus) ch)
+    ch))
 
 (defn topic [message]
   (::topic message))

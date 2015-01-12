@@ -45,17 +45,22 @@
   (start [component]
     (println ";; Starting web notificator")
     (let [messages (bus/subscribe-all (:bus component)
-                                      (collapsing-buffer 20 (constantly {:message/topic :resync})))
+                                      (collapsing-buffer 20 (constantly :resync)))
           input (async/chan)
           output (async/mult input)]
       (async/thread
         (loop []
           (when-let [message (<!! messages)]
-            (when-let [lock ((set db/advisory-locks) (bus/topic message))]
+            (doseq [lock (if (= :resync message)
+                           db/advisory-locks
+                           (filter (set db/advisory-locks) [(bus/topic message)]))]
               (db/with-transaction [db (:db component)]
                 (db/advisory-xact-lock! db lock)))
-            (when-let [web-message (some-> (bus->web component message)
-                                           (dissoc :pepa.bus/topic))]
+            
+            (when-let [web-message (if (= :resync message)
+                                     {:message/topic :resync}
+                                     (some-> (bus->web component message)
+                                             (dissoc :pepa.bus/topic)))]
               (println "sending web message..." (pr-str web-message)))
             (recur))))
       (assoc component
