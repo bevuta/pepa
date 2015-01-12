@@ -30,6 +30,7 @@
                                                       {:origin origin})]
                             (when (= origin "email")
                               (doseq [file files]
+                                ;; TODO(mu): It would be nice to have `create-documents!'
                                 (let [id (m/create-document! db {:file (:id file)
                                                                  :title (:name file)})
                                       tagging (get-in component [:config :tagging])]
@@ -37,9 +38,9 @@
                                   ;; trigger an update on the
                                   ;; notification bus
                                   (m/auto-tag*! db id tagging
-                                               {:origin origin
-                                                :mail/from from
-                                                :mail/to to}))))))))
+                                                {:origin origin
+                                                 :mail/from from
+                                                 :mail/to to}))))))))
                     (SimpleMessageListenerAdapter.)
                     (SMTPServer.))]
         (doto server
