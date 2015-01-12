@@ -40,14 +40,14 @@
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-2511"]
-                                       [com.cemerick/piggieback "0.1.3"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-2665"]
+                                       [com.cemerick/piggieback "0.1.4"]
                                        [com.cognitect/transit-cljs "0.8.199"]
-                                       [om "0.8.0-beta5"]
+                                       [org.om/om "0.8.0"]
                                        [garden "1.2.5"]
                                        [sablono "0.2.22"]
                                        [secretary "1.2.1"]
-                                       [weasel "0.4.2"]
+                                       [weasel "0.5.0"]
                                        [the/parsatron "0.0.7"]]}}
   ;; Cljsbuild configuration. Also see profiles.clj
   :cljsbuild {:builds {:pepa {:source-paths ["src-cljs/"]
