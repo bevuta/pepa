@@ -201,7 +201,8 @@
 (defn rotate-page! [page rotation]
   (go
     (when-not (= rotation (:rotation page))
-      (let [res (<! (xhr-request! (str "/pages/" (:id page) "/rotation")
+      (let [rotation (mod rotation 360)
+            res (<! (xhr-request! (str "/pages/" (:id page) "/rotation")
                                   :post {:rotation rotation}))]
         (when (and (:successful? res) (om/cursor? page))
           (om/update! page :rotation rotation))))))

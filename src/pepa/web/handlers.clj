@@ -78,7 +78,7 @@
                 (let [rotation (get-in ctx [:request :body :rotation])]
                   (if (and (integer? rotation)
                            (zero? (mod rotation 90)))
-                    [false {::rotation rotation}]
+                    [false {::rotation (mod rotation 360)}]
                     [true "Invalid rotation"])))
   :post! (fn [ctx]
            (let [db (get-in ctx [:request ::db])
