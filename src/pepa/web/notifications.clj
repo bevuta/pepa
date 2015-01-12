@@ -40,6 +40,9 @@
 (defmethod bus->web :documents/updated [notificator message]
   (assoc message :message/topic :document/updated))
 
+(defmethod bus->web :pages/ocr-updated [notificator message]
+  (assoc message :message/topic :pages/ocr-updated))
+
 (extend-type Notificator
   component/Lifecycle
   (start [component]

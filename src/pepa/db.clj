@@ -59,6 +59,7 @@
 (def advisory-locks
   [:files/new
    :pages/new
+   :pages/ocr-update
    :inbox/new
    :inbox/removed
    :documents/new
