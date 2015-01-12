@@ -79,7 +79,7 @@
 
 (defn notify!
   ([db topic data]
-   (advisory-xact-lock! db topic)
+   (advisory-xact-lock-shared! db topic)
    (bus/notify! (:bus db) topic data))
   ([db topic]
    (notify! db topic nil)))
