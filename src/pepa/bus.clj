@@ -14,27 +14,27 @@
     (async/sub (:output bus) topic chan)
     chan))
 
-;;; TODO: Add optional extra data. Replace `identity' in `async/pub'
-;;; below with ::topic or similar and make `notify!' put maps into the
-;;; channel.
-(defn notify! [bus topic]
-  (>!! (:input bus) topic ))
+(defn notify!
+  ([bus topic data]
+   (>!! (:input bus) (assoc data ::topic topic)))
+  ([bus topic]
+   (notify! bus topic {})))
 
 (defrecord Bus [input output]
   component/Lifecycle
   (start [component]
     (println ";; Starting bus")
     (let [input (async/chan)
-          output (async/pub input identity)]
+          output (async/pub input ::topic)]
       (assoc component
-        :input input
-        :output output)))
+             :input input
+             :output output)))
 
   (stop [component]
     (println ";; Stopping bus")
     (assoc component
-      :input nil
-      :output nil)))
+           :input nil
+           :output nil)))
 
 (defn make-component []
   (map->Bus {}))
