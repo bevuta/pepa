@@ -22,20 +22,32 @@
   ([bus topic]
    (notify! bus topic {})))
 
-(defrecord Bus [input output]
+(defn subscribe-all
+  "Returns a channel receiving all messages sent over the bus."
+  [bus & [buf]]
+  (let [ch (async/chan buf)]
+    (async/tap (:mult bus) ch)))
+
+(defrecord Bus [input mult output]
   component/Lifecycle
   (start [component]
     (println ";; Starting bus")
     (let [input (async/chan)
-          output (async/pub input ::topic)]
+          mult (async/mult input)
+          output-tap (async/chan)
+          output (async/pub output-tap ::topic)]
+      (async/tap mult output-tap)
       (assoc component
              :input input
+             :mult mult
              :output output)))
 
   (stop [component]
     (println ";; Stopping bus")
+    (async/close! (:input component))
     (assoc component
            :input nil
+           :mult nil
            :output nil)))
 
 (defn make-component []
