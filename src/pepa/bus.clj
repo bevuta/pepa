@@ -4,15 +4,17 @@
 
 ;;; pepa.bus is a simple application-wide notification bus. Clients
 ;;; can subscribe for any topic they want and will receive a value for
-;;; any cann of `notify!' for that topic.
+;;; any call of `notify!' for that topic.
 
 (defn subscribe
   "Returns a channel with that will receive a value when `notify!' is
-  called for that topic."
-  [bus topic]
-  (let [chan (async/chan (async/sliding-buffer 1))]
-    (async/sub (:output bus) topic chan)
-    chan))
+  called for that topic." 
+  ([bus topic buf]
+   (let [chan (async/chan buf)]
+     (async/sub (:output bus) topic chan)
+     chan))
+  ([bus topic]
+   (subscribe bus topic nil)))
 
 (defn notify!
   ([bus topic data]
