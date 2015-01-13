@@ -237,12 +237,12 @@
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
 
-
-(defn wrap-component [handler {:keys [config db]}]
+(defn wrap-component [handler {:keys [config db web-push]}]
   (fn [req]
     (handler (assoc req
                ::config config
-               ::db db))))
+               ::db db
+               ::push web-push))))
 
 (def handlers
   (routes (GET "/" [] (html/root))

@@ -7,7 +7,7 @@
             [pepa.smtp :as smtp]
             [pepa.processor.file-page-extractor :as fpe]
             [pepa.processor.page-ocr :as page-ocr]
-            [pepa.web.notifications :as notifications]
+            [pepa.web.push :as web-push]
             [pepa.init :as init]
 
             [clojure.core.match :refer [match]])
@@ -28,12 +28,12 @@
                [:config :db :bus])
    :web (component/using
           (web/make-component)
-          [:config :db :file-page-extractor])
+          [:config :db :file-page-extractor :web-push])
    :smtp (component/using
            (smtp/make-component)
            [:config :db])
-   :notifications (component/using
-                   (notifications/make-component)
+   :web-push (component/using
+                   (web-push/make-component)
                    [:db :bus])))
 
 (defn -main [& args]

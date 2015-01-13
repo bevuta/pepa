@@ -4,7 +4,7 @@
             [immutant.web :as http-server]
             [ring.middleware.stacktrace :refer [wrap-stacktrace]]))
 
-(defrecord Web [config db processor server]
+(defrecord Web [config db processor web-push server]
   component/Lifecycle
   (start [component]
     (println ";; Starting web server")

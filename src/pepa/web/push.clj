@@ -1,4 +1,4 @@
-(ns pepa.web.notifications
+(ns pepa.web.push
   (:require [com.stuartsierra.component :as component]
             [pepa.bus :as bus]
             [pepa.db :as db]
@@ -6,7 +6,7 @@
             [pepa.async :refer [collapsing-buffer]]
             [clojure.core.async :as async :refer [<!! >!!]]))
 
-(defrecord Notificator [db bus output])
+(defrecord WebPush [db bus output])
 
 (defmulti ^:private bus->web
   (fn [notificator bus-message]
@@ -43,10 +43,10 @@
 (defmethod bus->web :pages/ocr-updated [notificator message]
   (assoc message :message/topic :pages/ocr-updated))
 
-(extend-type Notificator
+(extend-type WebPush
   component/Lifecycle
   (start [component]
-    (println ";; Starting web notificator")
+    (println ";; Starting web push")
     (let [messages (bus/subscribe-all (:bus component)
                                       (collapsing-buffer 20 (constantly :resync)))
           input (async/chan)
@@ -65,7 +65,6 @@
                                        {:message/topic :resync}
                                        (some-> (bus->web component message)
                                                (dissoc :pepa.bus/topic)))]
-                (println "sending web message..." (pr-str web-message))
                 (>!! input web-message))
               (recur)))
           (catch Exception e
@@ -74,9 +73,9 @@
              :output output)))
 
   (stop [component]
-    (println ";; Stopping web notificator")
+    (println ";; Stopping web push")
     (async/untap-all (:output component))
     (dissoc component :output)))
 
 (defn make-component []
-  (map->Notificator {}))
+  (map->WebPush {}))
