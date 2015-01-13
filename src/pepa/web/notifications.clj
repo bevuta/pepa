@@ -4,7 +4,7 @@
             [pepa.db :as db]
             [pepa.model :as m]
             [pepa.async :refer [collapsing-buffer]]
-            [clojure.core.async :as async :refer [<!!]]))
+            [clojure.core.async :as async :refer [<!! >!!]]))
 
 (defrecord Notificator [db bus output])
 
@@ -52,20 +52,24 @@
           input (async/chan)
           output (async/mult input)]
       (async/thread
-        (loop []
-          (when-let [message (<!! messages)]
-            (doseq [lock (if (= :resync message)
-                           db/advisory-locks
-                           (filter (set db/advisory-locks) [(bus/topic message)]))]
-              (db/with-transaction [db (:db component)]
-                (db/advisory-xact-lock! db lock)))
-            
-            (when-let [web-message (if (= :resync message)
-                                     {:message/topic :resync}
-                                     (some-> (bus->web component message)
-                                             (dissoc :pepa.bus/topic)))]
-              (println "sending web message..." (pr-str web-message)))
-            (recur))))
+        (try
+          (loop []
+            (when-let [message (<!! messages)]
+              (doseq [lock (if (= :resync message)
+                             db/advisory-locks
+                             (filter (set db/advisory-locks) [(bus/topic message)]))]
+                (db/with-transaction [db (:db component)]
+                  (db/advisory-xact-lock! db lock)))
+              
+              (when-let [web-message (if (= :resync message)
+                                       {:message/topic :resync}
+                                       (some-> (bus->web component message)
+                                               (dissoc :pepa.bus/topic)))]
+                (println "sending web message..." (pr-str web-message))
+                (>!! input web-message))
+              (recur)))
+          (catch Exception e
+            (println "Caught exception:" e))))
       (assoc component
              :output output)))
 
