@@ -24,10 +24,12 @@
    (let [rotation (or (:rotation page) 0)]
      (html
       [:.rotate
-       [:.right {:on-click (partial rotate-clicked page (+ rotation 90))}
-        "R"]
-       [:.left  {:on-click (partial rotate-clicked page (- rotation 90))}
-        "L"]]))))
+       [:.right {:on-click (partial rotate-clicked page (+ rotation 90))
+                 :title "Rotate Clockwise"}]
+       [:.flip.vertical {:on-click (partial rotate-clicked page (+ rotation 180))
+                         :title "Flip Vertical"}]
+       [:.left  {:on-click (partial rotate-clicked page (- rotation 90))
+                 :title "Rotate Counterclockwise"}]]))))
 
 (defn thumbnail [page owner {:keys [enable-rotate?]}]
   (reify

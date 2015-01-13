@@ -185,6 +185,15 @@ Start the server by calling the `(go)` function in the `user`
 namespace. Alternatively, if you don't need a REPL, you can just use
 `lein run` to start the server.
 
+## Icons
+
+Icons found under the `resources/public/img/material/` folder are
+based on the
+["Material Design Icons"](https://github.com/google/material-design-icons/)
+by Google and are released under an
+[Attribution 4.0 International](http://creativecommons.org/licenses/by/4.0/)
+license.
+
 ## License
 
 Copyright © 2015 [bevuta IT GmbH](http://www.bevuta.com/)

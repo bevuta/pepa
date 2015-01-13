@@ -174,18 +174,26 @@
   [:.thumbnail {:position :relative}
    (let [rotate-height 25]
      [:.rotate {:position :absolute
-                :top 0
-                :width "100%", :height (px rotate-height)
-                :z-index 500}
-      [:.left :.right (list
-                       {:float :right
-                        :width (px rotate-height)
-                        :height (px rotate-height)
-                        :line-height (px rotate-height)
-                        :text-align :center}
-                       ^:prefix {:user-select :none})
-       [:&:hover {:background-color "gray"
-                  :cursor :pointer}]]])])
+                :top 0, :right 0
+                :height (px rotate-height)
+                :z-index 500
+                :background-color "rgba(255, 255, 255, 0.8)"
+                :margin (px 5)}
+      [:.left :.flip :.right (list
+                              {:float :right
+                               :width (px rotate-height)
+                               :height (px rotate-height)
+                               :line-height (px rotate-height)
+                               :text-align :center
+                               :background-size "100%"
+                               :cursor :pointer
+                               :opacity 0.3}
+                              ^:prefix {:user-select :none})
+       ;; Give buttons full opacity when hovered
+       [:&:hover {:opacity 1}]
+       [:&.right {:background-image (image-url "material/page-rotate-right.svg")}]
+       [:&.flip.vertical {:background-image (image-url "material/page-flip-vertical.svg")}]
+       [:&.left {:background-image (image-url "material/page-rotate-left.svg")}]]])])
 
 ;; [:&.inbox {:background
 ;; [:&.active {:background-color blue-background}
