@@ -18,11 +18,6 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]]))
 
-(defn ^:private scroll-to-page! [owner page]
-  (let [ref (str (:id page))
-        page-el (om/get-node owner ref)]
-    (.scrollIntoView page-el)))
-
 ;;; Editable Title Header
 
 (defn ^:private save-title! [document owner e]
@@ -70,19 +65,34 @@
                "Save"]])
             (:title document))])))))
 
-(defn ^:private show-current-page!
-  "Scrolls to :current-page of OWNER iff it's different
-  to :current-page in PREV-STATE."
-  [owner prev-state]
-  (let [page (om/get-state owner :current-page)]
-    (when (not= page (:current-page prev-state))
-      (scroll-to-page! owner page))))
+(defn ^:private scroll-maybe [page owner prev-state]
+  (prn page (type page))
+  (prn (:current-page prev-state) (type (:current-page prev-state)))
+  (when (and (= page (om/get-state owner :current-page))
+             ;; Don't scroll if we have the same ID
+             (not= (:id page) (:id (:current-page prev-state))))
+    (let [el (om/get-node owner)]
+      (.scrollIntoView el))))
+
+(defn ^:private page-cell [page owner opts]
+  (reify
+    om/IDidMount
+    (did-mount [_]
+      (scroll-maybe (om/value page) owner nil))
+    om/IDidUpdate
+    (did-update [_ _ prev-state]
+      (scroll-maybe (om/value page) owner prev-state))
+    om/IRenderState
+    (render-state [_ {:keys [current-page events]}]
+      (html
+       [:li {:class [(when (= page current-page) "current")]
+             :on-click (fn [e]
+                         (async/put! events (om/value page))
+                         (.preventDefault e))}
+        (om/build page/thumbnail page {:opts opts})]))))
 
 (defn ^:private thumbnails [pages owner]
   (reify
-    om/IDidUpdate
-    (did-update [_ _ prev-state]
-      (show-current-page! owner prev-state))
     om/IRenderState
     (render-state [_ {:keys [events current-page]}]
       (html
@@ -93,15 +103,11 @@
                                       38 (async/put! events :prev)
                                       40 (async/put! events :next))
                                     (.preventDefault e)))}
-        (for [page pages]
-          [:li {:class [(when (= page current-page) "current")]
-                :ref (str (:id page))
-                :key (:id page)
-                :on-click (fn [e]
-                            (async/put! events (om/value page))
-                            (.preventDefault e))}
-           (om/build page/thumbnail page
-                     {:opts {:enable-rotate? true}})])]))))
+        (om/build-all page-cell pages
+                      {:key :id
+                       :init-state {:events events}
+                       :state {:current-page current-page}
+                       :opts {:enable-rotate? true}})]))))
 
 (defn ^:private pages-pane-header [document]
   (om/component
@@ -115,18 +121,14 @@
 
 (defn ^:private pages [pages owner]
   (reify
-    om/IDidUpdate
-    (did-update [_ _ prev-state]
-      (show-current-page! owner prev-state))
     om/IRenderState
     (render-state [_ {:keys [events current-page]}]
       (html
        [:ul.pages {:tab-index 0}
-        (for [page pages]
-          [:li {:class [(when (= page current-page) "current")]
-                :ref (str (:id page))
-                :key (:id page)}
-           (om/build page/full page {:key :id})])]))))
+        (om/build-all page-cell pages
+                      {:key :id
+                       :init-state {:events events}
+                       :state {:current-page current-page}})]))))
 
 (defn ^:private meta-pane [document owner]
   (om/component
@@ -156,24 +158,26 @@
 (defn ^:private prev-page [pages page]
   (next-page (reverse pages) page))
 
+(defn ^:private page-idx [pages page]
+  (some (fn [[idx p]] (when (= page p) idx))
+        (map-indexed vector pages)))
+
 (defn ^:private handle-page-click! [document owner event]
-  (let [pages (om/value (:pages document))]
-    (om/update-state! owner :current-page
-                      (fn [page] 
-                        (or
-                         (case event
-                           :next (next-page pages page)
-                           :prev (prev-page pages page)
-                           event)
-                         ;; If there's no new page, return the current
-                         ;; page
-                         page)))))
+  (let [pages (:pages document)
+        page (om/get-state owner :page-number)
+        page (case event
+               :next (min (inc page) (count pages))
+               :prev (max (dec page) 1)
+               (inc (page-idx pages event)))]
+    (-> (nav/nav->route {:route [:document (:id document)]
+                         :query-params {:page page}})
+        (nav/navigate! :ignore-history))))
 
 (defn document [document owner]
   (reify
     om/IInitState
     (init-state [_]
-      {:current-page (first (:pages document))
+      {:page-number 1
        :thumbnail-width 300
        :sidebar-width css/default-right-sidebar-width
        :sidebar/visible? true
@@ -191,7 +195,7 @@
           (when (and event port)
             (cond
               (= port pages)
-              (handle-page-click! document owner event)
+              (handle-page-click! @document owner event)
               
               (= port tag-changes)
               (let [[op tag] event]
@@ -204,13 +208,15 @@
                     (api/update-document!))))
             (recur)))))
     om/IRenderState
-    (render-state [_ state]
-      (let [{:keys [current-page thumbnail-width sidebar-width]} state
+    (render-state [_ state] 
+      (let [{:keys [page-number thumbnail-width sidebar-width]} state
             page-events (:pages state)
             tag-changes (:tag-changes state)
             sidebar-width (if (:sidebar/visible? state)
                             sidebar-width
-                            0)]
+                            0)
+            current-page (nth (:pages (om/value document))
+                              (dec (or page-number 1)))]
         (html
          [:.workflow.document
           [:.pane {:style {:width thumbnail-width}}
