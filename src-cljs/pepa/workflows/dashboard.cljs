@@ -24,6 +24,11 @@
                                      #(data/add-tags % tags)))
     (.preventDefault e)))
 
+(defn ^:private page-count [pages]
+  (om/component
+   (html
+    [:.page-count (count pages)])))
+
 (defn document-preview [document]
   (reify
     om/IRender
@@ -34,7 +39,8 @@
                       :on-drop (partial handle-tags-drop document)}
           [:.preview
            [:a {:href href}
-            (om/build page/thumbnail (-> document :pages first))]]
+            (om/build page/thumbnail (-> document :pages first))
+            (om/build page-count (:pages document))]]
           [:a.title {:href href}
            (:title document)]
           (om/build tags/tags-list (:tags document))])))))

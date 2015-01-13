@@ -21,7 +21,7 @@
 (def sidebar-color dark-background)
 (def header-color dark-background)
 
-(def text-color-disabled "#999")
+(def text-color-disabled "#999999")
 (def blue-text "#37698c")
 (def default-text grey-2)
 
@@ -32,6 +32,8 @@
 (def border-light "#f0f0f0")
 (def border-dark "#cbcbcb")
 (def border-buttons "#a2a2a2")
+
+(def dashboard-page-count-color "#aaaaaa")
 
 ;;; Font
 
@@ -397,7 +399,13 @@
                 {:max-height "100%"
                  :padding {:left (px page-padding)
                            :right (px page-padding)}}
-                (calc-property :max-width ["100%" - (* 2 page-padding)]))]]
+                (calc-property :max-width ["100%" - (* 2 page-padding)]))]
+         (let [margin 10]
+          [:.page-count {:position :absolute
+                         :right (px margin)
+                         :bottom (px margin)
+                         :font-size (pt 9)
+                         :color dashboard-page-count-color}])]
         (let [title-padding 5
               title-height (em 2)]
           [:.title {:width "100%"
