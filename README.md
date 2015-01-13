@@ -82,6 +82,10 @@ are happy to receive feedback either via GitHub issues or
 since there is no official release, yet, you will have to build Pepa
 from sources to run it (see build instructions below).
 
+## Screenshots
+
+![Dashboard View](../screenshots/screenshots/dashboard.png?raw=true "Dashboard View")
+![Document View](../screenshots/screenshots/document-view.png?raw=true "Document View")
 
 ## Build instructions
 
