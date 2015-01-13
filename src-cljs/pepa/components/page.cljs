@@ -5,12 +5,19 @@
             [pepa.api :as api]
             [sablono.core :refer-macros [html]]))
 
+(defn ^:private rotate [deg]
+  (let [t (str "rotate(" deg "deg)")]
+    #js {:-webkit-transform t
+         :-moz-transform t
+         :-o-transform t
+         :-ms-transform t
+         :transform t}))
+
 (defn ^:private page-image [page owner {:keys [size]}]
   (assert size)
   (om/component
    (dom/img #js {:src (str "/pages/" (:id page) "/image/" size)
-                 :style (when-let [r (:rotation page)]
-                          #js {:transform (str "rotate(" r "deg)")})})))
+                 :style (rotate (:rotation page))})))
 
 (defn ^:private rotate-clicked [page rotation e]
   (println "rotating" page "by" rotation "degrees")
