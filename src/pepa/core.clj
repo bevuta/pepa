@@ -7,6 +7,7 @@
             [pepa.smtp :as smtp]
             [pepa.processor.file-page-extractor :as fpe]
             [pepa.processor.page-ocr :as page-ocr]
+            [pepa.processor.page-renderer :as page-renderer]
             [pepa.init :as init]
 
             [clojure.core.match :refer [match]])
@@ -22,6 +23,9 @@
    :file-page-extractor (component/using
                           (fpe/make-component)
                           [:config :db :bus])
+   :page-renderer (component/using
+                    (page-renderer/make-component)
+                    [:config :db :bus])
    :page-ocr (component/using
                (page-ocr/make-component)
                [:config :db :bus])
@@ -38,5 +42,4 @@
                      (init/write-schema)
                      (init/write-config))
     [[]] (component/start (make-system))
-    :else (println "Unsupported command line flags:" args))
-  )
+    :else (println "Unsupported command line flags:" args)))

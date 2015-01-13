@@ -48,7 +48,8 @@ CREATE TABLE pages (
        text TEXT,
        ocr_text TEXT,
        ocr_status PROCESSING_STATUS NOT NULL DEFAULT 'pending',
-       rotation INT NOT NULL DEFAULT 0
+       rotation INT NOT NULL DEFAULT 0,
+       render_status PROCESSING_STATUS NOT NULL DEFAULT 'pending'
 );
 
 CREATE TABLE page_images (
