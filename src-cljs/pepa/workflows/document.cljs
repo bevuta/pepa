@@ -10,6 +10,7 @@
             [pepa.style :as css]
 
             [pepa.api :as api]
+            [pepa.data :as data]
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
             [pepa.components.document :as document]
@@ -197,9 +198,9 @@
                 ;; Deref to get the 'actual' value (might be stale)
                 (-> @document
                     (update-in [:tags] (case op
-                                         :add conj
-                                         :remove disj)
-                               tag)
+                                         :add data/add-tags
+                                         :remove data/remove-tags)
+                               [tag])
                     (api/update-document!))))
             (recur)))))
     om/IRenderState

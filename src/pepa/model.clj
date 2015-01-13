@@ -68,7 +68,7 @@
   (db/with-transaction [conn db]
     (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, notes FROM documents WHERE id IN (%s)" ids))
           pages (get-associated conn "SELECT dp.document, p.id, p.rotation FROM pages AS p JOIN document_pages AS dp ON dp.page = p.id WHERE dp.document IN (%s) ORDER BY dp.number" ids :document)
-          tags (get-associated conn "SELECT dt.document, t.name FROM document_tags AS dt JOIN tags AS t ON t.id = dt.tag WHERE dt.document IN (%s) GROUP BY dt.document, t.name" ids :document)]
+          tags (get-associated conn "SELECT dt.document, t.name FROM document_tags AS dt JOIN tags AS t ON t.id = dt.tag WHERE dt.document IN (%s) ORDER BY dt.seq" ids :document)]
       (map (fn [{:keys [id] :as document}]
              (assoc document
                     :pages (vec (get pages id))

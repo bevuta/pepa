@@ -97,7 +97,7 @@
   "Removes tag. Might alter DOCUMENT or put [:remove TAG] into
   the :tags channel of OWNER. No-op if DOCUMENT already has TAG."
   [document owner tag]
-  (when (contains? (:tags @document) tag)
+  (when (some #{tag} (:tags @document))
     (if-let [chan (om/get-state owner :tags)]
       (async/put! chan [:remove tag])
       (om/transact! document :tags #(data/remove-tags % #{tag})))))
@@ -106,7 +106,7 @@
   "Adds TAG. Might alter DOCUMENT or put [:add TAG] into the :tags
   channel of OWNER. No-op if DOCUMENT already has TAG."
   [document owner tag]
-  (when-not (contains? (:tags @document) tag)
+  (when-not (some #{tag} (:tags @document))
     (if-let [chan (om/get-state owner :tags)]
       (async/put! chan [:add tag])
       (om/transact! document :tags

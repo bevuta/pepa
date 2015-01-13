@@ -56,10 +56,14 @@
       (s/trim)))
 
 (defn add-tags [tags new-tags]
-  (set/union (set tags) (set new-tags)))
+  (->> new-tags
+       (remove (set tags))
+       (into tags)))
 
 (defn remove-tags [tags removed-tags]
-  (set/difference (set tags) (set removed-tags)))
+  (->> tags
+       (remove (set removed-tags))
+       (into (empty tags))))
 
 ;;; Page Movement
 

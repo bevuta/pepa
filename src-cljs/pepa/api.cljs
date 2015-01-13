@@ -76,7 +76,7 @@
   (-> document
       (data/map->Document)
       (update-in [:pages] #(vec (map data/map->Page %)))
-      (update-in [:tags] set)))
+      (update-in [:tags] vec)))
 
 (defn fetch-document
   "Fetches document with ID and all its pages. Returns a channel which
@@ -128,7 +128,7 @@
       om/value
       (dissoc :id)
       (assoc :pages (mapv :id (:pages document)))
-      (update-in [:tags] set)
+      (update-in [:tags] vec)
       (update-in [:title] str)))
 
 (defn save-new-document!
@@ -192,8 +192,7 @@
       (when (= 200 (:status response))
         (->> response
              :response/transit
-             (map data/normalize-tag)
-             (set))))))
+             (mapv data/normalize-tag))))))
 
 ;;; Page Rotation
 

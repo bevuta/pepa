@@ -77,7 +77,8 @@ CREATE TABLE tags (
 CREATE TABLE document_tags (
        document INT NOT NULL REFERENCES documents,
        tag INT NOT NULL REFERENCES tags,
-       UNIQUE (document, tag)
+       UNIQUE (document, tag),
+       seq SERIAL CHECK (seq > 0)
 );
 
 CREATE TABLE inbox (
