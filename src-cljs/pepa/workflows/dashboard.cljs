@@ -52,40 +52,27 @@
       ;; Default to all documents
       (keys (:documents state))))
 
-(defn ^:private parse-page
-  "Returns the current page (according to the page query-param
-  of :navigation) or 1, if none given."
-  [state]
+(def +initial-elements+ 50)
+(def +to-load+ 50)
+
+(defn ^:private parse-query-number [state name & [default]]
   (or
    (try
-     (some-> state
-             :navigation :query-params :page
-             (js/parseInt 10))
+     (let [n (some-> (get-in state [:navigation :query-params name])
+                     (js/parseInt 10))]
+       (and (integer? n) n))
      (catch js/Error e nil))
-   1))
+   default
+   0))
+
+(defn ^:private parse-count-scroll
+  [state]
+  [(parse-query-number state :count +initial-elements+)
+   (parse-query-number state :scroll 0)])
 
 (defn ^:private page-ids [state]
-  (let [page (parse-page state)]
-    (pagination/page-items (document-ids state)
-                           page)))
-
-(defn ^:private change-page-buttons [state owner _]
-  (om/component
-   (let [page (parse-page state)
-         page-count (pagination/pages (document-ids state))
-         navigation (:navigation state)
-         route-fn (fn [page]
-                    (-> navigation
-                        (assoc-in [:query-params :page] page)
-                        (nav/nav->route)))]
-     (html
-      [:nav.page
-       [:a.button.prev {:class [(when (<= page 1)
-                                  "disabled")]
-                        :href (route-fn (dec page))}]
-       [:a.button.next {:class [(when (>= page page-count)
-                                  "disabled")]
-                        :href (route-fn (inc page))}]]))))
+  (let [[n _] (parse-count-scroll state)]
+    (take n (document-ids state))))
 
 (defn ^:private fetch-missing-documents!
   "Fetches all missing documents which will be visible in the
@@ -107,42 +94,79 @@
     (go (search/clear-results! state))))
 
 (defn ^:private dashboard-title [state]
-  (let [documents (document-ids state)
-        page (parse-page state)
-        [start end] (pagination/page-range documents page)]
+  (let [documents (document-ids state)]
     (cond
      (search/search-query state)
      "Search Results"
     
      true
-     "Dashboard ")))
+     "Dashboard")))
 
-(defn ^:private document-page-count-label [state _ _]
+(defn ^:private document-count [state]
   (om/component
    (html
-    (let [documents (document-ids state)
-          page (parse-page state)
-          [start end] (pagination/page-range documents page)]
-      [:span.document-count
-       (when (and start end)
-         (str "(" start "-" end " of " (count documents) ")"))]))))
+    [:span.document-count (str "(" (count (document-ids state)) ")")])))
+
+;;; Should be twice the document-height or so.
+(def +scroll-margin+ 500)
+
+(defn on-documents-scroll [state owner e]
+  (let [container e.currentTarget
+        scroll-top (.-scrollTop container)
+        scroll-height (.-scrollHeight container)
+        outer-height (.-clientHeight container)
+        bottom-distance (Math/abs (- scroll-height
+                                     (+ scroll-top outer-height)))
+        progress (/ scroll-top scroll-height)
+        elements (document-ids state)]
+    (let [[num scroll] (parse-count-scroll state)
+          scroll (Math/ceil (* progress num))
+          num (if (< bottom-distance +scroll-margin+)
+                (+ num +to-load+)
+                num)
+          num (min num (count elements))]
+      (-> (:navigation state)
+          (assoc-in [:query-params :count] (str num))
+          (assoc-in [:query-params :scroll] (str scroll))
+          (nav/nav->route)
+          (nav/navigate! :ignore-history :no-dispatch))
+      (om/update! state [:navigation :query-params :count] num))))
+
+(defn scroll-to-offset! [state owner]
+  (let [el (om/get-node owner "documents")
+        scroll-height (.-scrollHeight el)
+        [num scroll] (parse-count-scroll state)
+        elements (page-ids state)]
+    
+    (cond
+      (= 0 (.-scrollTop el))
+      (set! (.-scrollTop el) (* scroll-height
+                                (/ scroll (count elements))))
+
+      ;; TODO: :count isn't always nil (the query-params won't get
+      ;; updated). Need another way to change the url without changing
+      ;; history
+      (every? nil? ((juxt :count :scroll) (get-in state [:navigation :query-params])))
+      (set! (.-scrollTop el) 0))))
 
 (defn dashboard [state owner]
   (reify
+    om/ICheckState
     om/IWillMount
     (will-mount [_]
       (go
         (<! (search-maybe! state owner))
-        (<! (fetch-missing-documents! state owner))))
+        (<! (fetch-missing-documents! state owner))
+        (scroll-to-offset! state owner)))
     om/IDidUpdate
     (did-update [_ _ _]
       (go
         (<! (search-maybe! state owner))
-        (<! (fetch-missing-documents! state owner))))
+        (<! (fetch-missing-documents! state owner))
+        (scroll-to-offset! state owner)))
     om/IInitState
     (init-state [_]
-      {:sort/key :id
-       :filter-width css/default-right-sidebar-width})
+      {:filter-width css/default-right-sidebar-width})
     om/IRenderState
     (render-state [_ local-state]
       ;; Show all documents with ids found in :dashboard/document-ids
@@ -152,13 +176,12 @@
           [:.pane {:style {:width (str "calc(100% - " (:filter-width local-state) "px - 2px)")}}
            [:header
             (dashboard-title state)
-            (om/build document-page-count-label state)
-            (om/build change-page-buttons state)]
-           [:.documents
+            (om/build document-count state)]
+           [:.documents {:ref "documents"
+                         :on-scroll (partial on-documents-scroll state owner)}
             (let [documents (->> document-ids
                                  (map (partial get (:documents state)))
-                                 (remove nil?)
-                                 (sort-by (:sort/key local-state)))]
+                                 (remove nil?))]
               (om/build-all document-preview documents
                             {:key :id}))]]
           [:.pane {:style {:width (:filter-width local-state)}}

@@ -373,24 +373,14 @@
      [:.pane {:float :left
               :height "100%"}
       [:header
-       [:.document-count {:font-size (pt 9)}]
-       [:.page {:width (px 100)
-                :height "100%"
-                :float :right
-                :position :relative}
-        [:a
-         [:&.disabled {:pointer-events :none
-                       :cursor :default}]
-         [:&.prev {:left 0}
-          [:&:before {:content (pr-str "<")}]]
-         [:&.next {:right 0}
-          [:&:before {:content (pr-str ">")}]]]]]
+       [:.document-count {:font-size (pt 9)
+                          :padding-left (px 5)}]]
       [:.documents (list
                     {:overflow-y :auto}
                     (calc-property :height ["100%" - header-height]))
        [:.document {:display :inline-block
-                    :width (px document-width)
                     :height (px document-height)
+                    :width (px document-width)
                     :padding (px document-padding)}
         [:&:hover {:background-color dark-background}]
 
@@ -401,9 +391,10 @@
                              :style :solid
                              :color border-light}
                     :background-color light-background
-                    :position :relative}
+                    :position :relative
+                    :overflow :hidden}
          [:img (list
-                {:max-height :auto
+                {:max-height "100%"
                  :padding {:left (px page-padding)
                            :right (px page-padding)}}
                 (calc-property :max-width ["100%" - (* 2 page-padding)]))]]
