@@ -9,8 +9,7 @@
             [pepa.data :as data]
 
             [goog.string :as gstring])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]
-                   [pepa.async :refer [<?]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def xhr-timeout (* 5 1000))
 
