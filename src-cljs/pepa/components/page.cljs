@@ -7,10 +7,10 @@
 
 (defn ^:private rotate [deg]
   (let [t (str "rotate(" deg "deg)")]
-    #js {:-webkit-transform t
-         :-moz-transform t
-         :-o-transform t
-         :-ms-transform t
+    #js {:WebkitTransform t
+         :MozTransform t
+         :OTransform t
+         :MsTransform t
          :transform t}))
 
 (defn ^:private page-image [page owner {:keys [size]}]
@@ -20,7 +20,7 @@
                  :style (rotate (:rotation page))})))
 
 (defn ^:private rotate-clicked [page rotation e]
-  (println "rotating" page "by" rotation "degrees")
+  (println "rotating" page "to" rotation "degrees")
   (api/rotate-page! page rotation)
   (doto e
     (.preventDefault)
