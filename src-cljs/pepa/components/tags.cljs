@@ -223,4 +223,4 @@
     (render [_]
       (html
        [:ul.tags
-        (map #(om/build tag % {:react-key %}) tags)]))))
+        (om/build-all tag tags {:key-fn identity})]))))
