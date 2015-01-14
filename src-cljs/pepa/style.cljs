@@ -3,6 +3,8 @@
             [garden.units :as u :refer [px em pt]]
             [garden.stylesheet :refer [at-keyframes cssfn]]
 
+            [pepa.components.sidebar :refer [navigation-elements]]
+
             [clojure.string :as s]
             [goog.string :as gstring]))
 
@@ -99,11 +101,8 @@
                         :right (px header-padding)}
               :border-bottom (str "2px solid white")}]))
 
-(def sidebar-css
-  [:#sidebar {:height "100%"
-              :float :left
-              :background-color sidebar-color
-              :border-right (str "1px solid " border-dark)}
+(def sidebar-header-css
+  (list
    generic-header-css
    [:header {:text-decoration :none
              :font-size (em 1.2)}
@@ -114,63 +113,108 @@
                :width (px logo-width)
                :height (px logo-width)}])
     [:span {:padding-left (px 5)}
-     [:&.brand {:font-weight 400}]]]
-   ;; Search
-   [:.search {:height (px 50)
-              :position :relative
-              :border-bottom (str "1px solid " border-dark)}
-    [:input (list
-             {:width "90%"
-              :position :absolute
-              :top "50%"
-              :left "50%"
-              :border (str "1px solid " border-dark)}
-             ^:prefix {:transform "translate(-50%,-50%)"})]]
+     [:&.brand {:font-weight 400}]]]))
 
-   ;; Sections
-   [:ul {:padding-left 0, :margin 0}
-    (let [item-height 50
-          padding (/ item-height 8)
-          line-height (/ item-height 1.5)]
-      [:li {:list-style-type :none
-            :height (px line-height)
-            :line-height (px line-height)
-            :padding {:top (px padding)
-                      :bottom (px padding)}
-            :background {:repeat :no-repeat
-                         :size (px 20)
-                         :position [[(px 20) :center]]}}
-       (for [row [:inbox :dashboard]]
-         (let [row (name row)
-               selector (keyword (str "&." row))]
-           [selector
-            [:a
-             [:div
-              [:&:before {:background-image (image-url (str "menu-icons/" row ".svg"))}]]]
-            [:&.active
-             [:a
-              [:div
-               [:&:before :&:after {:background-color blue-background}]
-               [:&:before {:background-image (image-url (str "menu-icons/" row "-active.svg"))}]]]]]))
-       [:&.inbox {:position :relative}
-        [:.drop-target {:background-color darker-background}]
-        [:.count {:position :absolute
-                  :right (px 26)
-                  :font-size (pt 11)
-                  :color blue-text}]]
-       [:a
-        [:div {:height (px line-height)}
-         [:&:before :&:after {:content (pr-str " ")
-                              :display :block
-                              :height (px line-height)}]
-         [:&:before {:width (px 50)
-                     :float :left
-                     :margin-right (px 10)
+(defn sidebar-search-css [height]
+  [:.search {:height (px height)
+             :position :relative
+             :border-bottom (str "1px solid " border-dark)}
+   [:input (list
+            {:width "90%"
+             :position :absolute
+             :top "50%"
+             :left "50%"
+             :border (str "1px solid " border-dark)}
+            ^:prefix {:transform "translate(-50%,-50%)"})]]  )
+
+(def sidebar-css
+  (let [search-height 50]
+    [:#sidebar {:height "100%"
+                :float :left
+                :background-color sidebar-color
+                :border-right (str "1px solid " border-dark)}
+     sidebar-header-css
+     (sidebar-search-css search-height)
+
+     ;; Sections
+     [:nav.workflows (list
+                      {:overflow-y :auto}
+                      (calc-property :height ["100%" - (+ search-height header-height)]))
+      [:ul {:padding-left 0, :margin 0}
+       (let [item-height 50
+             padding (/ item-height 8)
+             line-height (/ item-height 1.5)
+             icon-size 20
+             padding-left 20]
+         [:li (list {:list-style-type :none
+                     :height (px line-height)
+                     :line-height (px line-height)
+                     :padding {:top (px padding)
+                               :bottom (px padding)}
                      :background {:repeat :no-repeat
-                                  :position [[(px 20) :center]]
-                                  :size (px 20)}}]
-         [:&:after {:width (px 10)
-                    :float :right}]]]])]])
+                                  :size (px icon-size)
+                                  :position [[(px padding-left) :center]]}}
+                    ^:prefix {:user-select :none})
+          (for [row (map second navigation-elements)]
+            (let [row (name row)
+                  selector (keyword (str "&." row))]
+              [selector
+               [:a
+                [:div
+                 [:&:before {:background-image (image-url (str "menu-icons/" row ".svg"))}]]]
+               [:&.active
+                [:a
+                 [:div
+                  [:&:before :&:after {:background-color blue-background}]
+                  [:&:before {:background-image (image-url (str "menu-icons/" row "-active.svg"))}]]]]]))
+          [:&.inbox {:position :relative}
+           [:.drop-target {:background-color darker-background}]
+           [:.count {:position :absolute
+                     :right (px 26)
+                     :font-size (pt 11)
+                     :color blue-text}]]
+          [:&.tags {:cursor :pointer}
+           ;; Use different icon when open?
+           [:div.open
+            [:&:before {:background-image (image-url "menu-icons/tags-open.svg")}]]
+           [:ul {:list-style-type :none
+                 :padding-left (px (+ (* 2 padding-left)
+                                      icon-size
+                                      
+                                      ))
+                 :overflow-y :auto}
+            (let [color-size 12]
+              [:li.tag {:display :list-item
+                        :position :relative
+                        :background :initial
+                        :max-width "100%"
+                        ;; Not sure if this is a good idea
+                        :font-size (px color-size)
+                        :line-height (px color-size)
+                        :height (px color-size)}
+               [:.tag-name (list {:position :absolute
+                                  :top "50%"
+                                  :overflow :hidden
+                                  :text-overflow :ellipsis}
+                                 (calc-property :width ["100%" - (* 2 color-size)])
+                                 ^:prefix {:transform "translateY(-50%)"})]
+               [:.color {:width (px color-size)
+                         :height (px color-size)
+                         :float :right}]])]]
+          
+          [:a
+           [:div {:height (px line-height)}
+            [:&:before :&:after {:content (pr-str " ")
+                                 :display :block
+                                 :height (px line-height)}]
+            [:&:before {:width (px 50)
+                        :float :left
+                        :margin-right (px 10)
+                        :background {:repeat :no-repeat
+                                     :position [[(px padding-left) :center]]
+                                     :size (px 20)}}]
+            [:&:after {:width (px 10)
+                       :float :right}]]]])]]]))
 
 (def page-css
   [:.thumbnail {:position :relative}
@@ -401,11 +445,11 @@
                            :right (px page-padding)}}
                 (calc-property :max-width ["100%" - (* 2 page-padding)]))]
          (let [margin 10]
-          [:.page-count {:position :absolute
-                         :right (px margin)
-                         :bottom (px margin)
-                         :font-size (pt 9)
-                         :color dashboard-page-count-color}])]
+           [:.page-count {:position :absolute
+                          :right (px margin)
+                          :bottom (px margin)
+                          :font-size (pt 9)
+                          :color dashboard-page-count-color}])]
         (let [title-padding 5
               title-height (em 2)]
           [:.title {:width "100%"
@@ -519,12 +563,12 @@
 
 (def tags-css
   (let [tag-icon-box 24]
-    [:.tags {:padding 0, :margin 0
-             :font-size (pt 8)
-             :overflow-x :hidden
-             :white-space :nowrap
-             :min-height (px tags-min-height)
-             :line-height (px (+ 2 tags-min-height))}
+    [:ul.tags {:padding 0, :margin 0
+               :font-size (pt 8)
+               :overflow-x :hidden
+               :white-space :nowrap
+               :min-height (px tags-min-height)
+               :line-height (px (+ 2 tags-min-height))}
      [:&.editable (list
                    {:padding-left (px tag-icon-box)
                     :border (str "1px solid " border-dark)

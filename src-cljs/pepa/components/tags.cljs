@@ -66,7 +66,7 @@
     (send-event! owner [:remove tag])
     (.preventDefault e)))
 
-(defn ^:private tag [tag owner _]
+(defn tag [tag owner _]
   (reify
     om/IDidUpdate
     (did-update [_ prev-props prev-state]
@@ -91,7 +91,7 @@
             :on-drag-start (partial handle-drag-start tag)}
         [:li.tag {:class [(when (= selected tag) "selected")]}
          [:span.color {:style {:background-color (tag-color tag)}}]
-         tag]]))))
+         [:span.tag-name tag]]]))))
 
 (defn ^:private remove-tag!
   "Removes tag. Might alter DOCUMENT or put [:remove TAG] into
