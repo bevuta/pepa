@@ -75,6 +75,7 @@
       (.scrollIntoView el))))
 
 (defn ^:private page-cell [page owner opts]
+  (assert (:view opts))
   (reify
     om/IDidMount
     (did-mount [_]
@@ -89,7 +90,7 @@
              :on-click (fn [e]
                          (async/put! events (om/value page))
                          (.preventDefault e))}
-        (om/build page/thumbnail page {:opts opts})]))))
+        (om/build (:view opts) page {:opts opts})]))))
 
 (defn ^:private thumbnails [pages owner]
   (reify
@@ -107,7 +108,8 @@
                       {:key :id
                        :init-state {:events events}
                        :state {:current-page current-page}
-                       :opts {:enable-rotate? true}})]))))
+                       :opts {:enable-rotate? true
+                              :view page/thumbnail}})]))))
 
 (defn ^:private pages-pane-header [document]
   (om/component
@@ -128,7 +130,8 @@
         (om/build-all page-cell pages
                       {:key :id
                        :init-state {:events events}
-                       :state {:current-page current-page}})]))))
+                       :state {:current-page current-page}
+                       :opts {:view page/full}})]))))
 
 (defn ^:private meta-pane [document owner]
   (om/component
