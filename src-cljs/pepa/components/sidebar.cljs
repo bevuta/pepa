@@ -108,4 +108,5 @@
                [:li {:class [(name ident)
                              (when (route-matches? route routes) "active")]
                      :key (name ident)}
+                ;; TODO: Use build-all
                 (om/build navigation-element state {:opts element})]))]])))))

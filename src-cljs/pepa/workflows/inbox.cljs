@@ -347,6 +347,7 @@
             (let [page-events (:page-events state)]
               (doall
                (for [p pages]
+                 ;; TODO: Use build-all here
                  (om/build document-page p
                            {:key :id
                             :init-state {:view view
