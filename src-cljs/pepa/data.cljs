@@ -65,6 +65,17 @@
        (remove (set removed-tags))
        (into (empty tags))))
 
+(defn tag-document-count [state tag]
+  (get-in state [:tags tag] 0))
+
+(defn all-tags [state]
+  (-> state :tags keys set))
+
+(defn sorted-tags [state]
+  (->> (all-tags state)
+       ;; Sort by document-count (desc) & name (asc)
+       (sort-by (juxt #(- (tag-document-count state %)) identity))))
+
 ;;; Page Movement
 
 (declare move-pages)

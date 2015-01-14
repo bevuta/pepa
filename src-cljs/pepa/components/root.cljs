@@ -25,10 +25,7 @@
   (go
     ;; Inbox initial data
     (om/update! state :workflow/inbox inbox/initial-data)
-    ;; Tags
-    (->> (<! (api/fetch-tags))
-         (set)
-         (om/update! state :tags))))
+    (<! (api/fetch-tags! state))))
 
 (defn transition-to! [state route query-params]
   (println "route" (pr-str route)

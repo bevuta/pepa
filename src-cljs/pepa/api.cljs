@@ -190,9 +190,17 @@
   (go
     (let [response (<! (xhr-request! "/tags" :get))]
       (when (= 200 (:status response))
-        (->> response
-             :response/transit
-             (mapv (comp data/normalize-tag :name)))))))
+        (:response/transit response)))))
+
+(defn fetch-tags! [state]
+  (go
+    (let [tags (<! (fetch-tags))]
+      (om/update! state :tags
+                  (reduce (fn
+                            [ts {:keys [name count]}]
+                            (assoc ts (data/normalize-tag name) count))
+                          {}
+                          tags)))))
 
 ;;; Page Rotation
 

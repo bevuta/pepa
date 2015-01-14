@@ -4,12 +4,13 @@
             [clojure.string :as s]
             [cljs.core.async :as async]
 
+            [pepa.data :as data]
             [pepa.navigation :as nav]
-            [pepa.search :refer [search-query]]
-            [pepa.components.logo :as logo]
             [pepa.api.upload :as upload]
+            [pepa.components.logo :as logo]
             [pepa.components.tags :as tags]
 
+            [pepa.search :refer [search-query]]
             [pepa.search.parser :as parser])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
@@ -94,7 +95,7 @@
                :class [(when open? "open")]}
          title]
         (when open?
-          (om/build tags/tags-list (sort (:tags state))))]))))
+          (om/build tags/tags-list (data/sorted-tags state)))]))))
 
 (defn ^:private route-matches? [route workflows]
   (let [route (if (seqable? route)
