@@ -192,7 +192,7 @@
       (when (= 200 (:status response))
         (->> response
              :response/transit
-             (mapv data/normalize-tag))))))
+             (mapv (comp data/normalize-tag :name)))))))
 
 ;;; Page Rotation
 
