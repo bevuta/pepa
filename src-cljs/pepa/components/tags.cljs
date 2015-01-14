@@ -70,8 +70,8 @@
   (reify
     om/IDidUpdate
     (did-update [_ prev-props prev-state]
-      (when (and (= tag (om/get-state owner :selected))
-                 (not= tag (:selected prev-state)))
+      (when (and (not (contains? (:selected prev-state) tag))
+                 (contains? (om/get-state owner :selected) tag))
         (.focus (om/get-node owner))))
     om/IRenderState
     (render-state [_ {:keys [selected]}]
@@ -89,7 +89,7 @@
             :on-key-down (partial handle-tag-key-down! tag owner)
             :draggable true
             :on-drag-start (partial handle-drag-start tag)}
-        [:li.tag {:class [(when (= selected tag) "selected")]}
+        [:li.tag {:class [(when (contains? selected tag) "selected")]}
          [:span.color {:style {:background-color (tag-color tag)}}]
          [:span.tag-name tag]]]))))
 
@@ -159,7 +159,7 @@
 
         (and (= keycodes/BACKSPACE key-code)
              (cursor-at-start? element))
-        (send-event! owner [:focus (last (:tags document))])))))
+        (send-event! owner [:focus (om/value (last (:tags document)))])))))
 
 (defn handle-tags-blur! [document owner e]
   (when (store-tag! document owner)
