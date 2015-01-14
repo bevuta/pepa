@@ -41,7 +41,7 @@
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
              :provided {:dependencies [[org.clojure/clojurescript "0.0-2665"]
-                                       [com.cemerick/piggieback "0.1.4"]
+                                       [com.cemerick/piggieback "0.1.5"]
                                        [com.cognitect/transit-cljs "0.8.199"]
                                        [org.om/om "0.8.0"]
                                        [garden "1.2.5"]
