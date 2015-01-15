@@ -186,8 +186,6 @@
        :tag-changes (async/chan)})
     om/IWillMount
     (will-mount [_]
-      ;; Refresh document from server
-      (api/fetch-documents! [(-> document om/value :id)])
       ;; Start handling tag change events etc.
       (go-loop []
         (let [pages (om/get-state owner :pages)
