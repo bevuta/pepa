@@ -10,5 +10,6 @@ pom.xml.asc
 /config.clj
 /resources/public/pepa.js
 /resources/public/out
+/resources/public/react-*.js
 /.repl/
 /result

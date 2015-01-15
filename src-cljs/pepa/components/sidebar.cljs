@@ -4,11 +4,13 @@
             [clojure.string :as s]
             [cljs.core.async :as async]
 
+            [pepa.data :as data]
             [pepa.navigation :as nav]
-            [pepa.search :refer [search-query]]
-            [pepa.components.logo :as logo]
             [pepa.api.upload :as upload]
+            [pepa.components.logo :as logo]
+            [pepa.components.tags :as tags]
 
+            [pepa.search :refer [search-query]]
             [pepa.search.parser :as parser])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
@@ -78,6 +80,23 @@
          (when-let [pages (-> state :workflows :inbox :documents :inbox :pages seq)]
            [:span.count (count pages)])]]))))
 
+(defmethod navigation-element :tags [state owner [title id _ href]]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:open? true})
+    om/IRenderState
+    (render-state [_ {:keys [open?]}]
+      (html
+       [:a {:href nil}
+        [:div {:on-click (fn [e]
+                           (om/update-state! owner :open? not)
+                           (.preventDefault e))
+               :class [(when open? "open")]}
+         title]
+        (when open?
+          (om/build tags/tags-list (data/sorted-tags state)))]))))
+
 (defn ^:private route-matches? [route workflows]
   (let [route (if (seqable? route)
                 (first route)
@@ -88,7 +107,8 @@
 
 (def navigation-elements
   [["Inbox"     :inbox     #{:inbox}     (nav/workflow-route :inbox)]
-   ["Documents" :dashboard #{:dashboard :search} (nav/dashboard-route)]])
+   ["Documents" :dashboard #{:dashboard :search} (nav/dashboard-route)]
+   ["Tags"      :tags      #{}           nil]])
 
 (defn sidebar-component [state]
   (let [route (om/value (get-in state [:navigation :route]))]
@@ -101,11 +121,12 @@
 
           (om/build search-field nil
                     {:state {:query (search-query state)}})
-          
-          [:ul
-           (for [element navigation-elements]
-             (let [[title ident routes href] element]
-               [:li {:class [(name ident)
-                             (when (route-matches? route routes) "active")]
-                     :key (name ident)}
-                (om/build navigation-element state {:opts element})]))]])))))
+          [:nav.workflows
+           [:ul
+            (for [element navigation-elements]
+              (let [[title ident routes href] element]
+                [:li {:class [(name ident)
+                              (when (route-matches? route routes) "active")]
+                      :key (name ident)}
+                 ;; TODO: Use build-all
+                 (om/build navigation-element state {:opts element})]))]]])))))

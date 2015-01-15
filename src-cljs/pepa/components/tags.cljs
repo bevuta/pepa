@@ -66,15 +66,15 @@
     (send-event! owner [:remove tag])
     (.preventDefault e)))
 
-(defn ^:private tag [tag owner _]
+(defn tag [tag owner _]
   (reify
     om/IDidUpdate
     (did-update [_ prev-props prev-state]
-      (when (and (om/get-state owner :selected?)
-                 (not (:selected? prev-state)))
+      (when (and (not (contains? (:selected prev-state) tag))
+                 (contains? (om/get-state owner :selected) tag))
         (.focus (om/get-node owner))))
     om/IRenderState
-    (render-state [_ {:keys [selected?]}]
+    (render-state [_ {:keys [selected]}]
       (html
        [:a {:href (when-not (om/get-state owner :events)
                     (nav/tag-search tag))
@@ -89,9 +89,9 @@
             :on-key-down (partial handle-tag-key-down! tag owner)
             :draggable true
             :on-drag-start (partial handle-drag-start tag)}
-        [:li.tag {:class [(when selected? "selected")]}
+        [:li.tag {:class [(when (contains? selected tag) "selected")]}
          [:span.color {:style {:background-color (tag-color tag)}}]
-         tag]]))))
+         [:span.tag-name tag]]]))))
 
 (defn ^:private remove-tag!
   "Removes tag. Might alter DOCUMENT or put [:remove TAG] into
@@ -159,7 +159,7 @@
 
         (and (= keycodes/BACKSPACE key-code)
              (cursor-at-start? element))
-        (send-event! owner [:focus (last (:tags document))])))))
+        (send-event! owner [:focus (om/value (last (:tags document)))])))))
 
 (defn handle-tags-blur! [document owner e]
   (when (store-tag! document owner)
@@ -205,11 +205,10 @@
                                    (when (re-find #"\w" text)
                                      (focus-tag-input owner)
                                      (.stopPropagation e))))}
-        (map #(om/build tag %
-                        {:react-key %
-                         :init-state {:events events}
-                         :state {:selected? (contains? selected %)}})
-             (:tags document))
+        (om/build-all tag (:tags document)
+                      {:key-fn identity
+                       :init-state {:events events}
+                       :state {:selected selected}})
         [:li.input
          [:input {:ref "tag-input"
                   :tab-index 0
@@ -223,4 +222,4 @@
     (render [_]
       (html
        [:ul.tags
-        (map #(om/build tag % {:react-key %}) tags)]))))
+        (om/build-all tag tags {:key-fn identity})]))))

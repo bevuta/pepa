@@ -72,4 +72,10 @@
     (when-let [processor (:processor component)]
       (processor/stop processor))
     (assoc component
-      :processor nil)))
+           :processor nil)))
+
+(defmethod clojure.core/print-method FilePageExtractor
+  [ext ^java.io.Writer writer]
+  (.write writer (str "#<PageRenderer "
+                      (if (:processor ext) "active" "disabled")
+                      ">")))

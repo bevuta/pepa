@@ -80,3 +80,9 @@
       (processor/stop processor))
     (assoc component
            :processor nil)))
+
+(defmethod clojure.core/print-method PageOcr
+  [ocr ^java.io.Writer writer]
+  (.write writer (str "#<OcrRenderer "
+                      (if (:processor ocr) "active" "disabled")
+                      ">")))

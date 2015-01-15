@@ -226,10 +226,10 @@
   :allowed-methods #{:get}
   :handle-ok (fn [ctx]
                (let [tags (db/query (get-in ctx [:request ::db])
-                                    "SELECT name FROM tags ORDER BY name")]
+                                    "SELECT t.name, COUNT(dt.document) FROM tags AS t JOIN document_tags AS dt ON dt.tag = t.id GROUP BY t.name")]
                  (condp = (get-in ctx [:representation :media-type])
-                   "text/html" (html/tags tags)
-                   (mapv :name tags)))))
+                   "text/html" (html/tags (map :name tags))
+                   tags))))
 
 (defn handle-get-objects-for-tag [req tag]
   (db/with-transaction [conn (::db req)]

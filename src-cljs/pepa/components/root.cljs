@@ -25,10 +25,7 @@
   (go
     ;; Inbox initial data
     (om/update! state :workflow/inbox inbox/initial-data)
-    ;; Tags
-    (->> (<! (api/fetch-tags))
-         (set)
-         (om/update! state :tags))))
+    (<! (api/fetch-tags! state))))
 
 (defn transition-to! [state route query-params]
   (println "route" (pr-str route)
@@ -91,7 +88,12 @@
              [:inbox] (when-let [c (:workflow/inbox state)]
                         (om/build inbox/group-pages-workflow c))
              [[:document id]] (when-let [d (get-in state [:documents id])]
-                                (om/build document/document d))
+                                (let [page (some-> (:page query-params)
+                                                   (js/parseInt 10)
+                                                   (try (catch js/Error e nil)))
+                                      page (if (integer? page) page 1)]
+                                  (om/build document/document d
+                                            {:state {:page-number page}})))
              :else (js/console.log "unmatched route" (pr-str route)))]
           (when-let [up (:upload state)]
             (om/build upload-dialog up
