@@ -13,7 +13,7 @@
          :MsTransform t
          :transform t}))
 
-(def +pending-placeholder+ "img/pending.svg")
+(def +pending-placeholder+ "/img/pending.svg")
 
 (defn ^:private page-image [page owner {:keys [size]}]
   (assert size)
@@ -49,7 +49,8 @@
   (reify
     om/IRenderState
     (render-state [_ {:keys [overlay?]}]
-      (if enable-rotate?
+      (if (and enable-rotate?
+               (= :processing-status/processed (:render-status page)))
         (dom/div #js {:className "thumbnail"
                       :onMouseEnter (fn [e] (om/set-state! owner :overlay? true))
                       :onMouseLeave (fn [e] (om/set-state! owner :overlay? false))}
