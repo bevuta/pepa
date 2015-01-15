@@ -66,8 +66,6 @@
             (:title document))])))))
 
 (defn ^:private scroll-maybe [page owner prev-state]
-  (prn page (type page))
-  (prn (:current-page prev-state) (type (:current-page prev-state)))
   (when (and (= page (om/get-state owner :current-page))
              ;; Don't scroll if we have the same ID
              (not= (:id page) (:id (:current-page prev-state))))

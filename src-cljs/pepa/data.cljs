@@ -3,7 +3,7 @@
             [clojure.set :as set]
             [clojure.string :as s]))
 
-(defrecord Page [id rotation])
+(defrecord Page [id rotation render-status])
 (defrecord Document [id title pages tags created modified notes])
 
 (defrecord State [documents navigation upload])

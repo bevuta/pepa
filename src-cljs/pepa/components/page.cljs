@@ -13,11 +13,18 @@
          :MsTransform t
          :transform t}))
 
+(def +pending-placeholder+ "img/pending.svg")
+
 (defn ^:private page-image [page owner {:keys [size]}]
   (assert size)
   (om/component
-   (dom/img #js {:src (str "/pages/" (:id page) "/image/" size)
-                 :style (rotate (:rotation page))})))
+   (let [rendered? (= :processing-status/processed (:render-status page))]
+     (dom/img #js {:src (if rendered?
+                          (str "/pages/" (:id page) "/image/" size)
+                          +pending-placeholder+)
+                   :style (rotate (:rotation page))
+                   :className (when-not rendered
+                                "pending")}))))
 
 (defn ^:private rotate-clicked [page rotation e]
   (println "rotating" page "to" rotation "degrees")
