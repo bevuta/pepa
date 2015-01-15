@@ -23,7 +23,7 @@
                           (str "/pages/" (:id page) "/image/" size)
                           +pending-placeholder+)
                    :style (rotate (:rotation page))
-                   :className (when-not rendered
+                   :className (when-not rendered?
                                 "pending")}))))
 
 (defn ^:private rotate-clicked [page rotation e]
