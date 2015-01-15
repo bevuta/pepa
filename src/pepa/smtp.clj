@@ -52,5 +52,11 @@
     (.stop server)
     (assoc component :server nil)))
 
+(defmethod clojure.core/print-method SMTP
+  [smtp ^java.io.Writer writer]
+  (.write writer (str "#<SMTP Server "
+                      (if (:server smtp) "active" "disabled")
+                      ">")))
+
 (defn make-component []
   (map->SMTP {}))

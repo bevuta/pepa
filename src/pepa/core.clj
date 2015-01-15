@@ -38,5 +38,4 @@
                      (init/write-schema)
                      (init/write-config))
     [[]] (component/start (make-system))
-    :else (println "Unsupported command line flags:" args))
-  )
+    :else (println "Unsupported command line flags:" args)))

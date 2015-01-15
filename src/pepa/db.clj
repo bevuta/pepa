@@ -30,6 +30,10 @@
       (.close datasource))
     (assoc component :datasource nil)))
 
+(defmethod clojure.core/print-method Database
+  [db ^java.io.Writer writer]
+  (.write writer (str "#<DatabaseConnection>")))
+
 (defn make-component []
   (map->Database {}))
 
