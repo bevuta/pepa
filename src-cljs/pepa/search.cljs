@@ -30,26 +30,30 @@
     (om/update! state :search/channel nil)))
 
 (defn clear-results!
-  "Resets search results to *all* documents on the server."
+  "Resets search results."
   [state]
+  (cancel-search! state)
+  (om/transact! state (fn [state]
+                        (assoc state
+                               :search/query nil
+                               :search/results nil
+                               :search/channel nil))))
+
+(defn all-documents!
+  "Fetches all document-ids and stores them in :search/results."
+  [state & [force?]]
   (go
-    ;; NOTE: This is quite ugly. We should introduce a :search
-    ;; top-level key.
-    (when (let [query (:search/query state)]
-            (or query
-                (and (nil? query)
-                     (nil? (:search/channel state))
-                     (empty? (:search/results state)))))
+    (when (or (not= ::all (:search/query state))
+              force?)
+      (clear-results! state)
       (let [ch (api/fetch-document-ids)]
-        (doto state
-          (cancel-search!)
-          (om/update! :search/results nil)
-          (om/update! :search/query nil)
-          (om/update! :search/channel ch))
+        (om/transact! state #(assoc %
+                                    :search/query ::all
+                                    :search/channel ch))
         (when-let [results (<! ch)]
-          (doto state
-            (om/update! :search/channel nil)
-            (om/update! :search/results results)))))))
+          (om/transact! state #(assoc %
+                                      :search/results results
+                                      :search/channel nil)))))))
 
 (defn search! [state query]
   (go

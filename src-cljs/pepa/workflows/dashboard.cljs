@@ -90,14 +90,14 @@
       (when (seq missing)
         (<! (api/fetch-documents! missing))))))
 
-(defn ^:private search-maybe! [state owner]
+(defn ^:private search-maybe! [state owner & [force-update?]]
   (match [(-> @state :navigation :route)]
     [[:search [:tag tag]]]
     (search/search! state (list 'tag tag))
     [[:search [:query query]]]
     (search/search! state query) 
     :else
-    (go (search/clear-results! state))))
+    (go (search/all-documents! state force-update?))))
 
 (defn ^:private dashboard-title [state]
   (let [documents (document-ids state)]
@@ -161,7 +161,7 @@
     om/IWillMount
     (will-mount [_]
       (go
-        (<! (search-maybe! state owner))
+        (<! (search-maybe! state owner :force-update))
         (<! (fetch-missing-documents! state owner))
         (scroll-to-offset! state owner)))
     om/IDidUpdate
