@@ -9,10 +9,11 @@
             [pepa.api.upload :as upload]
             [pepa.components.logo :as logo]
             [pepa.components.tags :as tags]
+            [pepa.components.draggable :refer [resize-draggable]]
 
             [pepa.search :refer [search-query]]
             [pepa.search.parser :as parser])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn ^:private search-field [_ owner opts]
   (reify
@@ -37,7 +38,12 @@
                                                   e.currentTarget.value)
                                    true)}]]))))
 
-(defmulti navigation-element (fn [_ _ [name id _ route]] id))
+(def navigation-elements
+  [["Inbox"     :inbox     #{:inbox}     (nav/workflow-route :inbox)]
+   ["Documents" :dashboard #{:dashboard :search} (nav/dashboard-route)]
+   ["Tags"      :tags      #{}           nil]])
+
+(defmulti ^:private navigation-element (fn [_ _ [name id _ route]] id))
 
 (defmethod navigation-element :default [state _ [title id _ href]]
   (om/component
@@ -105,18 +111,24 @@
         (and (set? workflows) (contains? workflows route))
         (and (fn? workflows) (workflows route)))))
 
-(def navigation-elements
-  [["Inbox"     :inbox     #{:inbox}     (nav/workflow-route :inbox)]
-   ["Documents" :dashboard #{:dashboard :search} (nav/dashboard-route)]
-   ["Tags"      :tags      #{}           nil]])
-
-(defn sidebar-component [state]
+(defn sidebar-component [state owner opts]
   (let [route (om/value (get-in state [:navigation :route]))]
     (reify
+      om/IInitState
+      (init-state [_]
+        {:positions (async/chan (async/sliding-buffer 1))})
+      om/IWillMount
+      (will-mount [_]
+        (go-loop []
+          (when-let [pos (<! (om/get-state owner :positions))]
+            (let [[x _] pos]
+              (om/set-state! owner :width x))
+            (recur))))
       om/IRenderState
-      (render-state [_ {:keys [width]}]
+      (render-state [_ {:keys [width positions]}]
         (html
          [:#sidebar {:style {:width (str width "px")}}
+          (om/build resize-draggable nil {:init-state {:positions positions}})
           (om/build logo/xeyes nil)
 
           (om/build search-field nil

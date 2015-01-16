@@ -101,6 +101,17 @@
                         :right (px header-padding)}
               :border-bottom (str "2px solid white")}]))
 
+(def draggable-height 10)
+(def draggable-width (* 1.5 draggable-height))
+(def draggable-css
+  [:.draggable {:position :absolute
+                :right (px (- (/ draggable-width 2)))
+                :top (px (- (/ header-height 2)
+                            (/ draggable-height 2)))
+                :width (px draggable-width)
+                :height (px draggable-height)
+                :background-color :red}])
+
 (def sidebar-header-css
   (list
    generic-header-css
@@ -132,7 +143,9 @@
     [:#sidebar {:height "100%"
                 :float :left
                 :background-color sidebar-color
-                :border-right (str "1px solid " border-dark)}
+                :border-right (str "1px solid " border-dark)
+                :position :relative}
+     draggable-css
      sidebar-header-css
      (sidebar-search-css search-height)
 

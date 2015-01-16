@@ -5,6 +5,7 @@
             [pepa.api :as api]
             [pepa.api.upload :as upload]
             [pepa.data :as data]
+            [pepa.style :as css]
             [pepa.components.sidebar :refer [sidebar-component]]
             [pepa.workflows.inbox :as inbox]
             [pepa.workflows.dashboard :as dashboard]
@@ -34,7 +35,7 @@
     [[:document id]] (api/fetch-documents! #{id})
     :else nil))
 
-(def sidebar-width 250)
+(def +initial-sidebar-width+ css/default-right-sidebar-width)
 
 ;;; Drag/Drop Handling
 
@@ -59,6 +60,9 @@
 (defn root-component [state owner]
   (reify
     om/ICheckState
+    om/IInitState
+    (init-state [_]
+      {:sidebar-width +initial-sidebar-width+})
     om/IWillMount
     (will-mount [_]
       (let [{:keys [route query-params]} (:navigation state)]
@@ -72,7 +76,7 @@
         (let [{:keys [route query-params]} (om/value (:navigation next-props))]
           (transition-to! state route query-params))))
     om/IRenderState
-    (render-state [_ {:keys [file-drop?]}]
+    (render-state [_ {:keys [file-drop? sidebar-width]}]
       (let [{:keys [route query-params]} (:navigation state)]
         (html
          [:div#app {:on-drag-over (partial root-drag-over state owner)
