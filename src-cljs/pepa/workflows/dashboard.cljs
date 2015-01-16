@@ -14,7 +14,9 @@
 
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
-            [pepa.components.pagination :as pagination])
+            [pepa.components.draggable :refer [resize-draggable]]
+
+            [goog.dom :as gdom])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]]))
 
@@ -45,13 +47,22 @@
            (:title document)]
           (om/build tags/tags-list (:tags document))])))))
 
-(defn filter-sidebar [state]
+(defn filter-sidebar [state owner _]
   (reify
+    om/IInitState
+    (init-state [_]
+      {:xs (async/chan (async/sliding-buffer 1)
+                       (map #(- (.-width (gdom/getViewportSize )) %)))})
+    om/IWillMount
+    (will-mount [_]
+      (async/pipe (om/get-state owner :xs)
+                  (om/get-state owner :widths)))
     om/IRenderState
-    (render-state [_ _]
+    (render-state [_ {:keys [xs]}]
       (html
        [:.sidebar
-        [:header "Sorting & Filtering"]]))))
+        [:header "Sorting & Filtering"]
+        (om/build resize-draggable nil {:init-state {:xs xs}})]))))
 
 (defn ^:private document-ids [state]
   (or (:search/results state)
@@ -158,21 +169,28 @@
 (defn dashboard [state owner]
   (reify
     om/ICheckState
+    om/IInitState
+    (init-state [_]
+      {:filter-width css/default-sidebar-width
+       :widths (async/chan (async/sliding-buffer 1))})
     om/IWillMount
     (will-mount [_]
       (go
         (<! (search-maybe! state owner :force-update))
         (<! (fetch-missing-documents! state owner))
-        (scroll-to-offset! state owner)))
+        (scroll-to-offset! state owner))
+      ;; Sidebar width handling
+      (go-loop []
+        (when-let [width (<! (om/get-state owner :widths))]
+          (when (<= css/min-sidebar-width width css/max-sidebar-width)
+            (om/set-state! owner :filter-width width))
+          (recur))))
     om/IDidUpdate
     (did-update [_ _ _]
       (go
         (<! (search-maybe! state owner))
         (<! (fetch-missing-documents! state owner))
         (scroll-to-offset! state owner)))
-    om/IInitState
-    (init-state [_]
-      {:filter-width css/default-sidebar-width})
     om/IRenderState
     (render-state [_ local-state]
       ;; Show all documents with ids found in :dashboard/document-ids
@@ -191,4 +209,5 @@
               (om/build-all document-preview documents
                             {:key :id}))]]
           [:.pane {:style {:width (:filter-width local-state)}}
-           (om/build filter-sidebar state)]])))))
+           (om/build filter-sidebar state
+                     {:init-state {:widths (:widths local-state)}})]])))))

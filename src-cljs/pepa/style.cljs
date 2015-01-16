@@ -105,14 +105,15 @@
 
 (def draggable-height 10)
 (def draggable-width (* 1.5 draggable-height))
-(def draggable-css
-  [:.draggable {:position :absolute
-                :right (px (- (/ draggable-width 2)))
-                :top (px (- (/ header-height 2)
-                            (/ draggable-height 2)))
-                :width (px draggable-width)
-                :height (px draggable-height)
-                :background-color :red}])
+(defn draggable-css [position]
+  [:.draggable (assoc {:position :absolute                
+                       :top (px (- (/ header-height 2)
+                                   (/ draggable-height 2)))
+                       :width (px draggable-width)
+                       :height (px draggable-height)
+                       :background-color :red}
+                      (or position :left)
+                      (px (- (/ draggable-width 2))))])
 
 (def sidebar-header-css
   (list
@@ -147,7 +148,7 @@
                 :background-color sidebar-color
                 :border-right (str "1px solid " border-dark)
                 :position :relative}
-     draggable-css
+     (draggable-css :right)
      sidebar-header-css
      (sidebar-search-css search-height)
 
@@ -479,7 +480,9 @@
         [:.tags {:width "100%"}]]]
       [:.sidebar {:height "100%"
                   :background-color dark-background
-                  :border-left (str "1px solid " border-dark)}]]]))
+                  :border-left (str "1px solid " border-dark)
+                  :position :relative}
+       (draggable-css :left)]]]))
 
 ;; Single Document
 (def document-css

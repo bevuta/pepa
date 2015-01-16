@@ -72,8 +72,7 @@
         ;; Loop to handle resize-events for the sidebar
         (go-loop []
           (when-let [width (<! (om/get-state owner :sidebar-widths))]
-            (when (and (>= width css/min-sidebar-width)
-                       (<= width css/max-sidebar-width))
+            (when (<= css/min-sidebar-width width css/max-sidebar-width)
               (om/set-state! owner :sidebar-width width))
             (recur)))))
     om/IWillUpdate
