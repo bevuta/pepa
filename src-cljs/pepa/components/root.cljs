@@ -35,8 +35,6 @@
     [[:document id]] (api/fetch-documents! #{id})
     :else nil))
 
-(def +initial-sidebar-width+ css/default-right-sidebar-width)
-
 ;;; Drag/Drop Handling
 
 (defn ^:private root-drag-over [state owner e]
@@ -62,13 +60,22 @@
     om/ICheckState
     om/IInitState
     (init-state [_]
-      {:sidebar-width +initial-sidebar-width+})
+      {:sidebar-width css/default-sidebar-width
+       :sidebar-widths (async/chan (async/sliding-buffer 1))})
     om/IWillMount
     (will-mount [_]
       (let [{:keys [route query-params]} (:navigation state)]
         (fetch-initial-data! state route)
         (let [route (om/value route)]
-          (transition-to! state route query-params))))
+          (transition-to! state route query-params))
+
+        ;; Loop to handle resize-events for the sidebar
+        (go-loop []
+          (when-let [width (<! (om/get-state owner :sidebar-widths))]
+            (when (and (>= width css/min-sidebar-width)
+                       (<= width css/max-sidebar-width))
+              (om/set-state! owner :sidebar-width width))
+            (recur)))))
     om/IWillUpdate
     (will-update [_ next-props next-state]
       (when-not (= (get-in (om/get-props owner) [:navigation :route])
@@ -76,7 +83,7 @@
         (let [{:keys [route query-params]} (om/value (:navigation next-props))]
           (transition-to! state route query-params))))
     om/IRenderState
-    (render-state [_ {:keys [file-drop? sidebar-width]}]
+    (render-state [_ {:keys [file-drop? sidebar-width sidebar-widths]}]
       (let [{:keys [route query-params]} (:navigation state)]
         (html
          [:div#app {:on-drag-over (partial root-drag-over state owner)
@@ -84,7 +91,8 @@
                     :on-drop (partial root-drop state owner)
                     :class [(when file-drop? "file-drop")]}
           (om/build sidebar-component state
-                    {:state {:width sidebar-width}})
+                    {:state {:width sidebar-width}
+                     :init-state {:widths sidebar-widths}})
           [:main {:style {:margin-left sidebar-width}}
            (match [(om/value route)]
              [:dashboard]  (om/build dashboard/dashboard state)

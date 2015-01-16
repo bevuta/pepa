@@ -116,14 +116,15 @@
     (reify
       om/IInitState
       (init-state [_]
-        {:positions (async/chan (async/sliding-buffer 1))})
+        ;; Create a 'positions' channel which will transform the
+        ;; positions to widths
+        {:positions (async/chan (async/sliding-buffer 1)
+                                (map first))})
       om/IWillMount
       (will-mount [_]
-        (go-loop []
-          (when-let [pos (<! (om/get-state owner :positions))]
-            (let [[x _] pos]
-              (om/set-state! owner :width x))
-            (recur))))
+        ;; Pipe widths into the :widths channel given from the parent
+        (async/pipe (om/get-state owner :positions)
+                    (om/get-state owner :widths)))
       om/IRenderState
       (render-state [_ {:keys [width positions]}]
         (html

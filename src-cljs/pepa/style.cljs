@@ -46,7 +46,9 @@
 
 ;;; Sizes
 
-(def default-right-sidebar-width 250)
+(def default-sidebar-width 250)
+(def max-sidebar-width 600)
+(def min-sidebar-width 200)
 
 ;;; Helper functions
 

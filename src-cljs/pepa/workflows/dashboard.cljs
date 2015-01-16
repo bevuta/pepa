@@ -172,7 +172,7 @@
         (scroll-to-offset! state owner)))
     om/IInitState
     (init-state [_]
-      {:filter-width css/default-right-sidebar-width})
+      {:filter-width css/default-sidebar-width})
     om/IRenderState
     (render-state [_ local-state]
       ;; Show all documents with ids found in :dashboard/document-ids

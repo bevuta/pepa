@@ -180,7 +180,7 @@
     (init-state [_]
       {:page-number 1
        :thumbnail-width 300
-       :sidebar-width css/default-right-sidebar-width
+       :sidebar-width css/default-sidebar-width
        :sidebar/visible? true
        :pages (async/chan)
        :tag-changes (async/chan)})
