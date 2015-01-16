@@ -14,8 +14,7 @@
 
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
-            [pepa.components.draggable :refer [resize-draggable
-                                               right-align-xform]])
+            [pepa.components.draggable :as draggable])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]]))
 
@@ -51,7 +50,7 @@
     om/IInitState
     (init-state [_]
       {:xs (async/chan (async/sliding-buffer 1)
-                       right-align-xform)})
+                       draggable/right-align-xform)})
     om/IWillMount
     (will-mount [_]
       (async/pipe (om/get-state owner :xs)
@@ -61,7 +60,7 @@
       (html
        [:.sidebar
         [:header "Sorting & Filtering"]
-        (om/build resize-draggable nil {:init-state {:xs xs}})]))))
+        (om/build draggable/resize-draggable nil {:init-state {:xs xs}})]))))
 
 (defn ^:private document-ids [state]
   (or (:search/results state)
@@ -170,8 +169,7 @@
     om/ICheckState
     om/IInitState
     (init-state [_]
-      {:filter-width css/default-sidebar-width
-       :widths (async/chan (async/sliding-buffer 1))})
+      {:widths (async/chan (async/sliding-buffer 1))})
     om/IWillMount
     (will-mount [_]
       (go
@@ -179,11 +177,8 @@
         (<! (fetch-missing-documents! state owner))
         (scroll-to-offset! state owner))
       ;; Sidebar width handling
-      (go-loop []
-        (when-let [width (<! (om/get-state owner :widths))]
-          (when (<= css/min-sidebar-width width css/max-sidebar-width)
-            (om/set-state! owner :filter-width width))
-          (recur))))
+      (draggable/width-loop ::sidebar (om/get-state owner :widths)
+                            [css/min-sidebar-width css/max-sidebar-width]))
     om/IDidUpdate
     (did-update [_ _ _]
       (go
@@ -193,10 +188,12 @@
     om/IRenderState
     (render-state [_ local-state]
       ;; Show all documents with ids found in :dashboard/document-ids
-      (let [document-ids (page-ids state)]
+      (let [document-ids (page-ids state)
+            sidebar-width (or (::sidebar (om/observe owner (data/ui-sidebars)))
+                              css/default-sidebar-width)]
         (html
          [:.workflow.dashboard
-          [:.pane {:style {:width (str "calc(100% - " (:filter-width local-state) "px - 2px)")}}
+          [:.pane {:style {:width (str "calc(100% - " sidebar-width "px - 2px)")}}
            [:header
             (dashboard-title state)
             (om/build document-count state)]
@@ -207,6 +204,6 @@
                                  (remove nil?))]
               (om/build-all document-preview documents
                             {:key :id}))]]
-          [:.pane {:style {:width (:filter-width local-state)}}
+          [:.pane {:style {:width sidebar-width}}
            (om/build filter-sidebar state
                      {:init-state {:widths (:widths local-state)}})]])))))

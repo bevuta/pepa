@@ -7,6 +7,7 @@
             [pepa.data :as data]
             [pepa.style :as css]
             [pepa.components.sidebar :refer [sidebar-component]]
+            [pepa.components.draggable :as draggable]
             [pepa.workflows.inbox :as inbox]
             [pepa.workflows.dashboard :as dashboard]
             [pepa.workflows.document :as document]
@@ -60,21 +61,17 @@
     om/ICheckState
     om/IInitState
     (init-state [_]
-      {:sidebar-width css/default-sidebar-width
-       :sidebar-widths (async/chan (async/sliding-buffer 1))})
+      {:sidebar-widths (async/chan (async/sliding-buffer 1))})
     om/IWillMount
     (will-mount [_]
       (let [{:keys [route query-params]} (:navigation state)]
         (fetch-initial-data! state route)
         (let [route (om/value route)]
           (transition-to! state route query-params))
-
+        
         ;; Loop to handle resize-events for the sidebar
-        (go-loop []
-          (when-let [width (<! (om/get-state owner :sidebar-widths))]
-            (when (<= css/min-sidebar-width width css/max-sidebar-width)
-              (om/set-state! owner :sidebar-width width))
-            (recur)))))
+        (draggable/width-loop ::sidebar (om/get-state owner :sidebar-widths)
+                              [css/min-sidebar-width css/max-sidebar-width])))
     om/IWillUpdate
     (will-update [_ next-props next-state]
       (when-not (= (get-in (om/get-props owner) [:navigation :route])
@@ -82,8 +79,10 @@
         (let [{:keys [route query-params]} (om/value (:navigation next-props))]
           (transition-to! state route query-params))))
     om/IRenderState
-    (render-state [_ {:keys [file-drop? sidebar-width sidebar-widths]}]
-      (let [{:keys [route query-params]} (:navigation state)]
+    (render-state [_ {:keys [file-drop? sidebar-widths]}]
+      (let [{:keys [route query-params]} (:navigation state)
+            sidebar-width (or (::sidebar (om/observe owner (data/ui-sidebars)))
+                              css/default-sidebar-width)]
         (html
          [:div#app {:on-drag-over (partial root-drag-over state owner)
                     :on-drag-leave (partial root-drag-leave state owner)

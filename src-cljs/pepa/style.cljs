@@ -106,7 +106,7 @@
 (def draggable-height 10)
 (def draggable-width (* 1.5 draggable-height))
 (defn draggable-css [position]
-  [:.draggable (assoc {:position :absolute                
+  [:.draggable (assoc {:position :absolute
                        :top (px (- (/ header-height 2)
                                    (/ draggable-height 2)))
                        :width (px draggable-width)
@@ -767,7 +767,7 @@
 
 (def css-string
   (css
-   {:vendors ["webkit" "moz"]
+   {:vendors ["webkit" "moz" "ms"]
     :output-to "resources/public/style.css"}
    [:html :body :#app {:height "100%"
                        :font-weight "300"

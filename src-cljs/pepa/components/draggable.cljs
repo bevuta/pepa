@@ -35,7 +35,7 @@
     (.stopPropagation)))
 
 (def right-align-xform
-  (map #(- (.-width (gdom/getViewportSize )) %)))
+  (map #(- (.-width (gdom/getViewportSize)) %)))
 
 (defn resize-draggable [_ owner]
   (reify
@@ -45,3 +45,11 @@
        [:.draggable {:class [(when dragging?
                                "active")]
                      :on-mouse-down (partial resize-draggable-mouse-down owner)}]))))
+
+(defn width-loop [sidebar width-ch [min max]]
+  (assert (< min max))
+  (go-loop []
+    (when-let [width (<! width-ch)]
+      (when (<= min width max)
+        (om/update! (pepa.data/ui-sidebars) sidebar width))
+      (recur))))
