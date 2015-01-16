@@ -4,11 +4,14 @@
 (def tasks
   {"schema" schema/run})
 
-(defn pepa [project task & args]
+(defn pepa [project & [task & args]]
   (if-let [run-task (get tasks task)]
     (run-task args)
     (binding [*out* *err*]
-      (println "Invalid pepa task:" (str "'" task "'"))
+      (print "Invalid pepa task")
+      (when (seq (str task))
+        (print (str " '" task "'")))
+      (newline)
       (newline)
       (println "Available tasks:")
       (doseq [task (sort (keys tasks))]
