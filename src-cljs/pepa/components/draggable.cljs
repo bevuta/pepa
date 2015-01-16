@@ -3,7 +3,8 @@
             [sablono.core :refer-macros [html]]
             [cljs.core.async :as async]
 
-            [clojure.browser.event :as bevent])
+            [clojure.browser.event :as bevent]
+            [goog.dom :as gdom])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn ^:private resize-draggable-mouse-down [owner e]
@@ -32,6 +33,9 @@
   (doto e
     (.preventDefault)
     (.stopPropagation)))
+
+(def right-align-xform
+  (map #(- (.-width (gdom/getViewportSize )) %)))
 
 (defn resize-draggable [_ owner]
   (reify

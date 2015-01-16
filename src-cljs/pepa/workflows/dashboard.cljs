@@ -14,9 +14,8 @@
 
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
-            [pepa.components.draggable :refer [resize-draggable]]
-
-            [goog.dom :as gdom])
+            [pepa.components.draggable :refer [resize-draggable
+                                               right-align-xform]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]]))
 
@@ -52,7 +51,7 @@
     om/IInitState
     (init-state [_]
       {:xs (async/chan (async/sliding-buffer 1)
-                       (map #(- (.-width (gdom/getViewportSize )) %)))})
+                       right-align-xform)})
     om/IWillMount
     (will-mount [_]
       (async/pipe (om/get-state owner :xs)
