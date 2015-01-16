@@ -90,7 +90,7 @@
                          (.preventDefault e))}
         (om/build (:view opts) page {:opts opts})]))))
 
-(defn ^:private thumbnails [pages owner]
+(defn ^:private thumbnail-list [pages owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [events current-page]}]
@@ -109,6 +109,17 @@
                        :opts {:enable-rotate? true
                               :view page/thumbnail}})]))))
 
+(defn ^:private thumbnails [document owner]
+  (reify
+    om/IRenderState
+    (render-state [_ state]
+      (html
+       [:.thumbnails
+        (om/build thumbnail-pane-header document)
+        (om/build thumbnail-list (:pages document)
+                  ;; Just pass down the whole state
+                  {:state state})]))))
+
 (defn ^:private pages-pane-header [document]
   (om/component
    (html
@@ -119,7 +130,7 @@
        [:option "PDF"]
        [:option "Plain Text"]]]])))
 
-(defn ^:private pages [pages owner]
+(defn ^:private pages-list [pages owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [events current-page]}]
@@ -130,6 +141,16 @@
                        :init-state {:events events}
                        :state {:current-page current-page}
                        :opts {:view page/full}})]))))
+
+(defn ^:private pages [document owner]
+  (reify
+    om/IRenderState
+    (render-state [_ state]
+      (html
+       [:.full
+        (om/build pages-pane-header document)
+        (om/build pages-list (:pages document)
+                  {:state state})]))))
 
 (defn ^:private meta-pane [document owner]
   (om/component
@@ -179,8 +200,10 @@
     om/IInitState
     (init-state [_]
       {:page-number 1
-       :thumbnail-width 300
+       :thumbnail-width css/default-sidebar-width
        :sidebar-width css/default-sidebar-width
+       :thumbnail-widths (async/chan (async/sliding-buffer 1))
+       :sidebar-widths (async/chan (async/sliding-buffer 1))
        :sidebar/visible? true
        :pages (async/chan)
        :tag-changes (async/chan)})
@@ -188,15 +211,14 @@
     (will-mount [_]
       ;; Start handling tag change events etc.
       (go-loop []
-        (let [pages (om/get-state owner :pages)
-              tag-changes (om/get-state owner :tag-changes)
-              [event port] (alts! [pages tag-changes])]
+        (let [{:keys [pages tag-changes thumbnail-widths sidebar-widths]} (om/get-state owner)
+              [event port] (alts! [pages tag-changes thumbnail-widths sidebar-widths])]
           (when (and event port)
-            (cond
-              (= port pages)
+            (condp = port
+              pages
               (handle-page-click! @document owner event)
               
-              (= port tag-changes)
+              tag-changes
               (let [[op tag] event]
                 ;; Deref to get the 'actual' value (might be stale)
                 (-> @document
@@ -204,7 +226,13 @@
                                          :add data/add-tags
                                          :remove data/remove-tags)
                                [tag])
-                    (api/update-document!))))
+                    (api/update-document!)))
+
+              sidebar-widths
+              (println "sidebar" event)
+              
+              thumbnail-widths
+              (println "thumbnail" event))
             (recur)))))
     om/IRenderState
     (render-state [_ state] 
@@ -219,21 +247,17 @@
         (html
          [:.workflow.document
           [:.pane {:style {:width thumbnail-width}}
-           [:.thumbnails
-            (om/build thumbnail-pane-header document)
-            (om/build thumbnails (:pages document)
-                      {:init-state {:events page-events}
-                       :state {:current-page current-page}})]]
+           (om/build thumbnails document
+                     {:init-state {:events page-events}
+                      :state {:current-page current-page}})]
           [:.pane {:style {:width (str "calc("
                                        "100%"
                                        " - " thumbnail-width "px"
                                        " - " sidebar-width "px"
                                        ")")}}
-           [:.full
-            (om/build pages-pane-header document)
-            (om/build pages (:pages document)
-                      {:state {:current-page current-page
-                               :events page-events}})]]
+           (om/build pages document
+                     {:init-state {:events page-events}
+                      :state {:current-page current-page}})]
           [:.pane {:style {:width sidebar-width}}
            (om/build meta-pane document
                      {:init-state {:tags tag-changes}})]])))))
