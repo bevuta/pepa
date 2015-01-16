@@ -128,7 +128,7 @@
       om/IRenderState
       (render-state [_ {:keys [width positions]}]
         (html
-         [:#sidebar {:style {:width (str width "px")}}
+         [:#sidebar {:style (when width {:width width})}
           (om/build resize-draggable nil {:init-state {:positions positions}})
           (om/build logo/xeyes nil)
 
