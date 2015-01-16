@@ -476,7 +476,7 @@
       (om/transact! state :documents #(dissoc % (:id document)))
       (let [pages (:pages document)]
         (when (<! (api/delete-from-inbox! pages))
-          (om/transact! state [:documents :inbox :pages] #(remove (set pages) %)))))))
+          (om/transact! state [:documents :inbox :pages] #(filterv (complement (set pages)) %)))))))
 
 (defn ^:private delete-pages!
   "Deletes selected pages from the inbox on the server."
@@ -486,7 +486,7 @@
       (om/update! state [:documents :inbox ::working] true)
       (println "Deleting pages" pages "from inbox...")
       (when (<! (api/delete-from-inbox! pages))
-        (om/transact! state [:documents :inbox :pages] #(remove (set pages) %)))
+        (om/transact! state [:documents :inbox :pages] #(filterv (complement (set pages)) %)))
       (finally
         (om/transact! state [:documents :inbox] #(dissoc % ::working))))))
 

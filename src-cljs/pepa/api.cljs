@@ -110,7 +110,7 @@
 
 (defn fetch-inbox []
   (go
-    (:response/transit (<! (xhr-request! "/inbox" :get)))))
+    (vec (:response/transit (<! (xhr-request! "/inbox" :get))))))
 
 (defn delete-from-inbox! [pages]
   (go
