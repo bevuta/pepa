@@ -114,32 +114,21 @@
 (defn sidebar-component [state owner opts]
   (let [route (om/value (get-in state [:navigation :route]))]
     (reify
-      om/IInitState
-      (init-state [_]
-        ;; Create a 'positions' channel which will transform the
-        ;; positions to widths
-        {:positions (async/chan (async/sliding-buffer 1)
-                                (map first))})
-      om/IWillMount
-      (will-mount [_]
-        ;; Pipe widths into the :widths channel given from the parent
-        (async/pipe (om/get-state owner :positions)
-                    (om/get-state owner :widths)))
       om/IRenderState
-      (render-state [_ {:keys [width positions]}]
+      (render-state [_ {:keys [width widths]}]
         (html
          [:#sidebar {:style (when width {:width width})}
-          (om/build resize-draggable nil {:init-state {:positions positions}})
+          (om/build resize-draggable nil {:init-state {:xs widths}})
           (om/build logo/xeyes nil)
 
           (om/build search-field nil
                     {:state {:query (search-query state)}})
           [:nav.workflows
            [:ul
+            ;; TODO: Use build-all
             (for [element navigation-elements]
               (let [[title ident routes href] element]
                 [:li {:class [(name ident)
                               (when (route-matches? route routes) "active")]
                       :key (name ident)}
-                 ;; TODO: Use build-all
                  (om/build navigation-element state {:opts element})]))]]])))))

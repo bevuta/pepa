@@ -9,10 +9,13 @@
 (defn ^:private resize-draggable-mouse-down [owner e]
   ;; Attach event handlers to window
   (let [on-move (fn [e]
-                  (let [{:keys [dragging? positions]} (om/get-state owner)
-                        pos [(.-clientX e) (.-clientY e)]]
-                    (when (and dragging? positions)
-                      (async/put! positions pos))))
+                  (let [{:keys [dragging? positions xs ys]} (om/get-state owner)]
+                    (when dragging?
+                      (let [pos [(.-clientX e) (.-clientY e)]
+                            [x y] pos]
+                        (when positions (async/put! positions pos))
+                        (when xs (async/put! xs x))
+                        (when ys (async/put! ys y))))))
         on-up (fn [e]
                 (doseq [handler (om/get-state owner :handlers)]
                   (bevent/unlisten-by-key handler))
@@ -33,8 +36,7 @@
 (defn resize-draggable [_ owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [dragging? positions
-                             position-changed]}]
+    (render-state [_ {:keys [dragging?]}]
       (html
        [:.draggable {:class [(when dragging?
                                "active")]
