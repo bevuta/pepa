@@ -103,19 +103,23 @@
                         :right (px header-padding)}
               :border-bottom (str "2px solid white")}]))
 
-(def draggable-height 10)
-(def draggable-width (* 1.5 draggable-height))
+(def draggable-size 15)
 (defn draggable-css [position]
-  [:.draggable (assoc {:position :absolute
-                       :top (px (- (/ header-height 2)
-                                   (/ draggable-height 2)))
-                       :width (px draggable-width)
-                       :height (px draggable-height)
-                       :z-index 10
-                       :background-color :red
-                       :cursor :ew-resize}
-                      (or position :left)
-                      (px (- (/ draggable-width 2))))])
+  [:.draggable (assoc
+                {:position :absolute
+                 :top (px (- (/ header-height 2)
+                             (/ draggable-height 2)))
+                 :width (px draggable-size)
+                 :height (px draggable-size)
+                 :z-index 10
+                 :cursor :ew-resize
+                 :background {:image (image-url "material/resize-drag-button.svg")
+                              :size [(px draggable-width)
+                                     (px draggable-height)]}
+                 :opacity 0.5}
+                (or position :left)
+                (px (- (/ draggable-width 2))))
+   [:&:hover {:opacity 1.0}]])
 
 (def sidebar-header-css
   (list
