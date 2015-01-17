@@ -132,16 +132,17 @@
      [:&.brand {:font-weight 400}]]]))
 
 (defn sidebar-search-css [height]
-  [:.search {:height (px height)
-             :position :relative
-             :border-bottom (str "1px solid " border-dark)}
-   [:input (list
-            {:width "90%"
-             :position :absolute
-             :top "50%"
-             :left "50%"
-             :border (str "1px solid " border-dark)}
-            ^:prefix {:transform "translate(-50%,-50%)"})]]  )
+  (let [search-padding 10]
+   [:.search {:height (px height)
+              :position :relative
+              :border-bottom (str "1px solid " border-dark)}
+    [:input (list
+             {:position :absolute
+              :top "50%"
+              :left "50%"
+              :border (str "1px solid " border-dark)}
+             ^:prefix {:transform "translate(-50%,-50%)"}
+             (calc-property :width ["100%" - (* 2 search-padding)]))]]))
 
 (def sidebar-css
   (let [search-height 50]
