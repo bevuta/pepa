@@ -117,7 +117,8 @@
       (html
        [:.thumbnails
         (om/build thumbnail-pane-header document)
-        (om/build draggable/resize-draggable nil)
+        (om/build draggable/resize-draggable nil
+                  {:opts {:sidebar ::thumbnails}})
         (om/build thumbnail-list (:pages document)
                   ;; Just pass down the whole state
                   {:state state})]))))
@@ -159,7 +160,8 @@
    (html
     [:.sidebar
      [:header "Meta"]
-     (om/build draggable/resize-draggable nil)
+     (om/build draggable/resize-draggable nil
+               {:opts {:sidebar ::meta}})
      [:aside
       (om/build document/meta-table document)
       ;; Input Fields: Tags, Sharing, Notes, etc.
@@ -203,19 +205,14 @@
     om/IInitState
     (init-state [_]
       {:page-number 1
-       :thumbnail-width css/default-sidebar-width
-       :sidebar-width css/default-sidebar-width
-       :thumbnail-widths (async/chan (async/sliding-buffer 1))
-       :sidebar-widths (async/chan (async/sliding-buffer 1))
-       :sidebar/visible? true
        :pages (async/chan)
        :tag-changes (async/chan)})
     om/IWillMount
     (will-mount [_]
       ;; Start handling tag change events etc.
       (go-loop []
-        (let [{:keys [pages tag-changes thumbnail-widths sidebar-widths]} (om/get-state owner)
-              [event port] (alts! [pages tag-changes thumbnail-widths sidebar-widths])]
+        (let [{:keys [pages tag-changes]} (om/get-state owner)
+              [event port] (alts! [pages tag-changes])]
           (when (and event port)
             (condp = port
               pages
@@ -229,22 +226,18 @@
                                          :add data/add-tags
                                          :remove data/remove-tags)
                                [tag])
-                    (api/update-document!)))
-
-              sidebar-widths
-              (println "sidebar" event)
-              
-              thumbnail-widths
-              (println "thumbnail" event))
+                    (api/update-document!))))
             (recur)))))
     om/IRenderState
     (render-state [_ state] 
-      (let [{:keys [page-number thumbnail-width sidebar-width]} state
+      (let [{:keys [page-number]} state
             page-events (:pages state)
             tag-changes (:tag-changes state)
-            sidebar-width (if (:sidebar/visible? state)
-                            sidebar-width
-                            0)
+            sidebars (om/observe owner (data/ui-sidebars))
+            meta-width (get sidebars ::meta
+                            css/default-sidebar-width)
+            thumbnail-width (get sidebars ::thumbnails
+                                 css/default-sidebar-width)
             current-page (nth (:pages (om/value document))
                               (dec (or page-number 1)))]
         (html
@@ -256,11 +249,21 @@
           [:.pane {:style {:width (str "calc("
                                        "100%"
                                        " - " thumbnail-width "px"
-                                       " - " sidebar-width "px"
+                                       " - " meta-width "px"
                                        ")")}}
            (om/build pages document
                      {:init-state {:events page-events}
                       :state {:current-page current-page}})]
-          [:.pane {:style {:width sidebar-width}}
+          [:.pane {:style {:width meta-width}}
            (om/build meta-pane document
                      {:init-state {:tags tag-changes}})]])))))
+
+(defmethod draggable/pos->width ::thumbnails [sidebars sidebar [x _]]
+  (draggable/limit
+   (- x (get sidebars :root/sidebar
+             css/default-sidebar-width))
+   100 400))
+
+(defmethod draggable/pos->width ::meta [_ sidebar [x _]]
+  (draggable/limit
+   (- (draggable/viewport-width) x)))

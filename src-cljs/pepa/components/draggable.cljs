@@ -3,22 +3,23 @@
             [sablono.core :refer-macros [html]]
             [cljs.core.async :as async]
 
+            [pepa.data :as data]
+            [pepa.style :as css]
+
             [clojure.browser.event :as bevent]
             [goog.dom :as gdom])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(defn ^:private resize-draggable-mouse-down [owner e]
+(defn ^:private resize-mouse-down [owner sidebar e]
   ;; Only handle 'main' mouse button
   (when (zero? (.-button e))
     ;; Attach event handlers to window
     (let [on-move (fn [e]
-                    (let [{:keys [dragging? positions xs ys]} (om/get-state owner)]
+                    (let [{:keys [dragging?]} (om/get-state owner)]
                       (when dragging?
-                        (let [pos [(.-clientX e) (.-clientY e)]
-                              [x y] pos]
-                          (when positions (async/put! positions pos))
-                          (when xs (async/put! xs x))
-                          (when ys (async/put! ys y))))))
+                        (let [pos [(.-clientX e) (.-clientY e)]]
+                          (when-let [positions (om/get-shared owner ::events)]
+                            (async/put! positions [sidebar pos]))))))
           on-up (fn [e]
                   (doseq [handler (om/get-state owner :handlers)]
                     (bevent/unlisten-by-key handler))
@@ -36,22 +37,44 @@
       (.preventDefault)
       (.stopPropagation))))
 
-(def right-align-xform
-  (map #(- (.-width (gdom/getViewportSize)) %)))
-
-(defn resize-draggable [_ owner]
+(defn resize-draggable [_ owner {:keys [sidebar]}]
   (reify
     om/IRenderState
     (render-state [_ {:keys [dragging?]}]
       (html
        [:.draggable {:class [(when dragging?
                                "active")]
-                     :on-mouse-down (partial resize-draggable-mouse-down owner)}]))))
+                     :on-mouse-down (partial resize-mouse-down owner sidebar)}]))))
 
-(defn width-loop [sidebar width-ch [min max]]
-  (assert (< min max))
+(defn limit
+  ([width min max]
+   (cond
+     (< width min)
+     min
+     (> width max)
+     max
+     true
+     width))
+  ([width]
+   (limit width css/min-sidebar-width css/max-sidebar-width)))
+
+(defmulti pos->width (fn [sidebars sidebar [x y]] sidebar))
+(defmethod pos->width :default [_ _ [x _]]
+  (limit x))
+
+(defn viewport-width []
+  (.-width (gdom/getViewportSize)))
+
+(defn shared-data []
+  {::events (async/chan)})
+
+(defn resize-handle-loop [root-owner]
   (go-loop []
-    (when-let [width (<! width-ch)]
-      (when (<= min width max)
-        (om/update! (pepa.data/ui-sidebars) sidebar width))
+    (when-let [event (<! (om/get-shared root-owner ::events))]
+      #_(println "got resize-event" (pr-str event))
+      (let [[sidebar pos] event]
+        (om/transact! (data/ui-sidebars)
+                      (fn [sidebars]
+                        (assoc sidebars sidebar
+                               (pos->width sidebars sidebar pos)))))
       (recur))))

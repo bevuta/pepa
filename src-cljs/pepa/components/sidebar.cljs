@@ -118,7 +118,8 @@
       (render-state [_ {:keys [width widths]}]
         (html
          [:#sidebar {:style (when width {:width width})}
-          (om/build resize-draggable nil {:init-state {:xs widths}})
+          (om/build resize-draggable nil
+                    {:opts {:sidebar :root/sidebar}})
           (om/build logo/xeyes nil)
 
           (om/build search-field nil

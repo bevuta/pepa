@@ -46,21 +46,11 @@
           (om/build tags/tags-list (:tags document))])))))
 
 (defn filter-sidebar [state owner _]
-  (reify
-    om/IInitState
-    (init-state [_]
-      {:xs (async/chan (async/sliding-buffer 1)
-                       draggable/right-align-xform)})
-    om/IWillMount
-    (will-mount [_]
-      (async/pipe (om/get-state owner :xs)
-                  (om/get-state owner :widths)))
-    om/IRenderState
-    (render-state [_ {:keys [xs]}]
-      (html
-       [:.sidebar
-        [:header "Sorting & Filtering"]
-        (om/build draggable/resize-draggable nil {:init-state {:xs xs}})]))))
+  (om/component
+   (html
+    [:.sidebar
+     [:header "Sorting & Filtering"]
+     (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})])))
 
 (defn ^:private document-ids [state]
   (or (:search/results state)
@@ -167,18 +157,12 @@
 (defn dashboard [state owner]
   (reify
     om/ICheckState
-    om/IInitState
-    (init-state [_]
-      {:widths (async/chan (async/sliding-buffer 1))})
     om/IWillMount
     (will-mount [_]
       (go
         (<! (search-maybe! state owner :force-update))
         (<! (fetch-missing-documents! state owner))
-        (scroll-to-offset! state owner))
-      ;; Sidebar width handling
-      (draggable/width-loop ::sidebar (om/get-state owner :widths)
-                            [css/min-sidebar-width css/max-sidebar-width]))
+        (scroll-to-offset! state owner)))
     om/IDidUpdate
     (did-update [_ _ _]
       (go
@@ -189,8 +173,8 @@
     (render-state [_ local-state]
       ;; Show all documents with ids found in :dashboard/document-ids
       (let [document-ids (page-ids state)
-            sidebar-width (or (::sidebar (om/observe owner (data/ui-sidebars)))
-                              css/default-sidebar-width)]
+            sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
+                               css/default-sidebar-width)]
         (html
          [:.workflow.dashboard
           [:.pane {:style {:width (str "calc(100% - " sidebar-width "px - 2px)")}}
@@ -205,5 +189,8 @@
               (om/build-all document-preview documents
                             {:key :id}))]]
           [:.pane {:style {:width sidebar-width}}
-           (om/build filter-sidebar state
-                     {:init-state {:widths (:widths local-state)}})]])))))
+           (om/build filter-sidebar state)]])))))
+
+(defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]
+  (draggable/limit
+   (- (draggable/viewport-width) x)))
