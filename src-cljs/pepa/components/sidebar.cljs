@@ -38,11 +38,6 @@
                                                   e.currentTarget.value)
                                    true)}]]))))
 
-(def navigation-elements
-  [["Inbox"     :inbox     #{:inbox}     (nav/workflow-route :inbox)]
-   ["Documents" :dashboard #{:dashboard :search} (nav/dashboard-route)]
-   ["Tags"      :tags      #{}           nil]])
-
 (defmulti ^:private navigation-element (fn [_ _ [name id _ route]] id))
 
 (defmethod navigation-element :default [state _ [title id _ href]]
@@ -127,7 +122,7 @@
           [:nav.workflows
            [:ul
             ;; TODO: Use build-all
-            (for [element navigation-elements]
+            (for [element nav/navigation-elements]
               (let [[title ident routes href] element]
                 [:li {:class [(name ident)
                               (when (route-matches? route routes) "active")]

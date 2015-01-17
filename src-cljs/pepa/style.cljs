@@ -3,7 +3,7 @@
             [garden.units :as u :refer [px em pt]]
             [garden.stylesheet :refer [at-keyframes cssfn]]
 
-            [pepa.components.sidebar :refer [navigation-elements]]
+            [pepa.navigation :refer [navigation-elements]]
 
             [clojure.string :as s]
             [goog.string :as gstring]))
@@ -108,17 +108,17 @@
   [:.draggable (assoc
                 {:position :absolute
                  :top (px (- (/ header-height 2)
-                             (/ draggable-height 2)))
+                             (/ draggable-size 2)))
                  :width (px draggable-size)
                  :height (px draggable-size)
                  :z-index 10
                  :cursor :ew-resize
                  :background {:image (image-url "material/resize-drag-button.svg")
-                              :size [(px draggable-width)
-                                     (px draggable-height)]}
+                              :size [(px draggable-size)
+                                     (px draggable-size)]}
                  :opacity 0.5}
                 (or position :left)
-                (px (- (/ draggable-width 2))))
+                (px (- (/ draggable-size 2))))
    [:&:hover {:opacity 1.0}]])
 
 (def sidebar-header-css
