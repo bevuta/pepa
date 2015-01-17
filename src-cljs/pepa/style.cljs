@@ -111,7 +111,9 @@
                                    (/ draggable-height 2)))
                        :width (px draggable-width)
                        :height (px draggable-height)
-                       :background-color :red}
+                       :z-index 10
+                       :background-color :red
+                       :cursor :ew-resize}
                       (or position :left)
                       (px (- (/ draggable-width 2))))])
 
@@ -511,8 +513,9 @@
        [:img {:max-width "100%"
               :border (str "1px solid " border-light)}]]]]
     ;; Page Thumbnails
-    [:.thumbnails
+    [:.thumbnails {:position :relative}
      [:header {:cursor :pointer}]
+     (draggable-css :right)
      [:ul.pages {:counter-reset "page-counter"}
       (let [padding 20]
         [:li {:padding (px padding)}
@@ -542,9 +545,11 @@
                       :border-width (px page-border)}
                      (calc-property :max-width ["100%" - (* 2 page-margin) - (* 2 page-border)]))])]]]
 
-    [:.sidebar {:background-color sidebar-color}
+    [:.sidebar {:background-color sidebar-color
+                :position :relative}
      [:header {:text-align :center
                :font-style :italic}]
+     (draggable-css :left)
      ;; Meta Data Table
      [:aside {:padding {:left (px 25)
                         :right (px 25)}}]

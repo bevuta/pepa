@@ -14,6 +14,7 @@
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
             [pepa.components.document :as document]
+            [pepa.components.draggable :as draggable]
             [goog.events.KeyCodes :as keycodes])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]]))
@@ -116,6 +117,7 @@
       (html
        [:.thumbnails
         (om/build thumbnail-pane-header document)
+        (om/build draggable/resize-draggable nil)
         (om/build thumbnail-list (:pages document)
                   ;; Just pass down the whole state
                   {:state state})]))))
@@ -157,6 +159,7 @@
    (html
     [:.sidebar
      [:header "Meta"]
+     (om/build draggable/resize-draggable nil)
      [:aside
       (om/build document/meta-table document)
       ;; Input Fields: Tags, Sharing, Notes, etc.
