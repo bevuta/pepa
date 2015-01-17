@@ -110,13 +110,7 @@
 
 (defn fetch-inbox []
   (go
-    (when-let [inbox (:response/transit (<! (xhr-request! "/inbox" :get)))]
-      ;; We group pages first by their originating file, then we sort
-      ;; them inside these files by their page-number, then we
-      ;; conatenate the result
-      (let [files (partition-by :file inbox)
-            files (mapcat (partial sort-by :number) files)]
-        files))))
+    (vec (:response/transit (<! (xhr-request! "/inbox" :get))))))
 
 (defn delete-from-inbox! [pages]
   (go

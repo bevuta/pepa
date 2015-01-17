@@ -255,12 +255,13 @@
 ;;; Misc. Functions
 
 (defn inbox
-  "Returns a vector of pages in the Inbox."
+  "Returns a vector of pages in the Inbox sorted by file and number."
   [db]
-  (vec (db/query db ["SELECT p.id, p.file, p.number 
+  (vec (db/query db ["SELECT p.id, p.file, p.number, p.render_status AS \"render-status\"
                       FROM inbox AS i
                       LEFT JOIN pages AS p
-                        ON i.page = p.id"])))
+                        ON i.page = p.id
+                      ORDER BY p.file, p.number"])))
 
 (defn add-to-inbox!
   "Unconditionally adds PAGES to inbox."
@@ -272,6 +273,7 @@
 
 ;;; TODO(mu): We need to cache this stuff.
 ;;; TODO(mu): We need to handle (= document file) more efficient
+;;; TODO: Handle render-status here
 (defn document-pdf
   "Generates a pdf-file for DOCUMENT-ID. Returns a file-object
   pointing to the (temporary) file. Caller must make sure to delete

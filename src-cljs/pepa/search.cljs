@@ -66,14 +66,13 @@
                   (catch js/Error e nil))]
       (when (not= query (:search/query state))
         (println "got new query")
-        ;; Cancel old search by closing the result channel
-        (cancel-search! state)
+        ;; Cancel old search & clear results
+        (clear-results! state)
         ;; Start new search, store result channel in app-state
         (let [chan (api/search-documents query)]
           (om/transact! state (fn [state]
                                 (assoc state
                                        :search/query query
-                                       :search/results nil
                                        :search/channel chan)))
           (when-let [results (<! chan)]
             (doto state
