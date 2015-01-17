@@ -157,7 +157,10 @@
      ;; Sections
      [:nav.workflows (list
                       {:overflow-y :auto}
-                      (calc-property :height ["100%" - (+ search-height header-height)]))
+                      (calc-property :height ["100%"
+                                              - (+ search-height header-height)
+                                              - 1 ; border
+                                              ]))
       [:ul {:padding-left 0, :margin 0}
        (let [item-height 50
              padding (/ item-height 8)
