@@ -11,7 +11,7 @@
             [goog.string :as gstring])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(def xhr-timeout (* 5 1000))
+(def +xhr-timeout+ (* 5 1000))
 
 (let [reader (transit/reader :json)]
   (defn ^:private parse-xhr-response
@@ -37,24 +37,26 @@
     "Performs an XmlHttpRequest to uri using method and payload data.
 
   Returns a channel containing something."
+    ([uri method content-type data timeout]
+     (let [ch (async/chan)]
+       (assert uri)
+       (xhr/send uri
+                 (fn [e]
+                   (async/put! ch (parse-xhr-response e.target)))
+                 (s/upper-case (name method))
+                 (if (= "application/transit+json" content-type)
+                   (transit/write writer data)
+                   data)
+                 #js {"Content-Type" content-type
+                      "Accept" "application/transit+json"}
+                 timeout)
+       ch))
     ([uri method content-type data]
-       (let [ch (async/chan)]
-         (assert uri)
-         (xhr/send uri
-                   (fn [e]
-                     (async/put! ch (parse-xhr-response e.target)))
-                   (s/upper-case (name method))
-                   (if (= "application/transit+json" content-type)
-                     (transit/write writer data)
-                     data)
-                   #js {"Content-Type" content-type
-                        "Accept" "application/transit+json"}
-                   xhr-timeout)
-         ch))
+     (xhr-request! uri method content-type data +xhr-timeout+))
     ([uri method data]
-       (xhr-request! uri method "application/transit+json" data))
+     (xhr-request! uri method "application/transit+json" data))
     ([uri method]
-       (xhr-request! uri method nil))))
+     (xhr-request! uri method nil))))
 
 (defn fetch-document-ids
   "Fetches all document-ids from the server."

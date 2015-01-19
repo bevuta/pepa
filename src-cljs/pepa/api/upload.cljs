@@ -33,7 +33,10 @@
 (defn upload-to-inbox! [blob]
   "Uploads blob from drop EVENT to server's inbox."
   (go
-    (let [response (<! (xhr-request! "/files/scanner" :post blob))]
+    (let [response (<! (xhr-request! "/files/scanner" :post
+                                     "application/transit+json" blob
+                                     nil ; no timeout
+                                     ))]
       (if (= 201 (:status response))
         :success
         (println "Upload error: " response)))))
@@ -41,11 +44,13 @@
 (defn upload-document! [document {:keys [blob content-type filename]}]
   "Uploads blob from drop EVENT to server's inbox."
   (go
-    (let [response (<! (xhr-request! "/documents" :post
+    (let [response (<! (xhr-request! "/documents" :post "application/transit+json"
                                      (-> (into {} document)
                                          (assoc :upload/file {:data blob
                                                               :content-type content-type
-                                                              :name filename}))))]
+                                                              :name filename}))
+                                     nil ; no timeout
+                                     ))]
       (if (= 201 (:status response))
         (-> response :response/transit :id)
         (println "Upload error: " response)))))
