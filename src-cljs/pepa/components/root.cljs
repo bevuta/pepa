@@ -5,7 +5,9 @@
             [pepa.api :as api]
             [pepa.api.upload :as upload]
             [pepa.data :as data]
+            [pepa.style :as css]
             [pepa.components.sidebar :refer [sidebar-component]]
+            [pepa.components.draggable :as draggable]
             [pepa.workflows.inbox :as inbox]
             [pepa.workflows.dashboard :as dashboard]
             [pepa.workflows.document :as document]
@@ -33,8 +35,6 @@
   (match [route]
     [[:document id]] (api/fetch-documents! #{id})
     :else nil))
-
-(def sidebar-width 250)
 
 ;;; Drag/Drop Handling
 
@@ -64,7 +64,10 @@
       (let [{:keys [route query-params]} (:navigation state)]
         (fetch-initial-data! state route)
         (let [route (om/value route)]
-          (transition-to! state route query-params))))
+          (transition-to! state route query-params))
+
+        ;; Handle all (global) resize events for sidebars
+        (draggable/resize-handle-loop owner)))
     om/IWillUpdate
     (will-update [_ next-props next-state]
       (when-not (= (get-in (om/get-props owner) [:navigation :route])
@@ -73,7 +76,9 @@
           (transition-to! state route query-params))))
     om/IRenderState
     (render-state [_ {:keys [file-drop?]}]
-      (let [{:keys [route query-params]} (:navigation state)]
+      (let [{:keys [route query-params]} (:navigation state)
+            sidebar-width (get (om/observe owner (data/ui-sidebars)) :root/sidebar
+                               css/default-sidebar-width)]
         (html
          [:div#app {:on-drag-over (partial root-drag-over state owner)
                     :on-drag-leave (partial root-drag-leave state owner)

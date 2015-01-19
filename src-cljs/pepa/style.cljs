@@ -3,7 +3,7 @@
             [garden.units :as u :refer [px em pt]]
             [garden.stylesheet :refer [at-keyframes cssfn]]
 
-            [pepa.components.sidebar :refer [navigation-elements]]
+            [pepa.navigation :refer [navigation-elements]]
 
             [clojure.string :as s]
             [goog.string :as gstring]))
@@ -46,7 +46,9 @@
 
 ;;; Sizes
 
-(def default-right-sidebar-width 250)
+(def default-sidebar-width 250)
+(def max-sidebar-width 600)
+(def min-sidebar-width 200)
 
 ;;; Helper functions
 
@@ -101,6 +103,24 @@
                         :right (px header-padding)}
               :border-bottom (str "2px solid white")}]))
 
+(def draggable-size 15)
+(defn draggable-css [position]
+  [:.draggable (assoc
+                {:position :absolute
+                 :top (px (- (/ header-height 2)
+                             (/ draggable-size 2)))
+                 :width (px draggable-size)
+                 :height (px draggable-size)
+                 :z-index 10
+                 :cursor :ew-resize
+                 :background {:image (image-url "material/resize-drag-button.svg")
+                              :size [(px draggable-size)
+                                     (px draggable-size)]}
+                 :opacity 0.5}
+                (or position :left)
+                (px (- (/ draggable-size 2))))
+   [:&:hover {:opacity 1.0}]])
+
 (def sidebar-header-css
   (list
    generic-header-css
@@ -116,30 +136,36 @@
      [:&.brand {:font-weight 400}]]]))
 
 (defn sidebar-search-css [height]
-  [:.search {:height (px height)
-             :position :relative
-             :border-bottom (str "1px solid " border-dark)}
-   [:input (list
-            {:width "90%"
-             :position :absolute
-             :top "50%"
-             :left "50%"
-             :border (str "1px solid " border-dark)}
-            ^:prefix {:transform "translate(-50%,-50%)"})]]  )
+  (let [search-padding 10]
+   [:.search {:height (px height)
+              :position :relative
+              :border-bottom (str "1px solid " border-dark)}
+    [:input (list
+             {:position :absolute
+              :top "50%"
+              :left "50%"
+              :border (str "1px solid " border-dark)}
+             ^:prefix {:transform "translate(-50%,-50%)"}
+             (calc-property :width ["100%" - (* 2 search-padding)]))]]))
 
 (def sidebar-css
   (let [search-height 50]
     [:#sidebar {:height "100%"
                 :float :left
                 :background-color sidebar-color
-                :border-right (str "1px solid " border-dark)}
+                :border-right (str "1px solid " border-dark)
+                :position :relative}
+     (draggable-css :right)
      sidebar-header-css
      (sidebar-search-css search-height)
 
      ;; Sections
      [:nav.workflows (list
                       {:overflow-y :auto}
-                      (calc-property :height ["100%" - (+ search-height header-height)]))
+                      (calc-property :height ["100%"
+                                              - (+ search-height header-height)
+                                              - 1 ; border
+                                              ]))
       [:ul {:padding-left 0, :margin 0}
        (let [item-height 50
              padding (/ item-height 8)
@@ -464,7 +490,9 @@
         [:.tags {:width "100%"}]]]
       [:.sidebar {:height "100%"
                   :background-color dark-background
-                  :border-left (str "1px solid " border-dark)}]]]))
+                  :border-left (str "1px solid " border-dark)
+                  :position :relative}
+       (draggable-css :left)]]]))
 
 ;; Single Document
 (def document-css
@@ -493,8 +521,9 @@
        [:img {:max-width "100%"
               :border (str "1px solid " border-light)}]]]]
     ;; Page Thumbnails
-    [:.thumbnails
+    [:.thumbnails {:position :relative}
      [:header {:cursor :pointer}]
+     (draggable-css :right)
      [:ul.pages {:counter-reset "page-counter"}
       (let [padding 20]
         [:li {:padding (px padding)}
@@ -524,9 +553,11 @@
                       :border-width (px page-border)}
                      (calc-property :max-width ["100%" - (* 2 page-margin) - (* 2 page-border)]))])]]]
 
-    [:.sidebar {:background-color sidebar-color}
+    [:.sidebar {:background-color sidebar-color
+                :position :relative}
      [:header {:text-align :center
                :font-style :italic}]
+     (draggable-css :left)
      ;; Meta Data Table
      [:aside {:padding {:left (px 25)
                         :right (px 25)}}]
@@ -749,7 +780,7 @@
 
 (def css-string
   (css
-   {:vendors ["webkit" "moz"]
+   {:vendors ["webkit" "moz" "ms"]
     :output-to "resources/public/style.css"}
    [:html :body :#app {:height "100%"
                        :font-weight "300"
