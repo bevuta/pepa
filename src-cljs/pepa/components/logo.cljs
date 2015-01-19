@@ -1,6 +1,9 @@
 (ns pepa.components.logo
   (:require [om.core :as om :include-macros true]
             [sablono.core :refer-macros [html]]
+            [clojure.browser.event :as event]
+            [goog.style.transform :as transform]
+            [goog.dom :as dom]
 
             [pepa.navigation :as nav]))
 
@@ -25,26 +28,22 @@
         rect (.getBoundingClientRect obj)
         center [(/ (- (.-right rect) (.-left rect)) 2)
                 (/ (- (.-bottom rect) (.-top rect)) 2)]]
-    (set! (.-onmousemove js/window) 
-          (fn [e]
-            (let [[dx dy] (vec- [e.clientX e.clientY] center)
-                  transform (str "translate("
-                                 (min (* eyeball-movement
-                                         (/ dx js/window.screen.width))
-                                      eyeball-max)
-                                 ", "
-                                 (min (* eyeball-movement
-                                         (/ dy js/window.screen.height))
-                                      eyeball-max)
-                                 ")")]
-              (.setAttribute eyeball "transform" transform))))))
+    (event/listen js/document.documentElement "mousemove"
+                  (fn [e]
+                    (let [[dx dy] (vec- [e.clientX e.clientY] center)
+                          [dw dh] (let [v (dom/getViewportSize)] [v.width v.height])
+                          tx (min (* eyeball-movement (/ dx dw))
+                                  eyeball-max)
+                          ty (min (* eyeball-movement (/ dy dh))
+                                  eyeball-max)]
+                      (transform/setTranslation eyeball tx ty))))))
 
 (defn xeyes [_ owner]
   (reify
     om/IDidMount
     (did-mount [_]
       (let [obj (om/get-node owner "logo")]
-        (.addEventListener obj "load" #(attach-eyeball-mover! obj))))
+        (event/listen obj "load" #(attach-eyeball-mover! obj))))
     om/IRender
     (render [_]
       (html
