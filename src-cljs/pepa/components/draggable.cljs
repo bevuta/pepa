@@ -7,8 +7,11 @@
             [pepa.style :as css]
 
             [clojure.browser.event :as bevent]
-            [goog.dom :as gdom])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+            [goog.dom :as gdom]
+            [cljs.reader :refer [read-string]])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
+  (:import goog.storage.Storage
+           goog.storage.mechanism.HTML5LocalStorage))
 
 (defn ^:private resize-mouse-down [owner sidebar e]
   ;; Only handle 'main' mouse button
@@ -68,13 +71,33 @@
 (defn shared-data []
   {::events (async/chan)})
 
+(def ^:private +save-timeout+ (* 0.5 1000))
+
+(let [storage (Storage. (HTML5LocalStorage.))]
+  (defn ^:private save-sidebar-state! [sidebars]
+    (println "saving sidebar state")
+    (.set storage (str ::sidebars) (pr-str sidebars)))
+
+  (defn ^:private read-sidebar-state []
+    (println "saving sidebar state")
+    (read-string (.get storage (str ::sidebars)))))
+
 (defn resize-handle-loop [root-owner]
-  (go-loop []
-    (when-let [event (<! (om/get-shared root-owner ::events))]
-      #_(println "got resize-event" (pr-str event))
-      (let [[sidebar pos] event]
-        (om/transact! (data/ui-sidebars)
-                      (fn [sidebars]
-                        (assoc sidebars sidebar
-                               (pos->width sidebars sidebar pos)))))
-      (recur))))
+  ;; Read sizes from local storage
+  (om/update! (data/ui-sidebars) (read-sidebar-state))
+  (go-loop [changed? false]
+    (let [resizes (om/get-shared root-owner ::events)
+          timeout (async/timeout +save-timeout+)
+          [event port] (alts! [resizes timeout])]
+      (cond
+        (and event (= port resizes))
+        (let [[sidebar pos] event]
+          (om/transact! (data/ui-sidebars)
+                        (fn [sidebars]
+                          (assoc sidebars sidebar
+                                 (pos->width sidebars sidebar pos))))
+          (recur true))
+        (= port timeout)
+        (do
+          (when changed? (save-sidebar-state! @(data/ui-sidebars)))
+          (recur false))))))
