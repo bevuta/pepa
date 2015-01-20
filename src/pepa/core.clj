@@ -8,6 +8,7 @@
             [pepa.processor.file-page-extractor :as fpe]
             [pepa.processor.page-ocr :as page-ocr]
             [pepa.processor.page-renderer :as page-renderer]
+            [pepa.printing :as printing]
             [pepa.init :as init]
 
             [clojure.core.match :refer [match]])
@@ -34,7 +35,10 @@
           [:config :db :file-page-extractor])
    :smtp (component/using
            (smtp/make-component)
-           [:config :db])))
+           [:config :db])
+   :lpd (component/using
+         (printing/make-lpd-component)
+         [:config])))
 
 (defn -main [& args]
   (match [(vec args)]

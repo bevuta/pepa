@@ -29,7 +29,11 @@
                  ;; E-Mail
                  [javax.mail/mail "1.4.7"
                   :exclusions [javax.activation/activation]]
-                 [org.subethamail/subethasmtp "3.1.7"]]
+                 [org.subethamail/subethasmtp "3.1.7"]
+
+                 ;; Printing
+                 [com.bevuta/lpd "0.1.0"]
+                 [javax.jmdns/jmdns "3.4.1"]]
   :plugins [[lein-cljsbuild "1.0.4"]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"
