@@ -372,14 +372,14 @@
            (list
             [:&.above [:&:before (assoc x :top offset)]]
             [:&.below [:&:after  (assoc x :bottom offset)]]))]
-        [:&.selected {:position :relative}
-         [:&:before {:content (pr-str " ")
-                     :display :block
-                     :width "100%"
-                     :height "100%"
-                     :position :absolute
-                     :top 0 :left 0
-                     :background-color "rgba(0,0,1,0.5)"}]]
+        [:&.selected
+         [:.thumbnail {:position :relative}
+          [:&:before {:content (pr-str " ")
+                      :display :block
+                      :width "100%", :height "100%"
+                      :position :absolute
+                      :top 0 :left 0
+                      :background-color "rgba(0,0,1,0.5)"}]]]
         [:img {:max-width "100%"
                :max-height "100%"}]]]
 
