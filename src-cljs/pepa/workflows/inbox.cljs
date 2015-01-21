@@ -359,16 +359,19 @@
                                     ;;                target-position)
                                     }}))))]
            [:footer
-            (if (inbox? document)
-              [:button.delete {:on-click (partial document-delete-pages! document owner)}
-               "Delete Pages"]
-              (list
-               (when (not= selected-document (:id document))
-                 [:button.move {:on-click (partial document-pull-pages! document owner)}
-                  "Move Pages"])
-               (when (= selected-document (:id document))
-                 [:button.remove {:on-click (partial document-remove-pages! document owner)}
-                  "Remove Pages"])))]]])))))
+            (let [page-or-pages (if (= 1 (count selected-pages))
+                                  "Page"
+                                  "Pages")]
+             (if (inbox? document)
+               [:button.delete {:on-click (partial document-delete-pages! document owner)}
+                (str "Delete " page-or-pages)]
+               (list
+                (when (not= selected-document (:id document))
+                  [:button.move {:on-click (partial document-pull-pages! document owner)}
+                   (str "Move " page-or-pages)])
+                (when (= selected-document (:id document))
+                  [:button.remove {:on-click (partial document-remove-pages! document owner)}
+                   (str "Remove " page-or-pages)]))))]]])))))
 
 ;;; The "Drag Target" Column
 
