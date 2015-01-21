@@ -378,7 +378,8 @@
                       :width "100%", :height "100%"
                       :position :absolute
                       :top 0 :left 0
-                      :background-color "rgba(0,0,1,0.5)"}]]]
+                      :background-color "rgba(0,0,1,0.5)"
+                      :z-index 10}]]]
         [:img {:max-width "100%"
                :max-height "100%"}]]]
 
