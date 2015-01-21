@@ -295,6 +295,10 @@
                    :width (px document-width)
                    :overflow-y :auto}
                   (calc-property :height ["100%" - margin-top]))
+      ;; Special handling for the inbox document (smaller header etc.)
+      [:&.inbox (list {:margin-top (px header-height)}
+                      (calc-property :height ["100%" - header-height]))
+       [:header {:height (px header-height)}]]
       (let [header-width (- document-width
                             (* 2 header-padding))]
         ;; TODO(mu): Redo this section
@@ -317,8 +321,7 @@
                     :top (px (/ header-height 2))}
                    ^:prefix {:transform "translateY(-50%)"})]
          [:.tags {:max-height (px (- tags-height 8))
-                  :padding-botton (px 8)}]
-         ])
+                  :padding-botton (px 8)}]])
       [:ul.pages {:margin 0, :padding 0}
        [:li.page (list
                   {:width "100%"
