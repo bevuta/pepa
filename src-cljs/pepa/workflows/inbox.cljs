@@ -151,7 +151,9 @@
                                   (async/put! (om/get-state owner :events)
                                               {:event :document/save
                                                :document (om/value document)})
-                                  (.preventDefault e))
+                                  (doto e
+                                    (.preventDefault)
+                                    (.stopPropagation)))
                       :disabled disabled?}
         "Save"]))))
 
@@ -208,8 +210,6 @@
               (or title "Unnamed")]
              (om/build save-button document
                        {:init-state {:events events}
-                        :state {:disabled? (or (s/blank? title)
-                                               (empty? (:pages document)))}
                         :key :id}))
             (list
              [:form.title {:on-submit (fn [e]
@@ -455,14 +455,16 @@
   "Saves DOCUMENT on the server and removes it from the inbox state."
   [state document]
   (go
-    (assert (:title document))
-    (assert (seq (:pages document)))
-    (println "Saving document" document)
-    (when (<! (api/save-new-document! document "inbox"))
-      (om/transact! state :documents #(dissoc % (:id document)))
-      (let [pages (:pages document)]
-        (when (<! (api/delete-from-inbox! pages))
-          (om/transact! state [:documents :inbox :pages] #(filterv (complement (set pages)) %)))))))
+    (let [document (update-in document [:title]
+                              #(or % (js/window.prompt "Please enter a name for the document:")))]
+      (assert (seq (:pages document)))
+      (if (s/blank? (:title document))
+        (js/alert "Can't save a document without a title.")
+        (when (<! (api/save-new-document! document "inbox"))
+          (om/transact! state :documents #(dissoc % (:id document)))
+          (let [pages (:pages document)]
+            (when (<! (api/delete-from-inbox! pages))
+              (om/transact! state [:documents :inbox :pages] #(filterv (complement (set pages)) %)))))))))
 
 (defn ^:private delete-pages!
   "Deletes selected pages from the inbox on the server."
