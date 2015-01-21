@@ -2,7 +2,8 @@
   (:require [clojure.string :as s]
             [clojure.java.io :as io]
             [pepa.util :refer [slurp-bytes run-process with-temp-file]])
-  (:import java.lang.ProcessBuilder))
+  (:import java.lang.ProcessBuilder
+           java.io.File))
 
 (declare make-reader)
 
@@ -52,7 +53,7 @@
           file-type (case file-type
                       ;; NOTE: Always use "." here. See note below.
                       :png "png")
-          tmp-file (java.io.File/createTempFile "pdftocairo" (str "." file-type))]
+          tmp-file (File/createTempFile "pdftocairo" (str "." file-type))]
       (try
         (let [args [(str file)
                     (str "-" file-type) ;-png flag
@@ -87,7 +88,7 @@
   "Extracts PAGE (a number) from PDF (input-stream). Returns a file.
   Caller must delete this file when it's no longer needed."
   [file page]
-  (let [tmp-file (java.io.File/createTempFile "pdfseparate-" ".pdf")
+  (let [tmp-file (File/createTempFile "pdfseparate-" ".pdf")
         page (inc page)
         args ["-f" page
               "-l" page
@@ -126,7 +127,7 @@
   "Merges PAGES into a pdf. PAGES must be a sequence of pdf files. Returns a file."
   [pages]
   (assert (seq pages))
-  (let [file (java.io.File/createTempFile "pdfunite-" ".pdf")
+  (let [file (File/createTempFile "pdfunite-" ".pdf")
         args (concat (map #(.getAbsolutePath %) pages)
                      [(.getAbsolutePath file)])
         process (-> (into-array (map str (cons "pdfunite" args)))
