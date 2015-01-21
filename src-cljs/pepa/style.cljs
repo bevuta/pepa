@@ -453,7 +453,8 @@
        [:.document {:display :inline-block
                     :height (px document-height)
                     :width (px document-width)
-                    :padding (px document-padding)}
+                    :padding (px document-padding)
+                    :cursor :pointer}
         [:&:hover {:background-color dark-background}]
 
         page-css

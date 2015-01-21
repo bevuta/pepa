@@ -35,8 +35,18 @@
     (render [_]
       (let [href (nav/document-route document)]
         (html
+         ;; NOTE: We can't wrap the <a> around all those divs. It's
+         ;; forbidden to put a <div> inside <a> if there are other
+         ;; <a>s and other stuff inside it. If we try it nonetheless,
+         ;; the browser will reorder or DOM and React will fail
+         ;; horribly.
          [:.document {:on-drag-over tags/accept-tags-drop
-                      :on-drop (partial handle-tags-drop document)}
+                      :on-drop (partial handle-tags-drop document)
+                      :on-click (fn [e]
+                                  (nav/navigate! (nav/document-route document))
+                                  (doto e
+                                    (.stopPropagation)
+                                    (.preventDefault)))}
           [:.preview
            [:a {:href href}
             (om/build page/thumbnail (-> document :pages first))
