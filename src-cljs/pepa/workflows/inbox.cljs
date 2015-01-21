@@ -399,7 +399,8 @@
 (defn new-document [documents pages & [from]]
   (when pages (assert from))
   (let [document (data/map->Document {:id (gensym)
-                                      :pages []})
+                                      :pages []
+                                      :tags []})
         documents (assoc documents (:id document) document)]
     (if from
       (move-pages documents pages from (:id document))
