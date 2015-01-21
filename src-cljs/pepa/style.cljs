@@ -137,16 +137,16 @@
 
 (defn sidebar-search-css [height]
   (let [search-padding 10]
-   [:.search {:height (px height)
-              :position :relative
-              :border-bottom (str "1px solid " border-dark)}
-    [:input (list
-             {:position :absolute
-              :top "50%"
-              :left "50%"
-              :border (str "1px solid " border-dark)}
-             ^:prefix {:transform "translate(-50%,-50%)"}
-             (calc-property :width ["100%" - (* 2 search-padding)]))]]))
+    [:.search {:height (px height)
+               :position :relative
+               :border-bottom (str "1px solid " border-dark)}
+     [:input (list
+              {:position :absolute
+               :top "50%"
+               :left "50%"
+               :border (str "1px solid " border-dark)}
+              ^:prefix {:transform "translate(-50%,-50%)"}
+              (calc-property :width ["100%" - (* 2 search-padding)]))]]))
 
 (def sidebar-css
   (let [search-height 50]
@@ -287,65 +287,38 @@
      [:td {:position :relative
            :vertical-align :top
            :border-right (str "1px solid " border-light)}]]]
-   (let [collapse-height 15
-         footer-height 40]
+   (let [footer-height 40
+         tags-height 30
+         margin-top (+ header-height tags-height)]
      [:.document (list
-                  {:margin-top (px (+ header-height
-                                      collapse-height))
+                  {:margin-top (px margin-top)
                    :width (px document-width)
                    :overflow-y :auto}
-                  (calc-property :height ["100%"
-                                          - header-height
-                                          - collapse-height]))
-      ;; Special handling for the inbox document (no .collapse thingy)
-
-      [:&.inbox (list {:margin-top (px header-height)}
-                      (calc-property :height ["100%"
-                                              - header-height]))]
+                  (calc-property :height ["100%" - margin-top]))
       (let [header-width (- document-width
                             (* 2 header-padding))]
         ;; TODO(mu): Redo this section
         [:header {:position :absolute
                   :width (px header-width)
-                  :height (px header-height)
+                  :height (px margin-top)
                   :top 0 :left 0
                   :cursor :pointer}
-         [:.title {:max-width "70%"
-                   :height "100%"
+         [:.title {:max-width "70%" 
                    :display :inline-block
                    :white-space :nowrap}
           [:&div {:overflow :hidden
                   :white-space :nowrap
                   :text-overflow :ellipsis
-                  :height "100%"}]
+                  }]
           [:&input {:width (px header-width)}]]
          [:button (list
                    {:position :absolute
                     :right (px header-padding)
-                    :margin-top (px (/ header-height 2))}
+                    :top (px (/ header-height 2))}
                    ^:prefix {:transform "translateY(-50%)"})]
-         ;; Collapsible tags input etc.
-         [:.collapse {:width (px header-width)
-                      :position :absolute
-                      :left 0
-                      :padding {:left (px header-padding)
-                                :right (px header-padding)
-                                :bottom (px header-padding)}
-                      :background-color dark-background
-                      :line-height (em 1)}
-          [:&:before (list
-                      {:content (pr-str " ")
-                       :display :block
-                       :width "100%", :height (px collapse-height)
-                       :background {:image (image-url "dropdown-arrow.svg")
-                                    :position [["50%" "50%"]]
-                                    :repeat :no-repeat}
-                       :z-index 100}
-                      ^:prefix {:transform "scale(1,-1)"})]
-          [:&.collapsed {:height (px collapse-height)
-                         :padding-bottom (px 2)}
-           [:&:before ^:prefix {:transform "scale(1,1)"}]]
-          [:&.open {:height :auto}]]])
+         [:.tags {:max-height (px (- tags-height 8))
+                  :padding-botton (px 8)}]
+         ])
       [:ul.pages {:margin 0, :padding 0}
        [:li.page (list
                   {:width "100%"
@@ -386,8 +359,7 @@
       [:footer {:display :none}]
       [:&.footer-visible (calc-property :height
                                         ["100%"
-                                         - header-height
-                                         - collapse-height
+                                         - margin-top 
                                          - footer-height])
        [:footer {:position :absolute
                  :height (px footer-height)
@@ -418,10 +390,6 @@
                             :size (px 72)}
                :width "100%"
                :height (px 72)}]
-     ;; [:img {:width (px 72)
-     ;;        :width "100%"
-     ;;        :height (px 72)
-     ;;        :position :relative}]
      (let [font-size 12]
        [:p {:font {:size (pt font-size)
                    :style :italic

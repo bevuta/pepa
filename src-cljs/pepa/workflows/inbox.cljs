@@ -183,24 +183,6 @@
      (om/build update-inbox-button inbox
                {:init-state {:events (om/get-state owner :events)}})])))
 
-(defn ^:private collapsible-document-props [document owner _]
-  (reify
-    om/IDisplayName (display-name [_] "CollapsibleDocumentProps")
-    om/IInitState
-    (init-state [_]
-      {:collapsed? true})
-    om/IRenderState
-    (render-state [_ {:keys [collapsed?]}]
-      (html
-       [:.collapse {:class [(if collapsed? "collapsed" "open")]
-                    :on-click (fn [e]
-                                (om/update-state! owner :collapsed? not)
-                                (doto e
-                                  (.preventDefault)
-                                  (.stopPropagation)))}
-        (when-not collapsed?
-          (om/build tags/tags-input document))]))))
-
 (defn ^:private editable-title [document owner _]
   (reify
     om/IDisplayName (display-name [_] "EditableTitle")
@@ -245,7 +227,7 @@
                        :on-blur #(om/set-state! owner :editing? false)}]
               [:button.ok {:type "submit"}
                "Ok"]])))
-        (om/build collapsible-document-props document)]))))
+        (om/build tags/tags-input document)]))))
 
 ;;; A single page
 
