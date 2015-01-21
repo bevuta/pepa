@@ -181,9 +181,8 @@
                                   :size (px icon-size)
                                   :position [[(px padding-left) :center]]}}
                     ^:prefix {:user-select :none})
-          (for [row (map second navigation-elements)]
-            (let [row (name row)
-                  selector (keyword (str "&." row))]
+          (for [row (map (comp name second) navigation-elements)]
+            (let [selector (keyword (str "&." row))]
               [selector
                [:a
                 [:div

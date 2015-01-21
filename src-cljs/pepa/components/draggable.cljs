@@ -80,11 +80,15 @@
 
   (defn ^:private read-sidebar-state []
     (println "saving sidebar state")
-    (read-string (.get storage (str ::sidebars)))))
+    (try
+      (-> (.get storage (str ::sidebars))
+          (read-string))
+      (catch js/Error e
+        (println "Couldn't read sidebar state from local storage.")))))
 
 (defn resize-handle-loop [root-owner]
   ;; Read sizes from local storage
-  (om/update! (data/ui-sidebars) (read-sidebar-state))
+  (om/update! (data/ui-sidebars) (or (read-sidebar-state) {}))
   (go-loop [changed? false]
     (let [resizes (om/get-shared root-owner ::events)
           timeout (async/timeout +save-timeout+)
