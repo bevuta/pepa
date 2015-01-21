@@ -243,23 +243,23 @@
 
 (def page-css
   [:.thumbnail {:position :relative}
-   (let [rotate-height 25]
+   (let [rotate-height 24]
      [:.rotate {:position :absolute
                 :top 0, :right 0
                 :height (px rotate-height)
                 :z-index 500
                 :background-color "rgba(255, 255, 255, 0.8)"
-                :margin (px 5)}
-      [:.left :.flip :.right (list
-                              {:float :right
-                               :width (px rotate-height)
-                               :height (px rotate-height)
-                               :line-height (px rotate-height)
-                               :text-align :center
-                               :background-size "100%"
-                               :cursor :pointer
-                               :opacity 0.3}
-                              ^:prefix {:user-select :none})
+                :margin (px 5)
+                :border-radius (px 4)}
+      [:.left :.right (list
+                       {:float :right
+                        :width (px rotate-height)
+                        :height (px rotate-height)
+                        :line-height (px rotate-height)
+                        :text-align :center
+                        :cursor :pointer
+                        :opacity 0.3}
+                       ^:prefix {:user-select :none})
        ;; Give buttons full opacity when hovered
        [:&:hover {:opacity 1}]
        [:&.right {:background-image (image-url "material/page-rotate-right.svg")}]
@@ -364,6 +364,9 @@
                                         ["100%"
                                          - margin-top 
                                          - footer-height])
+       [:&.inbox (calc-property :height ["100%"
+                                         - header-height
+                                         - footer-height])]
        [:footer {:position :absolute
                  :height (px footer-height)
                  :width "100%"
@@ -372,8 +375,7 @@
                  :display :initial}
         [:button (list
                   {:position :relative
-                   :left "50%", :top "50%"
-                   }
+                   :left "50%", :top "50%"}
                   ^:prefix {:transform "translate(-50%,-50%)"})]]]])
    ;; The drop-area to create new documents
    [:td.create-document {:min-width (px document-width)
