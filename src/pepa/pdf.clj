@@ -107,8 +107,6 @@
                        :page page})))
     tmp-file))
 
-;;; TODO(mu): Add a three-arg arity where you can specify rotation for
-;;; every page
 (defn rotate-pdf-file
   "Sets rotation of all pages in F to DEG degrees. DEG must be a
   multiple of 90. Overwrites f."

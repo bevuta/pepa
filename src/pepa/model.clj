@@ -106,6 +106,15 @@
       first
       :file))
 
+(defn document-pages
+  "Returns a list of pages for the document with ID."
+  [db id]
+  (db/query db ["SELECT p.file, p.number, p.rotation 
+                 FROM pages AS p 
+                 JOIN document_pages AS dp on dp.page = p.id
+                 WHERE dp.document = ?
+                 ORDER BY dp.number" id]))
+
 ;;; Modify Documents
 
 (defn add-pages! [db document page-ids]
@@ -273,44 +282,44 @@
 
 ;;; TODO(mu): We need to cache this stuff.
 ;;; TODO: Handle render-status here
-;;; TODO: We need to handle rotation for single-file documents
 (defn document-pdf
   "Generates a pdf-file for DOCUMENT-ID. Returns a file-object
   pointing to the (temporary) file. Caller must make sure to delete
   this file."
   [db document-id]
   ;; If the document has an associated file we can short-circuit the split&merge path
-  (if-let [document-file (document-file db document-id)]
-    (let [f (java.io.File/createTempFile "pepa" "pdf")
-          data (-> (db/query db ["SELECT data FROM files WHERE id = ?" document-file]) first :data)]
-      (with-open [out (io/output-stream f)]
-        (io/copy data out)
-        (.flush out))
-      f)
-    ;; ...if not: Split all source PDFs and merge the pages together
-    (let [pages (db/query db ["SELECT p.file, p.number, p.rotation FROM pages AS p JOIN document_pages AS dp on dp.page = p.id WHERE dp.document = ?  ORDER BY dp.number" document-id])
-          files (db/query db (db/sql+placeholders "SELECT f.id, f.data FROM files as f WHERE f.id in (%s)"
-                                                  (into #{} (map :file pages))))
-          files (zipmap (map :id files) files)
-          ;; file-id -> (page-number -> pdf-file)
-          page-files (into {}
-                           ;; Group pages by file so we don't create two temp files if we
-                           ;; want two pages from the same document
-                           (for [[file-id pages] (group-by :file pages)]
-                             [file-id
-                              (let [data (get-in files [file-id :data])]
-                                (pdf/split-pdf data (map :number pages)))]))
-          pages (map #(assoc % :pdf-file (get-in page-files [(:file %) (:number %)])) pages)]
-      (let [page-files (map :pdf-file pages)]
-        (try
-          ;; Rotate the pages if necessary
-          (let [page-files (for [page pages]
-                             (let [original (:pdf-file page)]
-                               (pdf/rotate-pdf-file original (:rotation page))))]
-            (pdf/merge-pages page-files))
-          (finally
-            (doseq [file page-files]
-              (.delete file))))))))
+  (let [pages (document-pages db document-id)]
+    (if-let [document-file (and (every? #(zero? (:rotation %)) pages)
+                                (document-file db document-id))]
+      (let [f (java.io.File/createTempFile "pepa" ".pdf")
+            data (-> (db/query db ["SELECT data FROM files WHERE id = ?" document-file]) first :data)]
+        (with-open [out (io/output-stream f)]
+          (io/copy data out)
+          (.flush out))
+        f)
+      ;; ...if not: Split all source PDFs and merge the pages together
+      (let [files (db/query db (db/sql+placeholders "SELECT f.id, f.data FROM files as f WHERE f.id in (%s)"
+                                                    (into #{} (map :file pages))))
+            files (zipmap (map :id files) files)
+            ;; file-id -> (page-number -> pdf-file)
+            page-files (into {}
+                             ;; Group pages by file so we don't create two temp files if we
+                             ;; want two pages from the same document
+                             (for [[file-id pages] (group-by :file pages)]
+                               [file-id
+                                (let [data (get-in files [file-id :data])]
+                                  (pdf/split-pdf data (map :number pages)))]))
+            pages (map #(assoc % :pdf-file (get-in page-files [(:file %) (:number %)])) pages)]
+        (let [page-files (map :pdf-file pages)]
+          (try
+            ;; Rotate the pages if necessary
+            (let [page-files (for [page pages]
+                               (let [original (:pdf-file page)]
+                                 (pdf/rotate-pdf-file original (:rotation page))))]
+              (pdf/merge-pages page-files))
+            (finally
+              (doseq [file page-files]
+                (.delete file)))))))))
 
 (defn mime-message->files [input]
   (->> (mime/message-parts input)
