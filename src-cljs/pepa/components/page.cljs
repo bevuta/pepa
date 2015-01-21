@@ -40,8 +40,6 @@
       [:.rotate
        [:.right {:on-click (partial rotate-clicked page (+ rotation 90))
                  :title "Rotate Clockwise"}]
-       [:.flip.vertical {:on-click (partial rotate-clicked page (+ rotation 180))
-                         :title "Flip Vertical"}]
        [:.left  {:on-click (partial rotate-clicked page (- rotation 90))
                  :title "Rotate Counterclockwise"}]]))))
 
