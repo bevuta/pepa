@@ -272,8 +272,8 @@
   (db/delete! db :inbox (db/sql+placeholders "page IN (%s)" page-ids)))
 
 ;;; TODO(mu): We need to cache this stuff.
-;;; TODO(mu): We need to handle (= document file) more efficient
 ;;; TODO: Handle render-status here
+;;; TODO: We need to handle rotation for single-file documents
 (defn document-pdf
   "Generates a pdf-file for DOCUMENT-ID. Returns a file-object
   pointing to the (temporary) file. Caller must make sure to delete
@@ -288,29 +288,29 @@
         (.flush out))
       f)
     ;; ...if not: Split all source PDFs and merge the pages together
-    (let [pages (db/query db ["SELECT p.file, p.number FROM pages AS p JOIN document_pages AS dp on dp.page = p.id WHERE dp.document = ?  ORDER BY dp.number" document-id])
+    (let [pages (db/query db ["SELECT p.file, p.number, p.rotation FROM pages AS p JOIN document_pages AS dp on dp.page = p.id WHERE dp.document = ?  ORDER BY dp.number" document-id])
           files (db/query db (db/sql+placeholders "SELECT f.id, f.data FROM files as f WHERE f.id in (%s)"
                                                   (into #{} (map :file pages))))
           files (zipmap (map :id files) files)
-          ;; Group pages by file so we don't create two temp files if we
-          ;; want two pages from the same document
-          grouped-pages (group-by :file pages) ; file-id -> [page, ...]
           ;; file-id -> (page-number -> pdf-file)
           page-files (into {}
-                           (for [[file-id pages] grouped-pages]
+                           ;; Group pages by file so we don't create two temp files if we
+                           ;; want two pages from the same document
+                           (for [[file-id pages] (group-by :file pages)]
                              [file-id
                               (let [data (get-in files [file-id :data])]
                                 (pdf/split-pdf data (map :number pages)))]))
-          ;; [pdf-file, ...]
-          page-files (map (fn [page]
-                            (get-in page-files [(:file page)
-                                                (:number page)]))
-                          pages)]
-      (try
-        (pdf/merge-pages page-files)
-        (finally
-          (doseq [file page-files]
-            (.delete file)))))))
+          pages (map #(assoc % :pdf-file (get-in page-files [(:file %) (:number %)])) pages)]
+      (let [page-files (map :pdf-file pages)]
+        (try
+          ;; Rotate the pages if necessary
+          (let [page-files (for [page pages]
+                             (let [original (:pdf-file page)]
+                               (pdf/rotate-pdf-file original (:rotation page))))]
+            (pdf/merge-pages page-files))
+          (finally
+            (doseq [file page-files]
+              (.delete file))))))))
 
 (defn mime-message->files [input]
   (->> (mime/message-parts input)

@@ -107,6 +107,43 @@
                        :page page})))
     tmp-file))
 
+;;; TODO(mu): Add a three-arg arity where you can specify rotation for
+;;; every page
+(defn rotate-pdf-file
+  "Sets rotation of all pages in F to DEG degrees. DEG must be a
+  multiple of 90. Overwrites f."
+  [f deg]
+  (let [deg (mod deg 360)]
+    (when-not (zero? (mod deg 90))
+      (throw (ex-info "PDF only supports rotation by multiples of 90."
+                      {:file f, :deg deg})))
+    (if (zero? deg)
+      f
+      ;; pdftk in.pdf cat 1-endsouth output out.pdf
+      (let [tmp-file (File/createTempFile "pdftk-" ".pdf")]
+        (try
+          (let [rot (case deg
+                      90 :right
+                      180 :down
+                      270 :left)
+            
+                args ["pdftk" f "cat" (str "1-end" (name rot)) "output" tmp-file]
+                proc (-> (into-array (map str args))
+                         (ProcessBuilder.)
+                         (.redirectError java.lang.ProcessBuilder$Redirect/INHERIT)
+                         (.start))
+                exit-code (.waitFor proc)]
+            (when-not (zero? exit-code)
+              (throw (ex-info "pdftk didn't terminate correctly"
+                              {:exit-code exit-code, :args args})))
+            (when-not (.renameTo tmp-file f)
+              (throw (ex-info "Couldn't overwrite input file"
+                              {:input f, :tmp-file tmp-file})))
+            f)
+          (finally
+            (when (.exists tmp-file)
+              (.delete tmp-file))))))))
+
 (defn split-pdf
   "Extract all pages with numbers in PAGES from PDF. Returns a map
   with page numbers as keys and files as values."
