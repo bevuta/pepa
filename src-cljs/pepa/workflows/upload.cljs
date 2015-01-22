@@ -10,8 +10,9 @@
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(defn ^:private upload-file! [row owner e]
-  (.preventDefault e)
+(defn ^:private upload-file! [row & [e]]
+  (when e
+   (.preventDefault e))
   (when-not (:working? row)
     (go
       (try
@@ -42,25 +43,21 @@
             size (.-size file)]
         (html
          [:li
-          [:form {:on-submit (partial upload-file! row owner)}
-           (if document-id
-             [:a.title {:href (when document-id
-                                (nav/document-route {:id document-id}))
-                        :title name}
-              name]
-             [:span.title {:title name} name])
-           [:span.size (str (byte->kb size) "kB")]
-           (if-not document-id
-             [:button.upload {:type :submit
-                              :disabled (:working? row)}
-              "Upload"]
-             [:.hide {:on-click (fn [e]
-                                  (when (fn? hide-fn)
-                                    (hide-fn (om/value row)))
-                                  (doto e
-                                    (.preventDefault)
-                                    (.stopPropagation)))}
-              "Hide"])]])))))
+          (if document-id
+            [:a.title {:href (when document-id
+                               (nav/document-route {:id document-id}))
+                       :title name}
+             name]
+            [:span.title {:title name} name])
+          [:span.size (str (byte->kb size) "kB")]
+          (when-not document-id
+            [:.hide {:on-click (fn [e]
+                                 (when (fn? hide-fn)
+                                   (hide-fn (om/value row)))
+                                 (doto e
+                                   (.preventDefault)
+                                   (.stopPropagation)))}
+             "Hide"])])))))
 
 (defn ^:private remove-file! [files file]
   (om/transact! files (fn [files]
@@ -96,10 +93,22 @@
       (js/console.warn "Unsupported file type:" (.-type file) file)
       upload)
     (update-in upload [:files]
-               #(vec (conj % {:file file})))))
+               #(conj (vec %) {:file file}))))
 
 (defn upload-dialog [upload owner _]
   (reify
+    om/IDidUpdate
+    (did-update [_ prev-props _]
+      ;; Start upload for every new file in :files
+      (when (< (count (:files prev-props))
+               (count (:files upload)))
+        (let [new-files (filter (fn [file]
+                                  (and (not (:working? file))
+                                       (not (:document-id file))))
+                                (:files upload))]
+          (println "got new files" new-files)
+          (doseq [file new-files]
+            (upload-file! file)))))
     om/IRenderState
     (render-state [_ {:keys [mini?]}]
       (let [files (:files upload)
