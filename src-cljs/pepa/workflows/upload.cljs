@@ -144,6 +144,7 @@
           (if-not mini?
             (list
              [:header {:on-click toggle-mini}]
-             (om/build file-list files)
+             ;; Not sure if {:key :file} works.
+             (om/build file-list files {:key :file})
              (om/build upload-button upload))
             "Upload Files")])))))
