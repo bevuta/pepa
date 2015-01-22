@@ -692,7 +692,7 @@
                               "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"] }]]]))
 
 (def upload-css
-  (let [padding 15
+  (let [padding 10
         header-height 15
         upload-button-height 40]
     [:#upload {:background-color dark-background
@@ -719,7 +719,8 @@
                :background-color darker-background
                :cursor :pointer}]
      [:ul.files (list
-                 {:padding {:left (px 10)}
+                 {:padding {:left (px padding)
+                            :right (px padding)}
                   :margin {:top (px header-height)}
                   :overflow-y :auto
                   :list-style-type :none}
@@ -737,16 +738,23 @@
          [:a.title {:text-decoration :underline}]
          [:.size {:font-size (pt 8)
                   :padding (px 4)}]
-         [:.upload :.hide (list
-                           {:position :absolute
-                            :top "50%"
-                            :right 0}
-                           ^:prefix {:transform "translateY(-50%)"})]
+         [:.progress :.hide (list
+                             {:position :absolute
+                              :display :block
+                              :right 0, :top "50%"}
+                             ^:prefix {:transform "translateY(-50%)"})]
+         (let [progress-height 4]
+           [:.progress {:width (px 150)
+                        :height (px progress-height)}
+            [:.bar {:height "100%"
+                    :float :right
+                    :background-color "darkgrey"}]])
          [:.hide {:text-decoration :underline
-                  :cursor :pointer
-                  :display :block}
+                  :cursor :pointer}
           [:&:hover {:color grey-1}]]])]
-     [:form.upload {:width "100%", :height (px upload-button-height)}]]))
+     [:form.upload {:width "100%", :height (px upload-button-height)
+                    :padding {:left (px padding)
+                              :right (px padding)}}]]))
 
 (def clear-a-css
   [:a {:text-decoration :none

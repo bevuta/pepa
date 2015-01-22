@@ -8,7 +8,16 @@
 
             [pepa.navigation :as nav]
             [cljs.core.async :as async])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+
+(defn ^:private update-progress-loop [row ch]
+  (go-loop []
+    (when-let [progress (<! ch)]
+      (println "progress-event:" (pr-str progress))
+      (cond 
+        (number? progress)
+        (om/update! row :progress progress))
+      (recur))))
 
 (defn ^:private upload-file! [row & [e]]
   (when e
@@ -24,11 +33,21 @@
               upload-blob {:blob (<! (upload/file->u8arr file))
                            :content-type content-type
                            :filename name}
-              id (<! (upload/upload-document! document upload-blob))]
-          (println "Successfully uploaded document with id" id)
-          (om/update! row :document-id id))
+              progress (async/chan (async/sliding-buffer 1)) 
+              id-ch (upload/upload-document! document upload-blob
+                                             progress)]
+          (update-progress-loop row progress)
+          (let [id (<! id-ch)]
+           (println "Successfully uploaded document with id" id)
+           (om/update! row :document-id id)))
         (finally
           (om/update! row :working? false))))))
+
+(defn ^:provate progress-bar [progress]
+  (om/component
+   (html
+    [:.progress
+     [:.bar {:style {:width (str (* progress 100) "%")}}]])))
 
 (defn ^:private byte->kb [byte]
   (Math/floor (/ byte 1024)))
@@ -50,14 +69,18 @@
              name]
             [:span.title {:title name} name])
           [:span.size (str (byte->kb size) "kB")]
-          (when-not document-id
+          
+          
+          (if document-id
             [:.hide {:on-click (fn [e]
                                  (when (fn? hide-fn)
                                    (hide-fn (om/value row)))
                                  (doto e
                                    (.preventDefault)
                                    (.stopPropagation)))}
-             "Hide"])])))))
+             "Hide"]
+            
+            (om/build progress-bar (or (:progress row) 0)))])))))
 
 (defn ^:private remove-file! [files file]
   (om/transact! files (fn [files]
