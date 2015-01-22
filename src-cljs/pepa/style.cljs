@@ -729,6 +729,16 @@
         [:li {:height (px height)
               :line-height (px height)
               :position :relative}
+         (let [icon-size 20]
+           [:&.invalid
+            [:&:before {:content (pr-str " ")
+                        :display :inline-block
+                        :width (px icon-size) :height (px height)
+                        :background {:image (image-url (str "material/warning-invalid-file.svg?" (gensym)))
+                                     :position :center
+                                     :repeat :no-repeat}}]
+            [:.title {:color "red"
+                      :padding-left (px 4)}]])
          [:.title {:max-width "70%", :height "100%"
                    :display :inline-block
                    :overflow :hidden
@@ -749,8 +759,9 @@
             [:.bar {:height "100%"
                     :float :right
                     :background-color "darkgrey"}]])
-         [:.hide {:text-decoration :underline
-                  :cursor :pointer}
+         [:.hide (list {:text-decoration :underline
+                        :cursor :pointer}
+                       ^:prefix {:user-select :none})
           [:&:hover {:color grey-1}]]])]
      [:form.upload {:width "100%", :height (px upload-button-height)
                     :padding {:left (px padding)

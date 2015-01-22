@@ -59,19 +59,23 @@
       (let [document-id (:document-id row)
             file (:file row)
             name (.-name file)
-            size (.-size file)]
+            size (.-size file)
+            valid? (:valid? row)]
         (html
-         [:li
+         [:li {:class [(when-not valid? "invalid")]
+               :title (when-not valid?
+                        "This file type isn't supported.")}
           (if document-id
             [:a.title {:href (when document-id
                                (nav/document-route {:id document-id}))
                        :title name}
              name]
-            [:span.title {:title name} name])
-          [:span.size (str (byte->kb size) "kB")]
+            [:span.title (when valid? {:title name}) name])
+          (when valid?
+            [:span.size (str (byte->kb size) "kB")])
           
           
-          (if document-id
+          (if (or (not valid?) document-id)
             [:.hide {:on-click (fn [e]
                                  (when (fn? hide-fn)
                                    (hide-fn (om/value row)))
@@ -111,12 +115,9 @@
                              (set! e.currentTarget.value nil)))}]])))
 
 (defn add-file [upload file]
-  (if-not (upload/allowed-file-type? (.-type file))
-    (do
-      (js/console.warn "Unsupported file type:" (.-type file) file)
-      upload)
-    (update-in upload [:files]
-               #(conj (vec %) {:file file}))))
+  (update-in upload [:files]
+             #(conj (vec %) {:file file
+                             :valid? (upload/allowed-file-type? (.-type file))})))
 
 (defn upload-dialog [upload owner _]
   (reify
@@ -127,7 +128,8 @@
                (count (:files upload)))
         (let [new-files (filter (fn [file]
                                   (and (not (:working? file))
-                                       (not (:document-id file))))
+                                       (not (:document-id file))
+                                       (:valid? file)))
                                 (:files upload))]
           (println "got new files" new-files)
           (doseq [file new-files]
