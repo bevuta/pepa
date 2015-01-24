@@ -43,7 +43,7 @@
              :provided {:dependencies [[org.clojure/clojurescript "0.0-2665"]
                                        [com.cemerick/piggieback "0.1.5"]
                                        [com.cognitect/transit-cljs "0.8.199"]
-                                       [org.om/om "0.8.0"]
+                                       [org.omcljs/om "0.8.2"]
                                        [garden "1.2.5"]
                                        [sablono "0.2.22"]
                                        [secretary "1.2.1"]
