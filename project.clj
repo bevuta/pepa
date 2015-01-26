@@ -45,7 +45,7 @@
                                        [com.cognitect/transit-cljs "0.8.202"]
                                        [org.omcljs/om "0.8.4"]
                                        [garden "1.2.5"]
-                                       [sablono "0.2.22"]
+                                       [sablono "0.3.0"]
                                        [secretary "1.2.1"]
                                        [weasel "0.5.0"]
                                        [the/parsatron "0.0.7"]]}}
