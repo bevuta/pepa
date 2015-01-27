@@ -17,7 +17,13 @@
             
             [liberator.core :refer [defresource]]
             [liberator.representation :refer [as-response]]
-            [io.clojure.liberator-transit])
+            [io.clojure.liberator-transit]
+
+            [clojure.data.json :as json]
+            [cognitect.transit :as transit]
+
+            [immutant.web.async :as async-web]
+            [clojure.core.async :as async :refer [go <!]])
   (:import java.io.ByteArrayOutputStream
            java.io.ByteArrayInputStream
            java.io.FileInputStream
@@ -256,6 +262,45 @@
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
 
+;;; Long Polling
+
+(defn poll [req]
+  (let [method (:request-method req)
+        allowed-methods #{:get :post}
+        content-type (get (disj (set +default-media-types+) "text/html")
+                          (:content-type req))]
+    (cond
+      (not content-type)
+      {:status 406}
+      
+      (not (contains? allowed-methods method))
+      {:status 405}
+      
+      true
+      (let [data->response (case content-type
+                             "application/json"
+                             json/write-str
+
+                             "application/transit+json"
+                             (let [out (ByteArrayOutputStream.)
+                                   writer (transit/writer out :json)]
+                               (fn [data]
+                                 (.reset out)
+                                 (transit/write writer data)
+                                 (.write out (byte \newline))
+                                 (.toString out "UTF-8"))))]
+        (async-web/as-channel
+         req
+         {:on-open (fn [ch]
+                     (go
+                       (loop []
+                         (<! (async/timeout 1000))
+                         (async-web/send! ch (data->response {:foo 42}))
+                         (recur))))
+          :on-error (fn [ch throwable]
+                      (println "Caught exception:" throwable))
+          :on-close (fn [ch {:keys [code reason]}]
+                      (println "Closed" code reason))})))))
 
 (defn wrap-component [handler {:keys [config db]}]
   (fn [req]
@@ -285,6 +330,8 @@
           (ANY "/tags" [] tags)
           (GET "/tags/:tag" [tag :as req]
                (handle-get-objects-for-tag req tag))
+
+          (ANY "/poll" [] poll)
 
           (route/resources "/")
           (route/not-found "Nothing here")))
