@@ -40,12 +40,12 @@
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-2665"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-2727"]
                                        [com.cemerick/piggieback "0.1.5"]
-                                       [com.cognitect/transit-cljs "0.8.199"]
-                                       [org.om/om "0.8.0"]
+                                       [com.cognitect/transit-cljs "0.8.202"]
+                                       [org.omcljs/om "0.8.4"]
                                        [garden "1.2.5"]
-                                       [sablono "0.2.22"]
+                                       [sablono "0.3.0"]
                                        [secretary "1.2.1"]
                                        [weasel "0.5.0"]
                                        [the/parsatron "0.0.7"]]}}
@@ -54,6 +54,8 @@
                               :compiler {:output-to "resources/public/pepa.js"
                                          :output-dir "resources/public/out/"
                                          :source-map "resources/public/pepa.js.map"
+                                         :asset-path "out/"
+                                         :main pepa.core
                                          :cache-analysis true
                                          :optimizations :none
                                          :pretty-print true}}}}

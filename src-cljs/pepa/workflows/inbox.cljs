@@ -151,7 +151,9 @@
                                   (async/put! (om/get-state owner :events)
                                               {:event :document/save
                                                :document (om/value document)})
-                                  (.preventDefault e))
+                                  (doto e
+                                    (.preventDefault)
+                                    (.stopPropagation)))
                       :disabled disabled?}
         "Save"]))))
 
@@ -183,24 +185,6 @@
      (om/build update-inbox-button inbox
                {:init-state {:events (om/get-state owner :events)}})])))
 
-(defn ^:private collapsible-document-props [document owner _]
-  (reify
-    om/IDisplayName (display-name [_] "CollapsibleDocumentProps")
-    om/IInitState
-    (init-state [_]
-      {:collapsed? true})
-    om/IRenderState
-    (render-state [_ {:keys [collapsed?]}]
-      (html
-       [:.collapse {:class [(if collapsed? "collapsed" "open")]
-                    :on-click (fn [e]
-                                (om/update-state! owner :collapsed? not)
-                                (doto e
-                                  (.preventDefault)
-                                  (.stopPropagation)))}
-        (when-not collapsed?
-          (om/build tags/tags-input document))]))))
-
 (defn ^:private editable-title [document owner _]
   (reify
     om/IDisplayName (display-name [_] "EditableTitle")
@@ -226,8 +210,6 @@
               (or title "Unnamed")]
              (om/build save-button document
                        {:init-state {:events events}
-                        :state {:disabled? (or (s/blank? title)
-                                               (empty? (:pages document)))}
                         :key :id}))
             (list
              [:form.title {:on-submit (fn [e]
@@ -245,7 +227,7 @@
                        :on-blur #(om/set-state! owner :editing? false)}]
               [:button.ok {:type "submit"}
                "Ok"]])))
-        (om/build collapsible-document-props document)]))))
+        (om/build tags/tags-input document)]))))
 
 ;;; A single page
 
@@ -359,16 +341,19 @@
                                     ;;                target-position)
                                     }}))))]
            [:footer
-            (if (inbox? document)
-              [:button.delete {:on-click (partial document-delete-pages! document owner)}
-               "Delete Pages"]
-              (list
-               (when (not= selected-document (:id document))
-                 [:button.move {:on-click (partial document-pull-pages! document owner)}
-                  "Move Pages"])
-               (when (= selected-document (:id document))
-                 [:button.remove {:on-click (partial document-remove-pages! document owner)}
-                  "Remove Pages"])))]]])))))
+            (let [page-or-pages (if (= 1 (count selected-pages))
+                                  "Page"
+                                  "Pages")]
+             (if (inbox? document)
+               [:button.delete {:on-click (partial document-delete-pages! document owner)}
+                (str "Delete " page-or-pages)]
+               (list
+                (when (not= selected-document (:id document))
+                  [:button.move {:on-click (partial document-pull-pages! document owner)}
+                   (str "Move " page-or-pages)])
+                (when (= selected-document (:id document))
+                  [:button.remove {:on-click (partial document-remove-pages! document owner)}
+                   (str "Remove " page-or-pages)]))))]]])))))
 
 ;;; The "Drag Target" Column
 
@@ -414,7 +399,8 @@
 (defn new-document [documents pages & [from]]
   (when pages (assert from))
   (let [document (data/map->Document {:id (gensym)
-                                      :pages []})
+                                      :pages []
+                                      :tags []})
         documents (assoc documents (:id document) document)]
     (if from
       (move-pages documents pages from (:id document))
@@ -469,14 +455,16 @@
   "Saves DOCUMENT on the server and removes it from the inbox state."
   [state document]
   (go
-    (assert (:title document))
-    (assert (seq (:pages document)))
-    (println "Saving document" document)
-    (when (<! (api/save-new-document! document "inbox"))
-      (om/transact! state :documents #(dissoc % (:id document)))
-      (let [pages (:pages document)]
-        (when (<! (api/delete-from-inbox! pages))
-          (om/transact! state [:documents :inbox :pages] #(filterv (complement (set pages)) %)))))))
+    (let [document (update-in document [:title]
+                              #(or % (js/window.prompt "Please enter a name for the document:")))]
+      (assert (seq (:pages document)))
+      (if (s/blank? (:title document))
+        (js/alert "Can't save a document without a title.")
+        (when (<! (api/save-new-document! document "inbox"))
+          (om/transact! state :documents #(dissoc % (:id document)))
+          (let [pages (:pages document)]
+            (when (<! (api/delete-from-inbox! pages))
+              (om/transact! state [:documents :inbox :pages] #(filterv (complement (set pages)) %)))))))))
 
 (defn ^:private delete-pages!
   "Deletes selected pages from the inbox on the server."

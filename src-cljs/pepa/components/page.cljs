@@ -3,7 +3,8 @@
             [om.dom :as dom]
             [pepa.data :as data]
             [pepa.api :as api]
-            [sablono.core :refer-macros [html]]))
+            [sablono.core :refer-macros [html]]
+            [goog.style :as style]))
 
 (defn ^:private rotate [deg]
   (let [t (str "rotate(" deg "deg)")]
@@ -26,6 +27,8 @@
                    :className (when-not rendered?
                                 "pending")}))))
 
+(def +min-rotate-width+ 100)
+
 (defn ^:private rotate-clicked [page rotation e]
   (println "rotating" page "to" rotation "degrees")
   (api/rotate-page! page rotation)
@@ -40,8 +43,6 @@
       [:.rotate
        [:.right {:on-click (partial rotate-clicked page (+ rotation 90))
                  :title "Rotate Clockwise"}]
-       [:.flip.vertical {:on-click (partial rotate-clicked page (+ rotation 180))
-                         :title "Flip Vertical"}]
        [:.left  {:on-click (partial rotate-clicked page (- rotation 90))
                  :title "Rotate Counterclockwise"}]]))))
 
@@ -52,7 +53,10 @@
       (if (and enable-rotate?
                (= :processing-status/processed (:render-status page)))
         (dom/div #js {:className "thumbnail"
-                      :onMouseEnter (fn [e] (om/set-state! owner :overlay? true))
+                      :onMouseEnter (fn [e]
+                                      (when (>= (.-width (style/getSize (om/get-node owner)))
+                                                +min-rotate-width+)
+                                        (om/set-state! owner :overlay? true)))
                       :onMouseLeave (fn [e] (om/set-state! owner :overlay? false))}
                  (when overlay?
                    (om/build rotate-buttons page))

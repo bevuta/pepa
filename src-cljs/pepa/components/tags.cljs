@@ -80,10 +80,7 @@
                     (nav/tag-search tag))
             :tab-index 0
             :on-click (fn [e]
-                        (when (om/get-state owner :events)
-                          ;; Stop propagation so the focus-to-input
-                          ;; doesn't catch on
-                          (.stopPropagation e)))
+                        (.stopPropagation e))
             :on-focus #(send-event! owner [:focus tag])
             :on-blur  #(send-event! owner [:blur tag])
             :on-key-down (partial handle-tag-key-down! tag owner)

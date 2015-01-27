@@ -100,3 +100,12 @@
     (goog.events/listen h EventType.NAVIGATE #(secretary/dispatch! (.-token %)))
     (doto h
       (.setEnabled true))))
+
+;;; Slight HACK: This is used in pepa.components.sidebar to generate
+;;; the navigation items
+
+(def navigation-elements
+  [["Inbox"     :inbox     #{:inbox}     (workflow-route :inbox)]
+   ["Documents" :dashboard #{:dashboard :search} (dashboard-route)]
+   ["Tags"      :tags      #{}           nil]])
+

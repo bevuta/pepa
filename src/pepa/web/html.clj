@@ -84,7 +84,4 @@
        [:li
         [:a {:href "/inbox"}
          "Inbox"]]]]
-     (include-js "react.js")
-     (include-js "out/goog/base.js")
-     (include-js "pepa.js")
-     [:script {:type "text/javascript"} "goog.require(\"pepa.core\");"]]]))
+     (include-js "pepa.js")]]))

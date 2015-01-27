@@ -3,8 +3,10 @@
             pepa.navigation
             pepa.api
 
-            [pepa.components.root :refer [root-component]]
             [pepa.data :as data]
+            [pepa.preloader :as preloader]
+            [pepa.components.root :refer [root-component]]
+            [pepa.components.draggable :as draggable]
 
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
@@ -18,6 +20,11 @@
                  :verbose true
                  :print :console)
 
+;;; Preload Images
+(preloader/preload)
+
 (om/root root-component
          data/state
-         {:target js/window.document.body})
+         {:target js/window.document.body
+          :shared (merge {}
+                         (draggable/shared-data))})

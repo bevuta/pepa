@@ -1,7 +1,11 @@
 (ns pepa.data
   (:require [om.core :as om]
             [clojure.set :as set]
-            [clojure.string :as s]))
+            [clojure.string :as s]
+
+            [cljs.core.async :as async :refer [<!]])
+  (:require-macros
+   [cljs.core.async.macros :refer [go-loop]]))
 
 (defrecord Page [id rotation render-status])
 (defrecord Document [id title pages tags created modified notes])
@@ -10,7 +14,8 @@
 
 (defonce state (atom (map->State {:documents {}
                                   :navigation {:route :dashboard}
-                                  :upload {}})))
+                                  :upload {}
+                                  :ui/sidebars {}})))
 
 ;;; Document Staleness
 
@@ -127,7 +132,15 @@
                   (when (= :after position) pages-to-move)
                   post))))
 
-;;; TODO: Simulation Testing
+;;; Resizable Sidebars
+
+(defn ui-sidebars []
+  (-> state
+      (om/root-cursor)
+      :ui/sidebars
+      (om/ref-cursor)))
+
+;; TODO: Simulation Testing
 
 (assert (= (move-pages [:foo :bar :baz :bla]
                  [:bar]

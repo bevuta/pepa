@@ -8,10 +8,20 @@
 
             [pepa.navigation :as nav]
             [cljs.core.async :as async])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(defn ^:private upload-file! [row owner e]
-  (.preventDefault e)
+(defn ^:private update-progress-loop [row ch]
+  (go-loop []
+    (when-let [progress (<! ch)]
+      (println "progress-event:" (pr-str progress))
+      (cond 
+        (number? progress)
+        (om/update! row :progress progress))
+      (recur))))
+
+(defn ^:private upload-file! [row & [e]]
+  (when e
+   (.preventDefault e))
   (when-not (:working? row)
     (go
       (try
@@ -23,11 +33,21 @@
               upload-blob {:blob (<! (upload/file->u8arr file))
                            :content-type content-type
                            :filename name}
-              id (<! (upload/upload-document! document upload-blob))]
-          (println "Successfully uploaded document with id" id)
-          (om/update! row :document-id id))
+              progress (async/chan (async/sliding-buffer 1)) 
+              id-ch (upload/upload-document! document upload-blob
+                                             progress)]
+          (update-progress-loop row progress)
+          (let [id (<! id-ch)]
+           (println "Successfully uploaded document with id" id)
+           (om/update! row :document-id id)))
         (finally
           (om/update! row :working? false))))))
+
+(defn ^:provate progress-bar [progress]
+  (om/component
+   (html
+    [:.progress
+     [:.bar {:style {:width (str (* progress 100) "%")}}]])))
 
 (defn ^:private byte->kb [byte]
   (Math/floor (/ byte 1024)))
@@ -39,28 +59,32 @@
       (let [document-id (:document-id row)
             file (:file row)
             name (.-name file)
-            size (.-size file)]
+            size (.-size file)
+            valid? (:valid? row)]
         (html
-         [:li
-          [:form {:on-submit (partial upload-file! row owner)}
-           (if document-id
-             [:a.title {:href (when document-id
-                                (nav/document-route {:id document-id}))
-                        :title name}
-              name]
-             [:span.title {:title name} name])
-           [:span.size (str (byte->kb size) "kB")]
-           (if-not document-id
-             [:button.upload {:type :submit
-                              :disabled (:working? row)}
-              "Upload"]
-             [:.hide {:on-click (fn [e]
-                                  (when (fn? hide-fn)
-                                    (hide-fn (om/value row)))
-                                  (doto e
-                                    (.preventDefault)
-                                    (.stopPropagation)))}
-              "Hide"])]])))))
+         [:li {:class [(when-not valid? "invalid")]
+               :title (when-not valid?
+                        "This file type isn't supported.")}
+          (if document-id
+            [:a.title {:href (when document-id
+                               (nav/document-route {:id document-id}))
+                       :title name}
+             name]
+            [:span.title (when valid? {:title name}) name])
+          (when valid?
+            [:span.size (str (byte->kb size) "kB")])
+          
+          
+          (if (or (not valid?) document-id)
+            [:.hide {:on-click (fn [e]
+                                 (when (fn? hide-fn)
+                                   (hide-fn (om/value row)))
+                                 (doto e
+                                   (.preventDefault)
+                                   (.stopPropagation)))}
+             "Hide"]
+            
+            (om/build progress-bar (or (:progress row) 0)))])))))
 
 (defn ^:private remove-file! [files file]
   (om/transact! files (fn [files]
@@ -91,15 +115,25 @@
                              (set! e.currentTarget.value nil)))}]])))
 
 (defn add-file [upload file]
-  (if-not (upload/allowed-file-type? (.-type file))
-    (do
-      (js/console.warn "Unsupported file type:" (.-type file) file)
-      upload)
-    (update-in upload [:files]
-               #(vec (conj % {:file file})))))
+  (update-in upload [:files]
+             #(conj (vec %) {:file file
+                             :valid? (upload/allowed-file-type? (.-type file))})))
 
 (defn upload-dialog [upload owner _]
   (reify
+    om/IDidUpdate
+    (did-update [_ prev-props _]
+      ;; Start upload for every new file in :files
+      (when (< (count (:files prev-props))
+               (count (:files upload)))
+        (let [new-files (filter (fn [file]
+                                  (and (not (:working? file))
+                                       (not (:document-id file))
+                                       (:valid? file)))
+                                (:files upload))]
+          (println "got new files" new-files)
+          (doseq [file new-files]
+            (upload-file! file)))))
     om/IRenderState
     (render-state [_ {:keys [mini?]}]
       (let [files (:files upload)
@@ -112,6 +146,7 @@
           (if-not mini?
             (list
              [:header {:on-click toggle-mini}]
-             (om/build file-list files)
+             ;; Not sure if {:key :file} works.
+             (om/build file-list files {:key :file})
              (om/build upload-button upload))
             "Upload Files")])))))

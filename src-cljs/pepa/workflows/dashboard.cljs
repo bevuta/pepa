@@ -14,7 +14,7 @@
 
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
-            [pepa.components.pagination :as pagination])
+            [pepa.components.draggable :as draggable])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]]))
 
@@ -35,8 +35,18 @@
     (render [_]
       (let [href (nav/document-route document)]
         (html
+         ;; NOTE: We can't wrap the <a> around all those divs. It's
+         ;; forbidden to put a <div> inside <a> if there are other
+         ;; <a>s and other stuff inside it. If we try it nonetheless,
+         ;; the browser will reorder or DOM and React will fail
+         ;; horribly.
          [:.document {:on-drag-over tags/accept-tags-drop
-                      :on-drop (partial handle-tags-drop document)}
+                      :on-drop (partial handle-tags-drop document)
+                      :on-click (fn [e]
+                                  (nav/navigate! (nav/document-route document))
+                                  (doto e
+                                    (.stopPropagation)
+                                    (.preventDefault)))}
           [:.preview
            [:a {:href href}
             (om/build page/thumbnail (-> document :pages first))
@@ -45,13 +55,12 @@
            (:title document)]
           (om/build tags/tags-list (:tags document))])))))
 
-(defn filter-sidebar [state]
-  (reify
-    om/IRenderState
-    (render-state [_ _]
-      (html
-       [:.sidebar
-        [:header "Sorting & Filtering"]]))))
+(defn filter-sidebar [state owner _]
+  (om/component
+   (html
+    [:.sidebar
+     [:header "Sorting & Filtering"]
+     (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})])))
 
 (defn ^:private document-ids [state]
   (or (:search/results state)
@@ -170,16 +179,15 @@
         (<! (search-maybe! state owner))
         (<! (fetch-missing-documents! state owner))
         (scroll-to-offset! state owner)))
-    om/IInitState
-    (init-state [_]
-      {:filter-width css/default-right-sidebar-width})
     om/IRenderState
     (render-state [_ local-state]
       ;; Show all documents with ids found in :dashboard/document-ids
-      (let [document-ids (page-ids state)]
+      (let [document-ids (page-ids state)
+            sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
+                               css/default-sidebar-width)]
         (html
          [:.workflow.dashboard
-          [:.pane {:style {:width (str "calc(100% - " (:filter-width local-state) "px - 2px)")}}
+          [:.pane {:style {:width (str "calc(100% - " sidebar-width "px - 2px)")}}
            [:header
             (dashboard-title state)
             (om/build document-count state)]
@@ -190,5 +198,9 @@
                                  (remove nil?))]
               (om/build-all document-preview documents
                             {:key :id}))]]
-          [:.pane {:style {:width (:filter-width local-state)}}
+          [:.pane {:style {:width sidebar-width}}
            (om/build filter-sidebar state)]])))))
+
+(defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]
+  (draggable/limit
+   (- (draggable/viewport-width) x)))

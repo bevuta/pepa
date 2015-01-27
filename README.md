@@ -92,7 +92,8 @@ from sources to run it (see build instructions below).
 To build and run Pepa on your system, you'll need Java (at least
 version 7), [Leinigen](https://github.com/technomancy/leiningen/),
 [PostgreSQL](http://www.postgresql.org/),
-[Poppler](http://poppler.freedesktop.org/). For OCR you'll need
+[Poppler](http://poppler.freedesktop.org/),
+[PDFtk](http://www.pdfhacks.com/pdftk). For OCR you'll need
 [CuneiForm](https://launchpad.net/cuneiform-linux) and/or
 [Tesseract-OCR](https://code.google.com/p/tesseract-ocr/).
 
@@ -150,7 +151,7 @@ Install [Leiningen](https://github.com/technomancy/leiningen/) on your
 system (see instructions on their website). All other dependencies are
 available via `pacman`.
 
-    sudo pacman -S jdk8-openjdk postgresql poppler cuneiform tesseract tesseract-data-eng tesseract-data-deu
+    sudo pacman -S jdk8-openjdk pdftk postgresql poppler cuneiform tesseract tesseract-data-eng tesseract-data-deu
 
 Next,
 [configure PostgreSQL according to the instructions in the Arch Linux wiki](https://wiki.archlinux.org/index.php/PostgreSQL)

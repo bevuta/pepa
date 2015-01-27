@@ -2,16 +2,17 @@
   (:require [cognitect.transit :as transit]
             [cljs.core.async :as async :refer [<!]]
 
-            [goog.net.XhrIo :as xhr]
             [clojure.string :as s]
-
+            [goog.string :as gstring]
+            
             [om.core :as om]
             [pepa.data :as data]
 
-            [goog.string :as gstring])
+            [clojure.browser.event :as event])
+  (:import [goog.net XhrIo XmlHttp XmlHttpFactory])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(def xhr-timeout (* 5 1000))
+(def +xhr-timeout+ (* 5 1000))
 
 (let [reader (transit/reader :json)]
   (defn ^:private parse-xhr-response
@@ -32,29 +33,62 @@
        :response/text (when-not transit text)
        :successful? (.isSuccess xhr)})))
 
+
+;;; HACK: Because the current release of Google Closure doens't
+;;; include support for the 'progress' event of Xhr, we have to attach
+;;; events to the underlying native object. But we have to do this
+;;; *before* Closure calls .open() on the object or else we won't
+;;; receive any events. Because there's no way to get the Xhr before
+;;; xhr.send(), we create a XmlHttpFactory dummy which always returns
+;;; the same object. We can then hook up event handlers to the Xhr
+;;; returned by it and therefore receive progress events.
+
+(defn ^:private xhr-factory-dummy
+  "Returns a goog.net.XmlHttpFactory fake which returns always the
+  same Xhr."
+  []
+  (let [xhr (XmlHttp.)
+        obj (XmlHttpFactory.)]
+    (set! (.-createInstance obj) (constantly xhr))
+    (set! (.-getOptions obj) (constantly #js {}))
+    obj))
+
 (let [writer (transit/writer :json)]
   (defn xhr-request!
     "Performs an XmlHttpRequest to uri using method and payload data.
 
   Returns a channel containing something."
+    ([uri method content-type data timeout & [progress]]
+     (let [ch (async/chan)]
+       (assert uri)
+       (let [factory (xhr-factory-dummy)
+             xhr (XhrIo. factory)] 
+         (let [put! (fn [d] (when progress (async/put! progress d)))]
+           (doto (.-upload (.createInstance factory))
+             (.addEventListener "progress" #(put! (/ (.-loaded %) (.-total %))))
+             (.addEventListener "load "    #(put! :loaded))
+             (.addEventListener "error"    #(put! :error))
+             (.addEventListener "abort"    #(put! :abort))))
+         (doto xhr
+           (.setTimeoutInterval timeout)
+           (event/listen "complete" (fn [e]
+                                      (when progress
+                                        (async/close! progress))
+                                      (async/put! ch (parse-xhr-response e.target))))
+           (.send uri
+                  (s/upper-case (name method))
+                  (if (= "application/transit+json" content-type)
+                    (transit/write writer data)
+                    data)
+                  #js {"Content-Type" content-type
+                       "Accept" "application/transit+json"})))
+       ch))
     ([uri method content-type data]
-       (let [ch (async/chan)]
-         (assert uri)
-         (xhr/send uri
-                   (fn [e]
-                     (async/put! ch (parse-xhr-response e.target)))
-                   (s/upper-case (name method))
-                   (if (= "application/transit+json" content-type)
-                     (transit/write writer data)
-                     data)
-                   #js {"Content-Type" content-type
-                        "Accept" "application/transit+json"}
-                   xhr-timeout)
-         ch))
+     (xhr-request! uri method content-type data +xhr-timeout+))
     ([uri method data]
-       (xhr-request! uri method "application/transit+json" data))
+     (xhr-request! uri method "application/transit+json" data))
     ([uri method]
-       (xhr-request! uri method nil))))
+     (xhr-request! uri method nil))))
 
 (defn fetch-document-ids
   "Fetches all document-ids from the server."
