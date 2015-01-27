@@ -13,7 +13,8 @@
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
 
                  ;; Web
-                 [org.immutant/web "2.0.0-beta1"]
+                 #_[org.immutant/web "2.0.0-beta1"]
+                 [org.immutant/web "2.x.incremental.442"]
                  [compojure "1.3.1"]
                  [ring/ring-devel "1.3.2"]
                  [com.cognitect/transit-clj "0.8.259"]
@@ -62,4 +63,6 @@
   :clean-targets ^{:protect false} [[:cljsbuild :builds :pepa :compiler :output-to]
                                     [:cljsbuild :builds :pepa :compiler :source-map]
                                     [:cljsbuild :builds :pepa :compiler :output-dir]
-                                    :target-path :compile-path])
+                                    :target-path :compile-path]
+  :repositories [["Immutant incremental builds"
+                  "http://downloads.immutant.org/incremental/"]])
