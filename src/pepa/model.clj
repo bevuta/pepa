@@ -327,3 +327,16 @@
        (map #(hash-map :name (:filename %)
                        :data (slurp-bytes @(:content %))
                        :content-type "application/pdf"))))
+
+;;; Sequence Number Stuff
+
+(def ^:private sequenced-tables
+  [:pages :page_images :files :documents :document_tags :document_pages])
+
+(let [names (map name sequenced-tables)
+      where (s/join ", " (map #(str % "_state_seq as " %) names))
+      select (s/join ", " (map #(str % ".current as " %) names))
+      query (str "SELECT " select " FROM " where)]
+  (defn sequence-numbers [db]
+    (db/query db [query]
+              :identifiers (comp keyword #(s/replace % "_" "-")))))
