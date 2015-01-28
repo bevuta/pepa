@@ -22,6 +22,9 @@
 (defn search-results [state]
   (:search/results state))
 
+(defn search-active? [state]
+  (-> state :search/channel boolean))
+
 (defn ^:private cancel-search! [state]
   (when-let [ch (:search/channel state)]
     (async/close! ch)
@@ -45,7 +48,7 @@
   (go
     (when (or (not= ::all (:search/query state))
               force?)
-      (clear-results! state)
+      (cancel-search! state)
       (let [ch (api/fetch-document-ids)]
         (om/transact! state #(assoc %
                                     :search/query ::all

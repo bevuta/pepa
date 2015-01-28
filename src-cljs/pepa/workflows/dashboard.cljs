@@ -63,9 +63,7 @@
      (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})])))
 
 (defn ^:private document-ids [state]
-  (or (:search/results state)
-      ;; Default to all documents
-      (keys (:documents state))))
+  (:search/results state))
 
 (def +initial-elements+ 50)
 (def +to-load+ 50)
@@ -108,19 +106,24 @@
     :else
     (go (search/all-documents! state force-update?))))
 
-(defn ^:private dashboard-title [state]
+(defn ^:private dashboard-title [state owner]
   (let [documents (document-ids state)]
     (cond
-     (search/search-query state)
-     "Search Results"
+      (search/search-active? state)
+      "Loading..."
+      
+      (search/search-query state)
+      "Search Results"
     
-     true
-     "Dashboard")))
+      true
+      "Dashboard")))
 
 (defn ^:private document-count [state]
   (om/component
    (html
-    [:span.document-count (str "(" (count (document-ids state)) ")")])))
+    [:span.document-count
+     (when-let [ids (seq (document-ids state))]
+       (str "(" (count ids) ")"))])))
 
 ;;; Should be twice the document-height or so.
 (def +scroll-margin+ 500)
@@ -189,7 +192,7 @@
          [:.workflow.dashboard
           [:.pane {:style {:width (str "calc(100% - " sidebar-width "px - 2px)")}}
            [:header
-            (dashboard-title state)
+            (dashboard-title state owner)
             (om/build document-count state)]
            [:.documents {:ref "documents"
                          :on-scroll (partial on-documents-scroll state owner)}
