@@ -338,5 +338,6 @@
       select (s/join ", " (map #(str % ".current as " %) names))
       query (str "SELECT " select " FROM " where)]
   (defn sequence-numbers [db]
-    (db/query db [query]
-              :identifiers (comp keyword #(s/replace % "_" "-")))))
+    (-> db
+        (db/query [query] :identifiers (comp keyword #(s/replace % "_" "-")))  
+        (first))))

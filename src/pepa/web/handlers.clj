@@ -2,6 +2,8 @@
   (:require [pepa.db :as db]
             [pepa.model :as m]
             [pepa.web.html :as html]
+            [pepa.web.poll :refer [poll-handler]]
+            
             [pepa.util :refer [slurp-bytes]]
             [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
@@ -14,13 +16,11 @@
             [ring.util.response :refer [redirect-after-post]]
             [ring.middleware.transit :refer [wrap-transit-response
                                              wrap-transit-body]]
+            [ring.middleware.json :refer [wrap-json-body]]
             
             [liberator.core :refer [defresource]]
             [liberator.representation :refer [as-response]]
             [io.clojure.liberator-transit]
-
-            [clojure.data.json :as json]
-            [cognitect.transit :as transit]
 
             [immutant.web.async :as async-web]
             [clojure.core.async :as async :refer [go <!]])
@@ -262,51 +262,13 @@
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
 
-;;; Long Polling
-
-(defn poll [req]
-  (let [method (:request-method req)
-        allowed-methods #{:get :post}
-        content-type (get (disj (set +default-media-types+) "text/html")
-                          (:content-type req))]
-    (cond
-      (not content-type)
-      {:status 406}
-      
-      (not (contains? allowed-methods method))
-      {:status 405}
-      
-      true
-      (let [data->response (case content-type
-                             "application/json"
-                             json/write-str
-
-                             "application/transit+json"
-                             (let [out (ByteArrayOutputStream.)
-                                   writer (transit/writer out :json)]
-                               (fn [data]
-                                 (.reset out)
-                                 (transit/write writer data)
-                                 (.write out (byte \newline))
-                                 (.toString out "UTF-8"))))]
-        (async-web/as-channel
-         req
-         {:on-open (fn [ch]
-                     (go
-                       (loop []
-                         (<! (async/timeout 1000))
-                         (async-web/send! ch (data->response {:foo 42}))
-                         (recur))))
-          :on-error (fn [ch throwable]
-                      (println "Caught exception:" throwable))
-          :on-close (fn [ch {:keys [code reason]}]
-                      (println "Closed" code reason))})))))
+>
 
 (defn wrap-component [handler {:keys [config db]}]
   (fn [req]
     (handler (assoc req
-               ::config config
-               ::db db))))
+                    ::config config
+                    ::db db))))
 
 (def handlers
   (routes (GET "/" [] (html/root))
@@ -331,7 +293,7 @@
           (GET "/tags/:tag" [tag :as req]
                (handle-get-objects-for-tag req tag))
 
-          (ANY "/poll" [] poll)
+          (ANY "/poll" [] poll-handler)
 
           (route/resources "/")
           (route/not-found "Nothing here")))
@@ -344,6 +306,7 @@
 
 (defn make-handlers [web-component]
   (-> #'handlers
+      ;; NOTE: *first* transit, then JSON
       (wrap-transit-body)
       (wrap-params)
       (wrap-logging)

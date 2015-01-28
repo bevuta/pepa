@@ -10,12 +10,13 @@
 (defrecord Page [id rotation render-status])
 (defrecord Document [id title pages tags created modified notes])
 
-(defrecord State [documents navigation upload])
+(defrecord State [documents navigation upload seqs])
 
 (defonce state (atom (map->State {:documents {}
                                   :navigation {:route :dashboard}
                                   :upload {}
-                                  :ui/sidebars {}})))
+                                  :ui/sidebars {}
+                                  :seqs {}})))
 
 ;;; Document Staleness
 

@@ -23,7 +23,7 @@
                     ;; Only parse body when it's transit
                     (when (and (seq text)
                                (re-find #"application/transit\+json"
-                                        (.getResponseHeader xhr "content-type")))
+                                        (or (.getResponseHeader xhr "content-type") "")))
                       (transit/read reader text))
                     (catch js/Error e
                       (js/console.error "Couldn't parse Transit" text)
@@ -240,3 +240,25 @@
                                   :post {:rotation rotation}))]
         (when (and (:successful? res) (om/cursor? page))
           (om/update! page :rotation rotation))))))
+
+;;; Polling
+
+(def +poll-timeout+ (* 30 1000))
+
+(defn poll! [state]
+  (go
+    (let [response (<! (xhr-request! "/poll"
+                                     :post
+                                     "application/transit+json"
+                                     (om/value (:seqs state))
+                                     +poll-timeout+))]
+      (prn response)
+      (when (:successful? response)
+        (let [data (:response/transit response)]
+          (om/transact! state :seqs #(merge % (:seqs data))))))))
+
+(go
+  (<! (async/timeout 1000))
+  (<! (poll! (om/root-cursor data/state)))
+  (<! (poll! (om/root-cursor data/state)))
+  (<! (poll! (om/root-cursor data/state))))
