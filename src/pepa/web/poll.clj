@@ -29,24 +29,21 @@
                        (-> data (data->response) (str \newline))
                        {:close? true}))))
 
-(defn spawn-client [db ch seqs content-type]
+(defn ^:private send-seqs! [db ch content-type]
+  ((send-fn content-type) ch {:seqs (m/sequence-numbers db)}))
+
+(defn ^:private handle-poll! [db ch seqs content-type]
   (let [send! (send-fn content-type)]
     (go
-      (cond
-        (empty? seqs)
-        (send! ch {:seqs (m/sequence-numbers db)})
-
-        true
-        (do
-          (<! (async/timeout))
-                    (send! ch {:foo 42}))))))
+      (<! (async/timeout 1000))
+      (send! ch {:foo 42}))))
 
 (defn ^:private poll-handler* [req]
   (let [method (:request-method req)
         allowed-methods #{:get :post}
-        content-type (get #{"application/transit+json"
-                            "application/json"}
-                          (:content-type req))]
+        content-type (soome #(re-find % (:content-type req))
+                            [#"^application/transit\+json"
+                             #"^application/json"])]
     (cond
       (not content-type)
       {:status 406}
@@ -55,18 +52,21 @@
       {:status 405}
 
       true
-      (let []
-        (-> req
-            (async-web/as-channel
-             {:on-open (fn [ch]
-                         (spawn-client (:pepa.web.handlers/db req)
-                                       ch
-                                       (:body req)
-                                       content-type))
-              :on-error (fn [ch throwable]
-                          (println "Caught exception:" throwable)
-                          (async-web/close ch))})
-            (assoc-in [:headers "content-type"] content-type))))))
+      (-> req
+          (async-web/as-channel
+           {:on-open (fn [ch]
+                       (let [seqs (:body req)
+                             db (:pepa.web.handlers/db req)]
+                         (if (empty? seqs)
+                           (send-seqs! db ch content-type)
+                           (handle-poll! db
+                                         ch
+                                         seqs
+                                         content-type))))
+            :on-error (fn [ch throwable]
+                        (println "Caught exception:" throwable)
+                        (async-web/close ch))})
+          (assoc-in [:headers "content-type"] content-type)))))
 
 
 (def poll-handler #'poll-handler*)
