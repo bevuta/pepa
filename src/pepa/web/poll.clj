@@ -41,9 +41,9 @@
 (defn ^:private poll-handler* [req]
   (let [method (:request-method req)
         allowed-methods #{:get :post}
-        content-type (soome #(re-find % (:content-type req))
-                            [#"^application/transit\+json"
-                             #"^application/json"])]
+        content-type (some #(re-find % (:content-type req))
+                           [#"^application/transit\+json"
+                            #"^application/json"])]
     (cond
       (not content-type)
       {:status 406}
