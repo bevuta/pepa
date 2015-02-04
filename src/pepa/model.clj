@@ -109,8 +109,8 @@
 (defn document-pages
   "Returns a list of pages for the document with ID."
   [db id]
-  (db/query db ["SELECT p.file, p.number, p.rotation 
-                 FROM pages AS p 
+  (db/query db ["SELECT p.file, p.number, p.rotation
+                 FROM pages AS p
                  JOIN document_pages AS dp on dp.page = p.id
                  WHERE dp.document = ?
                  ORDER BY dp.number" id]))
@@ -170,7 +170,7 @@
   (assert (every? string? added-tags))
   (assert (every? string? removed-tags))
   (assert (every? #{:title} (keys props)))
-  
+
   (db/with-transaction [conn db]
     (if-let [document (get-document conn id)]
       (let [added-tags (set added-tags)
@@ -333,11 +333,79 @@
 (def ^:private sequenced-tables
   [:pages :page_images :files :documents :document_tags :document_pages])
 
+(defn ^:private valid-seqs? [seq]
+  (and (every? (set sequenced-tables) (keys seq))
+       (every? integer? (vals seq))
+       (= (set sequenced-tables) (set (keys seq)))))
+
 (let [names (map name sequenced-tables)
       where (s/join ", " (map #(str % "_state_seq as " %) names))
       select (s/join ", " (map #(str % ".current as " %) names))
       query (str "SELECT " select " FROM " where)]
   (defn sequence-numbers [db]
     (-> db
-        (db/query [query] :identifiers (comp keyword #(s/replace % "_" "-")))  
+        (db/query [query])
         (first))))
+
+(defmulti ^:private changed-entities* (fn [db table seq-num] table))
+
+(defmethod changed-entities* :default [_ _ _] nil)
+
+(defmethod changed-entities* :documents [db _ seq-num]
+  {:documents (mapv :id (db/query db ["SELECT id FROM documents WHERE state_seq > ?" seq-num]))})
+
+(defmethod changed-entities* :document_pages [db _ seq-num]
+  {:documents (->> (db/query db ["SELECT DISTINCT d.id
+                                  FROM document_pages AS dp
+                                  LEFT JOIN documents as d
+                                    ON d.id = dp.document
+                                  WHERE dp.state_seq > ?" seq-num])
+                   (mapv :id))})
+
+(defmethod changed-entities* :document_tags [db _ seq-num]
+  {:documents (->> (db/query db ["SELECT DISTINCT d.id
+                                  FROM document_tags AS dt
+                                  LEFT JOIN documents as d
+                                    ON d.id = dt.document
+                                  WHERE dt.state_seq > ?" seq-num])
+                   (mapv :id))})
+
+(defmethod changed-entities* :pages [db _ seq-num]
+  (let [pages (mapv :id (db/query db ["SELECT id FROM pages WHERE state_seq > ?" seq-num]))]
+    {:pages pages
+     :documents (when (seq pages)
+                  (->>
+                   (db/query db (db/sql+placeholders
+                                 "SELECT DISTINCT dp.document
+                                  FROM document_pages AS dp
+                                  WHERE dp.page IN (%s)" pages))
+                   (mapv :document)))}))
+
+(defmethod changed-entities* :page_images [db _ seq-num]
+  (let [pages (->>
+               (db/query db ["SELECT DISTINCT p.id
+                              FROM page_images as pi
+                              LEFT JOIN pages as p ON p.id = pi.page
+                              WHERE pi.state_seq > ?" seq-num])
+               (map :id))]
+    {:pages pages
+     :documents (when (seq pages)
+                  (->>
+                   (db/query db (db/sql+placeholders
+                                 "SELECT DISTINCT dp.document
+                                  FROM document_pages AS dp
+                                  WHERE dp.page IN (%s)" pages))
+                   (mapv :document)))}))
+
+(defmethod changed-entities* :files [db _ seq-num]
+  {:files (mapv :id (db/query db ["SELECT id FROM files WHERE state_seq > ?" seq-num]))})
+
+(defn changed-entities
+  "Takes a seqs-map and returns a map containing IDs for all changed
+  entities since that point in time."
+  [db seqs]
+  (if (valid-seqs? seqs)
+    (db/with-transaction [db db]
+      (apply (partial merge-with #(into (set %1) %2))
+             (map #(apply changed-entities* db %) seqs)))
+    (throw (ex-info "Didn't get a valid (and complete) seqs-map!" {:seqs seqs}))))
