@@ -6,7 +6,7 @@
             [cognitect.transit :as transit]
             
             [immutant.web.async :as async-web]
-            [clojure.core.async :as async :refer [go <!]])
+            [clojure.core.async :as async :refer [go go-loop <!]])
   (:import java.io.ByteArrayOutputStream))
 
 (defn ^:private data->response-fn [content-type]
@@ -34,9 +34,12 @@
 
 (defn ^:private handle-poll! [db ch seqs content-type]
   (let [send! (send-fn content-type)]
-    (go
-      (<! (async/timeout 1000))
-      (send! ch {:foo 42}))))
+    (go-loop []
+      ;; TODO: Remove the polling here!
+      (if-let [changed (m/changed-entities db seqs)]
+        (send! ch changed)
+        (do (<! (async/timeout 1000))
+            (recur))))))
 
 (defn ^:private poll-handler* [req]
   (let [method (:request-method req)

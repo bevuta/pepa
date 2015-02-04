@@ -257,8 +257,7 @@
         (let [data (:response/transit response)]
           (om/transact! state :seqs #(merge % (:seqs data))))))))
 
-(go
+(go-loop []
   (<! (async/timeout 1000))
   (<! (poll! (om/root-cursor data/state)))
-  (<! (poll! (om/root-cursor data/state)))
-  (<! (poll! (om/root-cursor data/state))))
+  (recur))

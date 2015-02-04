@@ -402,10 +402,15 @@
 
 (defn changed-entities
   "Takes a seqs-map and returns a map containing IDs for all changed
-  entities since that point in time."
+  entities since that point in time. Map contains also a :seqs entry
+  which is the new seqs-map."
   [db seqs]
   (if (valid-seqs? seqs)
     (db/with-transaction [db db]
-      (apply (partial merge-with #(into (set %1) %2))
-             (map #(apply changed-entities* db %) seqs)))
+      (let [m (apply (partial merge-with #(into (set %1) %2))
+                     (map #(apply changed-entities* db %) seqs))]
+        ;; Remove "empty" keys from map
+        (when-let [kvs (seq (for [[k v] m :when (seq v)] [k v]))]
+          (into {:seqs (sequence-numbers db)} kvs))))
     (throw (ex-info "Didn't get a valid (and complete) seqs-map!" {:seqs seqs}))))
+
