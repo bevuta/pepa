@@ -36,17 +36,23 @@
   (let [send! (send-fn content-type)]
     (go-loop []
       ;; TODO: Remove the polling here!
+      
+      ;; TODO: We have to manually close the channels after a certain
+      ;; timeout - else they stay open for forever!
       (if-let [changed (m/changed-entities db seqs)]
         (send! ch changed)
         (do (<! (async/timeout 1000))
-            (recur))))))
+            (if (async-web/open? ch)
+              (recur)
+              (println "Long-Polling channel closed")))))))
 
-(defn ^:private poll-handler* [req]
+(defn ^:private poll-handler* [req]p
   (let [method (:request-method req)
         allowed-methods #{:get :post}
         content-type (some #(re-find % (:content-type req))
                            [#"^application/transit\+json"
-                            #"^application/json"])]
+                            #"^application/json"])
+        seqs (:body req)]
     (cond
       (not content-type)
       {:status 406}
@@ -54,18 +60,21 @@
       (not (contains? allowed-methods method))
       {:status 405}
 
+      (and (seq seqs) (not (m/valid-seqs? seqs)))
+      {:status 400}
+
       true
       (-> req
           (async-web/as-channel
            {:on-open (fn [ch]
-                       (let [seqs (:body req)
-                             db (:pepa.web.handlers/db req)]
+                       (let [db (:pepa.web.handlers/db req)]
                          (if (empty? seqs)
                            (send-seqs! db ch content-type)
                            (handle-poll! db
                                          ch
                                          seqs
                                          content-type))))
+            :on-close (fn [_] (println "on-close"))
             :on-error (fn [ch throwable]
                         (println "Caught exception:" throwable)
                         (async-web/close ch))})

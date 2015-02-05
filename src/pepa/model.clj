@@ -333,7 +333,7 @@
 (def ^:private sequenced-tables
   [:pages :page_images :files :documents :document_tags :document_pages])
 
-(defn ^:private valid-seqs? [seq]
+(defn valid-seqs? [seq]
   (and (every? (set sequenced-tables) (keys seq))
        (every? integer? (vals seq))
        (= (set sequenced-tables) (set (keys seq)))))
