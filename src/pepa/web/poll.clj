@@ -32,8 +32,9 @@
 (defn ^:private send-seqs! [db ch content-type]
   ((send-fn content-type) ch {:seqs (m/sequence-numbers db)}))
 
-(defn ^:private handle-poll! [db ch seqs content-type]
-  (let [send! (send-fn content-type)]
+(defn ^:private handle-poll! [config db ch seqs content-type]
+  (let [send! (send-fn content-type)
+        timeout (async/timeout (* 1000 (:timeout config)))]
     (go-loop []
       ;; TODO: Remove the polling here!
       
@@ -41,18 +42,27 @@
       ;; timeout - else they stay open for forever!
       (if-let [changed (m/changed-entities db seqs)]
         (send! ch changed)
-        (do (<! (async/timeout 1000))
-            (if (async-web/open? ch)
-              (recur)
-              (println "Long-Polling channel closed")))))))
+        (let [[_ port] (async/alts! [timeout (async/timeout 1000)])]
+          (cond
+            (= port timeout)
+            (do
+              (println "Closing long-polling channel after timeout")
+              (async-web/close ch))
+            
+            (async-web/open? ch)
+            (recur)
 
-(defn ^:private poll-handler* [req]p
+            true
+            (println "Long-Polling channel closed by client")))))))
+
+(defn ^:private poll-handler* [req]
   (let [method (:request-method req)
         allowed-methods #{:get :post}
         content-type (some #(re-find % (:content-type req))
                            [#"^application/transit\+json"
                             #"^application/json"])
-        seqs (:body req)]
+        seqs (:body req)
+        config (get-in req [:pepa.web.handlers/config :web :poll])]
     (cond
       (not content-type)
       {:status 406}
@@ -70,11 +80,11 @@
                        (let [db (:pepa.web.handlers/db req)]
                          (if (empty? seqs)
                            (send-seqs! db ch content-type)
-                           (handle-poll! db
+                           (handle-poll! config
+                                         db
                                          ch
                                          seqs
                                          content-type))))
-            :on-close (fn [_] (println "on-close"))
             :on-error (fn [ch throwable]
                         (println "Caught exception:" throwable)
                         (async-web/close ch))})

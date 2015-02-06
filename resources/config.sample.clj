@@ -5,7 +5,9 @@
        :host "localhost"
        :show-traces true
        :log-requests? false
-       :default-page-dpi 150}
+       :default-page-dpi 150
+       ;; 30s Long-Polling timeout
+       :poll {:timeout 30}}
  :rendering {:png {:dpi {"thumbnail" 50
                          "full" 150}
                    :default-dpi 150}}
