@@ -255,7 +255,8 @@
       (prn response)
       (when (:successful? response)
         (let [data (:response/transit response)]
-          (om/transact! state :seqs #(merge % (:seqs data))))))))
+          (when-let [seqs (:seqs data)]
+            (om/transact! state :seqs #(merge % seqs))))))))
 
 (go-loop []
   (<! (async/timeout 1000))
