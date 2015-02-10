@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [com.stuartsierra/component "0.2.2"]
-                 [org.clojure/tools.namespace "0.2.8"]
+                 [org.clojure/tools.namespace "0.2.9"]
 
                  ;; DB
                  [org.clojure/java.jdbc "0.3.6"]
@@ -14,7 +14,7 @@
 
                  ;; Web
                  #_[org.immutant/web "2.0.0-beta1"]
-                 [org.immutant/web "2.x.incremental.442"]
+                 [org.immutant/web "2.x.incremental.465"]
                  [compojure "1.3.1"]
                  [ring/ring-devel "1.3.2"]
                  [com.cognitect/transit-clj "0.8.259"]
@@ -42,14 +42,14 @@
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-2727"]
-                                       [com.cemerick/piggieback "0.1.5"]
-                                       [com.cognitect/transit-cljs "0.8.202"]
-                                       [org.omcljs/om "0.8.6"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-2814"]
+                                       [com.cemerick/piggieback "0.1.6-SNAPSHOT"]
+                                       [com.cognitect/transit-cljs "0.8.205"]
+                                       [org.omcljs/om "0.8.8"]
                                        [garden "1.2.5"]
-                                       [sablono "0.3.0"]
+                                       [sablono "0.3.1"]
                                        [secretary "1.2.1"]
-                                       [weasel "0.5.0"]
+                                       [weasel "0.6.0-SNAPSHOT"]
                                        [the/parsatron "0.0.7"]]}}
   ;; Cljsbuild configuration. Also see profiles.clj
   :cljsbuild {:builds {:pepa {:source-paths ["src-cljs/"]
