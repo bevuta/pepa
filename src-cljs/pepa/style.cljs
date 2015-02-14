@@ -143,10 +143,9 @@
                :border-bottom (str "1px solid " border-dark)}
      [:input (list
               {:position :absolute
-               :top "50%"
-               :left "50%"
+               :top "50%", :left "50%"
+               :transform "translate(-50%,-50%)"
                :border (str "1px solid " border-dark)}
-              ^:prefix {:transform "translate(-50%,-50%)"}
               (calc-property :width ["100%" - (* 2 search-padding)]))]]))
 
 (def sidebar-css
@@ -173,15 +172,15 @@
              line-height (/ item-height 1.5)
              icon-size 20
              padding-left 20]
-         [:li (list {:list-style-type :none
-                     :height (px line-height)
-                     :line-height (px line-height)
-                     :padding {:top (px padding)
-                               :bottom (px padding)}
-                     :background {:repeat :no-repeat
-                                  :size (px icon-size)
-                                  :position [[(px padding-left) :center]]}}
-                    ^:prefix {:user-select :none})
+         [:li {:list-style-type :none
+               :height (px line-height)
+               :line-height (px line-height)
+               :padding {:top (px padding)
+                         :bottom (px padding)}
+               :background {:repeat :no-repeat
+                            :size (px icon-size)
+                            :position [[(px padding-left) :center]]}
+               :user-select :none}
           (for [row (map (comp name second) navigation-elements)]
             (let [selector (keyword (str "&." row))]
               [selector
@@ -218,12 +217,10 @@
                         :font-size (px color-size)
                         :line-height (px color-size)
                         :height (px color-size)}
-               [:.tag-name (list {:position :absolute
-                                  :top "50%"
-                                  :overflow :hidden
-                                  :text-overflow :ellipsis}
-                                 (calc-property :width ["100%" - (* 2 color-size)])
-                                 ^:prefix {:transform "translateY(-50%)"})]
+               [:.tag-name {:position :absolute
+                            :top "50%" :transform "translateY(-50%)"
+                            :overflow :hidden
+                            :text-overflow :ellipsis}]
                [:.color {:width (px color-size)
                          :height (px color-size)
                          :float :right}]])]]
@@ -252,15 +249,14 @@
                 :background-color "rgba(255, 255, 255, 0.8)"
                 :margin (px 5)
                 :border-radius (px 4)}
-      [:.left :.right (list
-                       {:float :right
-                        :width (px rotate-height)
-                        :height (px rotate-height)
-                        :line-height (px rotate-height)
-                        :text-align :center
-                        :cursor :pointer
-                        :opacity 0.3}
-                       ^:prefix {:user-select :none})
+      [:.left :.right {:float :right
+                       :width (px rotate-height)
+                       :height (px rotate-height)
+                       :line-height (px rotate-height)
+                       :text-align :center
+                       :cursor :pointer
+                       :opacity 0.3
+                       :user-select :none}
        ;; Give buttons full opacity when hovered
        [:&:hover {:opacity 1}]
        [:&.right {:background-image (image-url "material/page-rotate-right.svg")}]
@@ -316,18 +312,16 @@
                   :text-overflow :ellipsis
                   }]
           [:&input {:width (px header-width)}]]
-         [:button (list
-                   {:position :absolute
-                    :right (px header-padding)
-                    :top (px (/ header-height 2))}
-                   ^:prefix {:transform "translateY(-50%)"})]
+         [:button {:position :absolute
+                   :right (px header-padding)
+                   :top (px (/ header-height 2))
+                   :transform "translateY(-50%)"}]
          [:.tags {:max-height (px (- tags-height 8))
                   :padding-botton (px 8)}]])
       [:ul.pages {:margin 0, :padding 0}
-       [:li.page (list
-                  {:width "100%"
-                   :list-style-type :none}
-                  ^:prefix {:user-select :none})
+       [:li.page {:width "100%"
+                  :list-style-type :none
+                  :user-select :none}
 
         page-css
         
@@ -374,22 +368,20 @@
                  :background-color header-color
                  :bottom 0
                  :display :initial}
-        [:button (list
-                  {:position :relative
-                   :left "50%", :top "50%"}
-                  ^:prefix {:transform "translate(-50%,-50%)"})]]]])
+        [:button {:position :relative
+                  :left "50%", :top "50%"
+                  :transform "translate(-50%,-50%)"}]]]])
    ;; The drop-area to create new documents
    [:td.create-document {:min-width (px document-width)
                          :position :relative
                          :display :block}
     [:&.active {:background-color "lightgray"}]
-    [:.note (list
-             {:width "100%"
-              :height "100"
-              :position :absolute
-              :top "50%", :left "50%"
-              :text-align :center}
-             ^:prefix {:transform "translate(-50%, -50%)"})
+    [:.note {:width "100%"
+             :height "100"
+             :position :absolute
+             :top "50%", :left "50%"
+             :transform "translate(-50%, -50%)"
+             :text-align :center}
      [:.arrow {:background {:image (image-url "drop-arrow.svg")
                             :repeat :no-repeat
                             :position :center
@@ -477,10 +469,9 @@
              :white-space :nowrap
              :text-overflow :ellipsis}
     [:form
-     [:button (list
-               {:float :right
-                :margin-top (px (/ header-height 2))}
-               ^:prefix {:transform "translateY(-50%)"})]]]
+     [:button {:float :right
+               :margin-top (px (/ header-height 2))
+               :transform "translateY(-50%)"}]]]
    [:.pane {:float :left
             :height "100%"
             :overflow :auto}
@@ -578,6 +569,7 @@
      [:&.editable (list
                    {:padding-left (px tag-icon-box)
                     :border (str "1px solid " border-dark)
+                    :border-radius (px 3)
                     :height :auto
                     :background {:image (image-url "tag-icon.svg")
                                  :repeat :no-repeat
@@ -585,8 +577,7 @@
                                  :position [[(px 4) (px 4)]]
                                  :color :white}
                     :white-space :initial}
-                   (calc-property :width ["100%" -  (px tag-icon-box)])
-                   ^:prefix {:border-radius (px 3)})
+                   (calc-property :width ["100%" -  (px tag-icon-box)]))
       [:&:before {:content (pr-str "Tags:")
                   :font-size (em 1.2)}]]
      (let [tag-height 16]
@@ -610,15 +601,14 @@
         (ui/css-fade "tag" (u/ms 100))
         
         (let [color-size 8]
-          [:.color (list
-                    {:display :inline-block
-                     :height (px color-size)
-                     :width (px color-size)
-                     :margin-right (px 2)
-                     ;; Border looks horrible on non-high-DPI screens
-                     ;; :border "1px solid white"
-                     }
-                    ^:prefix {:border-radius "50%"})])])
+          [:.color {:display :inline-block
+                    :height (px color-size)
+                    :width (px color-size)
+                    :margin-right (px 2)
+                    ;; Border looks horrible on non-high-DPI screens
+                    ;; :border "1px solid white"
+                    :border-radius "50%"
+                    }])])
      (let [input-padding 5]
        [:li {:display :inline-block}
         [:input {:background-color :transparent
@@ -632,20 +622,19 @@
 (def button-css
   (let [padding (px 10)]
     [:button :a.button
-     (list
-      {:background "linear-gradient(to bottom, #ffffff 0%,#e4e4e4 100%)"
-       :border (str "1px solid " border-buttons)
-       :color blue-text
-       :text-shadow "1px 1px #ffffff"
-       :height (px 25)
-       :font {:family default-font
-              :size (px 14)
-              :weight 400}
-       :outline :none
-       :padding {:left padding
-                 :right padding}}
-      ^:prefix {:border-radius (px 3)
-                :box-shadow "0px 0px 3px #dddddd"})
+     {:background "linear-gradient(to bottom, #ffffff 0%,#e4e4e4 100%)"
+      :border (str "1px solid " border-buttons)
+      :color blue-text
+      :text-shadow "1px 1px #ffffff"
+      :height (px 25)
+      :font {:family default-font
+             :size (px 14)
+             :weight 400}
+      :outline :none
+      :padding {:left padding
+                :right padding}
+      :border-radius (px 3)
+      :box-shadow "0px 0px 3px #dddddd"}
      [:&:hover {:background "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"}]
      [:&:active {:box-shadow "inset 0 0 3px #000000;"}]
      [:&:disabled :&.disabled {:background "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"
@@ -654,20 +643,20 @@
 (def dropdown-css
   (let [font-size (px 14)
         height 25]
-    [:label.dropdown (list {:background "linear-gradient(to bottom, #ffffff 0%,#e4e4e4 100%)"
-                            :font-size font-size
-                            :position :relative
-                            :height (px height)
-                            :text-shadow "1px 1px #ffffff"
-                            :line-height (px height)
-                            :display :inline-flex
-                            :padding  {:left (px 10)
-                                       :right (px 0)
-                                       :top (px 0)
-                                       :bottom (px 0)}
-                            :border (str "1px solid " border-buttons)
-                            :border-radius (px 4)}
-                           ^:prefix {:box-shadow "0px 0px 3px #dddddd"})
+    [:label.dropdown {:background "linear-gradient(to bottom, #ffffff 0%,#e4e4e4 100%)"
+                      :font-size font-size
+                      :position :relative
+                      :height (px height)
+                      :text-shadow "1px 1px #ffffff"
+                      :line-height (px height)
+                      :display :inline-flex
+                      :padding  {:left (px 10)
+                                 :right (px 0)
+                                 :top (px 0)
+                                 :bottom (px 0)}
+                      :border (str "1px solid " border-buttons)
+                      :border-radius (px 4)
+                      :box-shadow "0px 0px 3px #dddddd"}
      [:span {:padding {:left (px 20)
                        :right (px 20)}
              :font-weight 300}]
@@ -687,11 +676,11 @@
                      :outline :none
                      :font-family default-font
                      :padding {:left (px 30)
-                               :right (px 10)}}
-                    ^:prefix {:appearance :none})
+                               :right (px 10)}
+                     :appearance :none})
       [:&:active {:background-gradient :white}]
-      [:&:disabled (list {:color text-color-disabled}
-                         ^:prefix {:filter "grayscale(100%)"})]
+      [:&:disabled {:color text-color-disabled
+                    :filter "grayscale(100%)"}]
       [:&:hover {:background [(str (image-url "dropdown-arrow.svg") " 10px center no-repeat")
                               "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"] }]]]))
 
@@ -723,8 +712,7 @@
                :background-color darker-background
                :cursor :pointer}]
      [:ul.files (list
-                 {:padding {:left (px padding)
-                            :right (px padding)}
+                 {:padding {:left (px padding), :right (px padding)}
                   :margin {:top (px header-height)}
                   :overflow-y :auto
                   :list-style-type :none}
@@ -741,7 +729,7 @@
                         :background {:image (image-url (str "material/warning-invalid-file.svg?" (gensym)))
                                      :position :center
                                      :repeat :no-repeat}}]
-            [:.title {:color "red"
+            [:.title {:color :red
                       :padding-left (px 4)}]])
          [:.title {:max-width "70%", :height "100%"
                    :display :inline-block
@@ -752,20 +740,19 @@
          [:a.title {:text-decoration :underline}]
          [:.size {:font-size (pt 8)
                   :padding (px 4)}]
-         [:.progress :.hide (list
-                             {:position :absolute
-                              :display :block
-                              :right 0, :top "50%"}
-                             ^:prefix {:transform "translateY(-50%)"})]
+         [:.progress :.hide {:position :absolute
+                             :display :block
+                             :right 0, :top "50%"
+                             :transform "translateY(-50%)"}]
          (let [progress-height 4]
            [:.progress {:width (px 150)
                         :height (px progress-height)}
             [:.bar {:height "100%"
                     :float :right
                     :background-color "darkgrey"}]])
-         [:.hide (list {:text-decoration :underline
-                        :cursor :pointer}
-                       ^:prefix {:user-select :none})
+         [:.hide {:text-decoration :underline
+                  :cursor :pointer
+                  :user-select :none}
           [:&:hover {:color grey-1}]]])]
      [:form.upload {:width "100%", :height (px upload-button-height)
                     :padding {:left (px padding)
@@ -775,10 +762,19 @@
   [:a {:text-decoration :none
        :color default-text}])
 
+(def auto-prefix #{:transition
+                   :user-select
+                   :border-radius
+                   :transform
+                   :filter
+                   :appearance
+                   :box-shadow})
+
 (def css-string
   (css
    {:vendors ["webkit" "moz" "ms"]
-    :output-to "resources/public/style.css"}
+    :output-to "resources/public/style.css"
+    :auto-prefix auto-prefix}
    [:html :body :#app {:height "100%"
                        :font-weight "300"
                        :font-family default-font}]
