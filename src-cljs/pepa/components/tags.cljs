@@ -4,6 +4,7 @@
 
             [pepa.data :as data]
             [pepa.navigation :as nav]
+            [pepa.ui :as ui]
             
             [cljs.core.async :as async :refer [<!]]
             [cljs.core.match]
@@ -76,17 +77,17 @@
     om/IRenderState
     (render-state [_ {:keys [selected]}]
       (html
-       [:a {:href (when-not (om/get-state owner :events)
-                    (nav/tag-search tag))
-            :tab-index 0
-            :on-click (fn [e]
-                        (.stopPropagation e))
-            :on-focus #(send-event! owner [:focus tag])
-            :on-blur  #(send-event! owner [:blur tag])
-            :on-key-down (partial handle-tag-key-down! tag owner)
-            :draggable true
-            :on-drag-start (partial handle-drag-start tag)}
-        [:li.tag {:class [(when (contains? selected tag) "selected")]}
+       [:li.tag {:tab-index 0
+                 :class [(when (contains? selected tag) "selected")]
+                 :on-click (fn [e]
+                             (.stopPropagation e))
+                 :on-focus #(send-event! owner [:focus tag])
+                 :on-blur  #(send-event! owner [:blur tag])
+                 :on-key-down (partial handle-tag-key-down! tag owner)
+                 :draggable true
+                 :on-drag-start (partial handle-drag-start tag)}
+        [:a {:href (when-not (om/get-state owner :events)
+                     (nav/tag-search tag))}
          [:span.color {:style {:background-color (tag-color tag)}}]
          [:span.tag-name tag]]]))))
 
@@ -202,10 +203,12 @@
                                    (when (re-find #"\w" text)
                                      (focus-tag-input owner)
                                      (.stopPropagation e))))}
-        (om/build-all tag (:tags document)
-                      {:key-fn identity
-                       :init-state {:events events}
-                       :state {:selected selected}})
+        (ui/css-transition-group
+         {:transitionName "tag"}
+         (om/build-all tag (:tags document)
+                       {:key-fn identity
+                        :init-state {:events events}
+                        :state {:selected selected}}))
         [:li.input
          [:input {:ref "tag-input"
                   :tab-index 0

@@ -2,7 +2,8 @@
   (:require [garden.core :refer [css]]
             [garden.units :as u :refer [px em pt]]
             [garden.stylesheet :refer [at-keyframes cssfn]]
-
+            
+            [pepa.ui :as ui]
             [pepa.navigation :refer [navigation-elements]]
 
             [clojure.string :as s]
@@ -605,6 +606,9 @@
                       :border (str "1px solid" border-dark)
                       :padding {:left (px 3)
                                 :right (px 3)}}]
+        ;; CSS Fade-{In,Out}
+        (ui/css-fade "tag" (u/ms 100))
+        
         (let [color-size 8]
           [:.color (list
                     {:display :inline-block
