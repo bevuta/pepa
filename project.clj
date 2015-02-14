@@ -13,8 +13,7 @@
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
 
                  ;; Web
-                 #_[org.immutant/web "2.0.0-beta1"]
-                 [org.immutant/web "2.x.incremental.465"]
+                 [org.immutant/web "2.0.0-beta2"]
                  [compojure "1.3.1"]
                  [ring/ring-devel "1.3.2"]
                  [com.cognitect/transit-clj "0.8.259"]
@@ -42,12 +41,12 @@
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-2814"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-2850"]
                                        [com.cemerick/piggieback "0.1.6-SNAPSHOT"]
                                        [com.cognitect/transit-cljs "0.8.205"]
                                        [org.omcljs/om "0.8.8"]
                                        [garden "1.2.5"]
-                                       [sablono "0.3.1"]
+                                       [sablono "0.3.3"]
                                        [secretary "1.2.1"]
                                        [weasel "0.6.0-SNAPSHOT"]
                                        [the/parsatron "0.0.7"]]}}
