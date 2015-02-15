@@ -43,7 +43,7 @@
 (defmethod navigation-element :default [state _ [title id _ href]]
   (om/component
    (html
-    [:a {:href href}
+    [:a.menu-link {:href href}
      [:div title]])))
 
 (defn ^:private inbox-drop! [state owner e]
@@ -70,7 +70,7 @@
     om/IRenderState
     (render-state [_ {:keys [drop? working?]}]
       (html
-       [:a {:href href}
+       [:a.menu-link {:href href}
         [:div {:class [(when working? "working")
                        (when drop? "drop-target")]
                :on-drag-over upload/accept-file-drag
@@ -89,7 +89,7 @@
     om/IRenderState
     (render-state [_ {:keys [open?]}]
       (html
-       [:a {:href nil}
+       [:div.menu-link
         [:div {:on-click (fn [e]
                            (om/update-state! owner :open? not)
                            (.preventDefault e))

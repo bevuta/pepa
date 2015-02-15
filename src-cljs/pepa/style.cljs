@@ -184,11 +184,11 @@
           (for [row (map (comp name second) navigation-elements)]
             (let [selector (keyword (str "&." row))]
               [selector
-               [:a
+               [:.menu-link
                 [:div
                  [:&:before {:background-image (image-url (str "menu-icons/" row ".svg"))}]]]
                [:&.active
-                [:a
+                [:.menu-link
                  [:div
                   [:&:before :&:after {:background-color blue-background}]
                   [:&:before {:background-image (image-url (str "menu-icons/" row "-active.svg"))}]]]]]))
@@ -225,7 +225,7 @@
                          :height (px color-size)
                          :float :right}]])]]
           
-          [:a
+          [:.menu-link
            [:div {:height (px line-height)}
             [:&:before :&:after {:content (pr-str " ")
                                  :display :block
