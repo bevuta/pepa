@@ -47,7 +47,7 @@
                                        [org.omcljs/om "0.8.8" :exclusions [cljsjs/react]]
                                        [cljsjs/react-with-addons "0.12.2-4" :exclusions [cljsjs/react]]
                                        [garden "1.2.5"]
-                                       [sablono "0.3.3"]
+                                       [sablono "0.3.4"]
                                        [secretary "1.2.1"]
                                        [weasel "0.6.0-SNAPSHOT"]
                                        [the/parsatron "0.0.7"]]}}
