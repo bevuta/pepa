@@ -367,7 +367,11 @@
 ;;; Sequence Number Stuff
 
 (def ^:private sequenced-tables
-  [:pages :page_images :files :documents :document_tags :document_pages :inbox])
+  [:pages :page_images
+   :files
+   :documents :document_tags :document_pages
+   :inbox
+   :deletions])
 
 (defn valid-seqs? [seq]
   (and (every? (set sequenced-tables) (keys seq))
@@ -434,7 +438,20 @@
                    (mapv :document)))}))
 
 (defmethod changed-entities* :files [db _ seq-num]
-  {:files (mapv :id (db/query db ["SELECT id FROM files WHERE state_seq > ?" seq-num]))})
+  {:files (->> (db/query db ["SELECT id FROM files WHERE state_seq > ?" seq-num])
+               (mapv :id)
+               (set))})
+
+(defmethod changed-entities* :inbox [db _ seq-num]
+  {:inbox (->> (db/query db ["SELECT page FROM inbox WHERE state_seq > ?" seq-num])
+               (mapv :page)
+               (set))})
+
+(defmethod changed-entities* :deletions [db _ seq-num]
+  {:deletions (reduce (fn [deletions {:keys [id entity]}]
+                        (update-in deletions [(-> entity name keyword)] (comp set conj) id))
+                      {}
+                      (db/query db ["SELECT id, entity FROM deletions WHERE state_seq > ?" seq-num]))})
 
 (defn changed-entities
   "Takes a seqs-map and returns a map containing IDs for all changed
