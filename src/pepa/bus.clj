@@ -24,9 +24,11 @@
 
 (defn subscribe-all
   "Returns a channel receiving all messages sent over the bus."
-  [bus & [buf]]
-  (let [ch (async/chan buf)]
-    (async/tap (:mult bus) ch)))
+  ([bus buf]
+   (let [ch (async/chan buf)]
+     (async/tap (:mult bus) ch)))
+  ([bus]
+   (subscribe-all bus nil)))
 
 (defrecord Bus [input mult output]
   component/Lifecycle
