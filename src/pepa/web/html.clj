@@ -79,9 +79,5 @@
     [:head
      [:style#style {:style "text/css"}]]
     [:body
-     [:noscript
-      [:ul
-       [:li
-        [:a {:href "/inbox"}
-         "Inbox"]]]]
+     [:div#app]
      (include-js "pepa.js")]]))

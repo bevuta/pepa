@@ -80,10 +80,10 @@
             sidebar-width (get (om/observe owner (data/ui-sidebars)) :root/sidebar
                                css/default-sidebar-width)]
         (html
-         [:div#app {:on-drag-over (partial root-drag-over state owner)
-                    :on-drag-leave (partial root-drag-leave state owner)
-                    :on-drop (partial root-drop state owner)
-                    :class [(when file-drop? "file-drop")]}
+         [:div.container {:on-drag-over (partial root-drag-over state owner)
+                          :on-drag-leave (partial root-drag-leave state owner)
+                          :on-drop (partial root-drop state owner)
+                          :class [(when file-drop? "file-drop")]}
           (om/build sidebar-component state
                     {:state {:width sidebar-width}})
           [:main {:style {:margin-left sidebar-width}}

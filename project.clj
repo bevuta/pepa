@@ -45,9 +45,9 @@
                                        [com.cemerick/piggieback "0.1.6-SNAPSHOT"]
                                        [com.cognitect/transit-cljs "0.8.205"]
                                        [org.omcljs/om "0.8.8" :exclusions [cljsjs/react]]
-                                       [cljsjs/react-with-addons "0.12.2-4" :exclusions [cljsjs/react]]
+                                       [cljsjs/react-with-addons "0.12.2-5"]
                                        [garden "1.2.5"]
-                                       [sablono "0.3.4"]
+                                       [sablono "0.3.4" :exclusions [cljsjs/react]]
                                        [secretary "1.2.1"]
                                        [weasel "0.6.0-SNAPSHOT"]
                                        [the/parsatron "0.0.7"]]}}

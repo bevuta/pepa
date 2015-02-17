@@ -34,4 +34,5 @@
     (cljs-repl
      :repl-env (repl-env
                 :ip "0.0.0.0"
-                :port 9009))))
+                :port 9009
+                :working-dir "resources/public/out"))))

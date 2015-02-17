@@ -782,6 +782,7 @@
                  :color default-text
                  :letter-spacing (px 0.8)}]
    [:#app {:height "100%"}
+    [:.container {:height "100%"}]
     [:&.file-drop
      {:background "red"}]
     clear-a-css
