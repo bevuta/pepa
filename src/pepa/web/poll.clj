@@ -34,11 +34,9 @@
   ((send-fn content-type) ch {:seqs (m/sequence-numbers db)}))
 
 (defn lock! [db topic]
-  (println "taking locks")
   (db/with-transaction [db db]
-   (doseq [lock db/advisory-locks]
-     (db/advisory-xact-lock! db lock)))
-  (println "releasing locks"))
+    (doseq [lock db/advisory-locks]
+      (db/advisory-xact-lock! db lock))))
 
 (defn ^:private handle-poll! [config db bus ch seqs content-type]
   (let [send! (send-fn content-type)
