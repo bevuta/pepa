@@ -17,11 +17,14 @@ DROP TABLE IF EXISTS document_tags CASCADE;DROP TABLE IF EXISTS document_tags_st
 
 DROP TABLE IF EXISTS inbox CASCADE;DROP TABLE IF EXISTS inbox_state_seq CASCADE;
 
+DROP TABLE IF EXISTS deletions CASCADE;DROP TABLE IF EXISTS deletions_state_seq CASCADE;
+
 
 
 DROP TYPE IF EXISTS PROCESSING_STATUS;
 
 CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
+CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox');
 
 CREATE TABLE files (
        id SERIAL PRIMARY KEY CHECK(id > 0),
@@ -275,6 +278,38 @@ CREATE TRIGGER insert_inbox_state_seq_trigger
   ON inbox
   FOR EACH ROW
   EXECUTE PROCEDURE update_inbox_state_seq_func();
+
+CREATE TABLE deletions (
+       id INT NOT NULL,
+       entity ENTITY NOT NULL);
+
+ALTER TABLE deletions ADD COLUMN state_seq BIGINT NOT NULL CHECK(state_seq > 0);
+
+CREATE TABLE deletions_state_seq (
+       current BIGINT NOT NULL CHECK (current >= 0)
+);
+
+INSERT INTO deletions_state_seq (current) VALUES (0);
+
+CREATE OR REPLACE FUNCTION update_deletions_state_seq_func() RETURNS TRIGGER AS $$
+       BEGIN
+         UPDATE deletions_state_seq SET current = current + 1 RETURNING current INTO NEW.state_seq;
+         RETURN NEW;
+       END;
+$$ LANGUAGE PLPGSQL;
+
+CREATE TRIGGER update_deletions_state_seq_trigger
+  BEFORE UPDATE
+  ON deletions
+  FOR EACH ROW
+  WHEN (NEW.* IS DISTINCT FROM OLD.*)
+  EXECUTE PROCEDURE update_deletions_state_seq_func();
+
+CREATE TRIGGER insert_deletions_state_seq_trigger
+  BEFORE INSERT
+  ON deletions
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_deletions_state_seq_func();
 
 
 CREATE OR REPLACE FUNCTION utc_now() RETURNS TIMESTAMP AS $$

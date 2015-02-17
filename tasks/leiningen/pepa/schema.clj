@@ -4,8 +4,10 @@
 (def prologue
   "
 DROP TYPE IF EXISTS PROCESSING_STATUS;
+DROP TYPE IF EXISTS ENTITY;
 
 CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
+CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox');
 ")
 
 (def tables
@@ -18,7 +20,8 @@ CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
        origin TEXT NOT NULL,
        name TEXT,
        report TEXT CHECK ((report IS NULL) = (status = 'pending'))"
-     :state-seq? true}]
+     :state-seq? true
+     :track-deletions? true}]
 
    ["documents"
     {:columns "
@@ -30,7 +33,8 @@ CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
        -- If set, this document correspondents exactly to file
        -- TODO: Add check to make sure all pages in document_pages are from document.file if NOT NULL
        file INT REFERENCES files"
-     :state-seq? true}]
+     :state-seq? true
+     :track-deletions? true}]
 
    ["pages"
     {:columns "
@@ -42,7 +46,8 @@ CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
        ocr_status PROCESSING_STATUS NOT NULL DEFAULT 'pending',
        rotation INT NOT NULL DEFAULT 0,
        render_status PROCESSING_STATUS NOT NULL DEFAULT 'pending'"
-     :state-seq? true}]
+     :state-seq? true
+     :track-deletions? true}]
 
    ["page_images"
     {:columns "
@@ -78,6 +83,14 @@ CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
    ["inbox"
     {:columns "
        page INT NOT NULL REFERENCES pages"
+     :state-seq? true
+     :track-deletions? true
+     :entity-id-field "page"}]
+
+   ["deletions"
+    {:columns "
+       id INT NOT NULL,
+       entity ENTITY NOT NULL"
      :state-seq? true}]])
 
 (def epilogue
@@ -184,6 +197,22 @@ CREATE TRIGGER insert_%1$s_state_seq_trigger
   EXECUTE PROCEDURE update_%1$s_state_seq_func();
 " table))
 
+(defn add-deletion-trigger [table id-field]
+  (printf "
+
+CREATE OR REPLACE FUNCTION delete_%1$s_track_func() RETURNS TRIGGER AS $$
+       BEGIN
+         INSERT INTO deletions (entity, id) VALUES ('%1$s', OLD.%2$s);
+         RETURN OLD;
+       END;
+$$ LANGUAGE PLPGSQL;
+
+CREATE TRIGGER delete_%1$s_track_trigger
+  AFTER DELETE ON %1$s
+  FOR EACH ROW
+  EXECUTE PROCEDURE delete_%1$s_track_func();
+" table id-field))
+
 
 (defn maybe-println [x]
   (when x
@@ -202,8 +231,10 @@ CREATE TRIGGER insert_%1$s_state_seq_trigger
   (doseq [[table spec] tables]
     (create-table table (:columns spec))
     (when (:state-seq? spec)
-      (add-state-seq table))
+      (add-state-seq table)) 
     (maybe-println (:after spec))
+    (when (:track-deletions? spec)
+      (add-deletion-trigger table (or (:entity-id-field spec) "id")))
     (newline))
   (println epilogue)
   (println "COMMIT;")

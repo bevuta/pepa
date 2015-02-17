@@ -107,7 +107,7 @@
 (def +schema-enums+
   "A set of all PostgreSQL enums in schema.sql. Used to convert
   enum-values back into Clojure keywords."
-  #{"processing_status"})
+  #{"processing_status" "entity"})
 
 (extend-type String
   jdbc/IResultSetReadColumn
