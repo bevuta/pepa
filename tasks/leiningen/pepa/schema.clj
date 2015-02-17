@@ -77,7 +77,8 @@ CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
 
    ["inbox"
     {:columns "
-       page INT NOT NULL REFERENCES pages"}]])
+       page INT NOT NULL REFERENCES pages"
+     :state-seq? true}]])
 
 (def epilogue
   "

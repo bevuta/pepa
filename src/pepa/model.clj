@@ -367,7 +367,7 @@
 ;;; Sequence Number Stuff
 
 (def ^:private sequenced-tables
-  [:pages :page_images :files :documents :document_tags :document_pages])
+  [:pages :page_images :files :documents :document_tags :document_pages :inbox])
 
 (defn valid-seqs? [seq]
   (and (every? (set sequenced-tables) (keys seq))

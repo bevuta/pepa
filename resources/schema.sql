@@ -15,7 +15,8 @@ DROP TABLE IF EXISTS document_pages CASCADE;DROP TABLE IF EXISTS document_pages_
 DROP TABLE IF EXISTS tags CASCADE;
 DROP TABLE IF EXISTS document_tags CASCADE;DROP TABLE IF EXISTS document_tags_state_seq CASCADE;
 
-DROP TABLE IF EXISTS inbox CASCADE;
+DROP TABLE IF EXISTS inbox CASCADE;DROP TABLE IF EXISTS inbox_state_seq CASCADE;
+
 
 
 DROP TYPE IF EXISTS PROCESSING_STATUS;
@@ -246,6 +247,34 @@ CREATE TRIGGER insert_document_tags_state_seq_trigger
 
 CREATE TABLE inbox (
        page INT NOT NULL REFERENCES pages);
+
+ALTER TABLE inbox ADD COLUMN state_seq BIGINT NOT NULL CHECK(state_seq > 0);
+
+CREATE TABLE inbox_state_seq (
+       current BIGINT NOT NULL CHECK (current >= 0)
+);
+
+INSERT INTO inbox_state_seq (current) VALUES (0);
+
+CREATE OR REPLACE FUNCTION update_inbox_state_seq_func() RETURNS TRIGGER AS $$
+       BEGIN
+         UPDATE inbox_state_seq SET current = current + 1 RETURNING current INTO NEW.state_seq;
+         RETURN NEW;
+       END;
+$$ LANGUAGE PLPGSQL;
+
+CREATE TRIGGER update_inbox_state_seq_trigger
+  BEFORE UPDATE
+  ON inbox
+  FOR EACH ROW
+  WHEN (NEW.* IS DISTINCT FROM OLD.*)
+  EXECUTE PROCEDURE update_inbox_state_seq_func();
+
+CREATE TRIGGER insert_inbox_state_seq_trigger
+  BEFORE INSERT
+  ON inbox
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_inbox_state_seq_func();
 
 
 CREATE OR REPLACE FUNCTION utc_now() RETURNS TIMESTAMP AS $$
