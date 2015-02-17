@@ -45,27 +45,26 @@
         timeout (async/timeout (* 1000 (:timeout config)))
         bus-changes (bus/subscribe-all bus (async/sliding-buffer 1))]
     (go-loop []
-      ;; NOTE: We have to manually close the channels after a timeout,
-      ;; else they stay open for forever & hog memory!
-      (let [[val port] (async/alts! [timeout bus-changes])]
-        (cond
-          (= port bus-changes)
-          (let [topic (bus/topic val)]
-            (lock! db topic)
-            (if-let [changed (m/changed-entities db seqs)]
-              (do
-                (println "changed" (pr-str changed))
-                (send! ch changed))
-              (do
-                (println "nothing changed")
-               (recur))))
-          (= port timeout)
-          (do
-            (println "Closing long-polling channel after timeout")
-            (async-web/close ch))
-          
-          ;; (println "handle-poll loop" "port:" (if (= timeout port) "timeout" "bus-changes") "val:"(pr-str val))
-          )))))
+      (if-let [changed (m/changed-entities db seqs)]
+        (do
+          (println "changed" (pr-str changed))
+          (send! ch changed))
+        ;; NOTE: We have to manually close the channels after a timeout,
+        ;; else they stay open for forever & hog memory!
+        (let [[val port] (async/alts! [timeout bus-changes])]
+          (cond
+            ;; Something changed
+            (= port bus-changes)
+            (let [topic (bus/topic val)]
+              (lock! db topic)
+              ;; Recur to trigger the then-part of the if.
+              (recur))
+            ;; Hit a timeout or channel is closed
+            (or (= port timeout) (not (async-web/open? ch)))
+            (do
+              (println "Closing long-polling channel...")
+              (when (async-web/open? ch)
+                (async-web/close ch)))))))))
 
 (defn ^:private poll-handler* [req]
   (let [method (:request-method req)
