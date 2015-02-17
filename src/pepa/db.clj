@@ -60,14 +60,20 @@
 
 (def advisory-locks
   [:files/new
-   :pages/new])
+   :pages/new
+   :documents/new
+   :files/updated
+   :pages/updated
+   :documents/updated])
 
 (defn make-advisory-lock-query-fn [lock-fn]
   (let [statement (format "SELECT %s(?::int, ?::int)" lock-fn)]
     (fn [db lock-name]
-      (query db [statement
-                 advisory-lock-prefix
-                 (.indexOf advisory-locks lock-name)]))))
+      (let [idx (.indexOf advisory-locks lock-name)]
+        (assert (not= -1 idx) (str "Need to have an advisory-lock for topicN " lock-name))
+        (query db [statement
+                   advisory-lock-prefix
+                   idx])))))
 
 (def advisory-xact-lock!
   (make-advisory-lock-query-fn "pg_advisory_xact_lock"))

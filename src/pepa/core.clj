@@ -31,7 +31,7 @@
                [:config :db :bus])
    :web (component/using
           (web/make-component)
-          [:config :db :file-page-extractor])
+          [:config :db :bus :file-page-extractor])
    :smtp (component/using
            (smtp/make-component)
            [:config :db])))

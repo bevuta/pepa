@@ -264,11 +264,12 @@
 
 >
 
-(defn wrap-component [handler {:keys [config db]}]
+(defn wrap-component [handler {:keys [config db bus]}]
   (fn [req]
     (handler (assoc req
                     ::config config
-                    ::db db))))
+                    ::db db
+                    ::bus bus))))
 
 (def handlers
   (routes (GET "/" [] (html/root))

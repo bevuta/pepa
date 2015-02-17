@@ -18,6 +18,7 @@
 
 (defn notify!
   ([bus topic data]
+   (println "notify!" topic data)
    (>!! (:input bus) (assoc data ::topic topic)))
   ([bus topic]
    (notify! bus topic {})))
@@ -29,6 +30,9 @@
      (async/tap (:mult bus) ch)))
   ([bus]
    (subscribe-all bus nil)))
+
+(defn topic [message]
+  (::topic message))
 
 (defrecord Bus [input mult output]
   component/Lifecycle

@@ -48,7 +48,9 @@
 
 (defn rotate-page [db page-id rotation]
   (assert (zero? (mod rotation 90)))
-  (db/update! db :pages {:rotation rotation} ["id = ?" page-id]))
+  (db/with-transaction [db db]
+    (db/notify! db :pages/updated)
+    (db/update! db :pages {:rotation rotation} ["id = ?" page-id])))
 
 ;;; Document Functions
 

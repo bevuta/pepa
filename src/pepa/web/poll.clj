@@ -1,6 +1,7 @@
 (ns pepa.web.poll
   (:require [pepa.model :as m]
             [pepa.db :as db]
+            [pepa.bus :as bus]
 
             [clojure.data.json :as json]
             [cognitect.transit :as transit]
@@ -32,28 +33,39 @@
 (defn ^:private send-seqs! [db ch content-type]
   ((send-fn content-type) ch {:seqs (m/sequence-numbers db)}))
 
-(defn ^:private handle-poll! [config db ch seqs content-type]
-  (let [send! (send-fn content-type)
-        timeout (async/timeout (* 1000 (:timeout config)))]
-    (go-loop []
-      ;; TODO: Remove the polling here!
-      
-      ;; TODO: We have to manually close the channels after a certain
-      ;; timeout - else they stay open for forever!
-      (if-let [changed (m/changed-entities db seqs)]
-        (send! ch changed)
-        (let [[_ port] (async/alts! [timeout (async/timeout 1000)])]
-          (cond
-            (= port timeout)
-            (do
-              (println "Closing long-polling channel after timeout")
-              (async-web/close ch))
-            
-            (async-web/open? ch)
-            (recur)
+(defn lock! [db topic]
+  (println "taking locks")
+  (db/with-transaction [db db]
+   (doseq [lock db/advisory-locks]
+     (db/advisory-xact-lock! db lock)))
+  (println "releasing locks"))
 
-            true
-            (println "Long-Polling channel closed by client")))))))
+(defn ^:private handle-poll! [config db bus ch seqs content-type]
+  (let [send! (send-fn content-type)
+        timeout (async/timeout (* 1000 (:timeout config)))
+        bus-changes (bus/subscribe-all bus (async/sliding-buffer 1))]
+    (go-loop []
+      ;; NOTE: We have to manually close the channels after a timeout,
+      ;; else they stay open for forever & hog memory!
+      (let [[val port] (async/alts! [timeout bus-changes])]
+        (cond
+          (= port bus-changes)
+          (let [topic (bus/topic val)]
+            (lock! db topic)
+            (if-let [changed (m/changed-entities db seqs)]
+              (do
+                (println "changed" (pr-str changed))
+                (send! ch changed))
+              (do
+                (println "nothing changed")
+               (recur))))
+          (= port timeout)
+          (do
+            (println "Closing long-polling channel after timeout")
+            (async-web/close ch))
+          
+          ;; (println "handle-poll loop" "port:" (if (= timeout port) "timeout" "bus-changes") "val:"(pr-str val))
+          )))))
 
 (defn ^:private poll-handler* [req]
   (let [method (:request-method req)
@@ -62,7 +74,11 @@
                            [#"^application/transit\+json"
                             #"^application/json"])
         seqs (:body req)
-        config (get-in req [:pepa.web.handlers/config :web :poll])]
+        
+        config (get-in req [:pepa.web.handlers/config :web :poll])
+        db (:pepa.web.handlers/db req)
+        bus (:pepa.web.handlers/bus req)
+        handle-poll! (partial handle-poll! config db bus)]
     (cond
       (not content-type)
       {:status 406}
@@ -77,14 +93,9 @@
       (-> req
           (async-web/as-channel
            {:on-open (fn [ch]
-                       (let [db (:pepa.web.handlers/db req)]
-                         (if (empty? seqs)
-                           (send-seqs! db ch content-type)
-                           (handle-poll! config
-                                         db
-                                         ch
-                                         seqs
-                                         content-type))))
+                       (if (empty? seqs)
+                         (send-seqs! db ch content-type)
+                         (handle-poll! ch seqs content-type)))
             :on-error (fn [ch throwable]
                         (println "Caught exception:" throwable)
                         (async-web/close ch))})
