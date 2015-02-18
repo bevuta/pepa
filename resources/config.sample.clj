@@ -8,9 +8,7 @@
        :default-page-dpi 150
        ;; 30s Long-Polling timeout
        :poll {:timeout 30}}
- :rendering {:png {:dpi {"thumbnail" 50
-                         "full" 150}
-                   :default-dpi 150}}
+ :rendering {:png {:dpi #{50 150}}}
  :smtp {:enable true
         :port 2525
         :host "localhost"}

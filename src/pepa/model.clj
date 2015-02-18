@@ -52,6 +52,20 @@
     (db/notify! db :pages/updated)
     (db/update! db :pages {:rotation rotation} ["id = ?" page-id])))
 
+(def ^:private pg-array->set (comp set #(.getArray %)))
+
+(defn get-pages [db ids]
+  (->> (pepa.db/query db (db/sql+placeholders
+                          "SELECT id, rotation, number, render_status AS \"render-status\", ocr_status AS \"ocr-status\",
+                             (SELECT array_agg(dpi) from page_images where page = id) as dpi
+                           FROM pages
+                           WHERE id IN (%s)"
+                          ids))
+       ;; Make  a set out of the strange Postgres-Array
+       (map #(update-in % [:dpi] pg-array->set))))
+
+
+
 ;;; Document Functions
 
 (defn ^:private dissoc-fks [fk rows]
@@ -69,11 +83,19 @@
 (defn get-documents [db ids]
   (db/with-transaction [conn db]
     (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, notes FROM documents WHERE id IN (%s)" ids))
-          pages (get-associated conn "SELECT dp.document, p.id, p.rotation, p.render_status AS \"render-status\" FROM pages AS p JOIN document_pages AS dp ON dp.page = p.id WHERE dp.document IN (%s) ORDER BY dp.number" ids :document)
+          pages (get-associated conn "SELECT dp.document, p.id, p.rotation, p.render_status AS \"render-status\",
+                                        (SELECT array_agg(dpi) from page_images where page = id) AS dpi
+                                      FROM pages AS p
+                                      JOIN document_pages AS dp
+                                        ON dp.page = p.id
+                                      WHERE dp.document IN (%s)
+                                      ORDER BY dp.number"
+                                ids :document)
           tags (get-associated conn "SELECT dt.document, t.name FROM document_tags AS dt JOIN tags AS t ON t.id = dt.tag WHERE dt.document IN (%s) ORDER BY dt.seq" ids :document)]
       (map (fn [{:keys [id] :as document}]
              (assoc document
-                    :pages (vec (get pages id))
+                    :pages (->> (vec (get pages id))
+                                (map #(update-in % [:dpi] pg-array->set)))
                     :tags (mapv :name (get tags id))))
            documents))))
 
@@ -466,4 +488,3 @@
         (when-let [kvs (seq (for [[k v] m :when (seq v)] [k v]))]
           (into {:seqs (sequence-numbers db)} kvs))))
     (throw (ex-info "Didn't get a valid (and complete) seqs-map!" {:seqs seqs}))))
-

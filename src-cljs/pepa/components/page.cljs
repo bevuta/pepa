@@ -16,10 +16,13 @@
 
 (def +pending-placeholder+ "/img/pending.svg")
 
-(defn ^:private page-image [page owner {:keys [size]}]
-  (assert size)
+(defn ^:private page-image [page owner {:keys [size size-fn]}]
+  (assert (or size (fn? size-fn)))
   (om/component
-   (let [rendered? (= :processing-status/processed (:render-status page))]
+   (let [rendered? (= :processing-status/processed (:render-status page))
+         size (if (fn? size-fn)
+                (apply size-fn (:dpi page))
+                size)]
      (dom/img #js {:src (if rendered?
                           (str "/pages/" (:id page) "/image/" size)
                           +pending-placeholder+)
@@ -60,8 +63,8 @@
                       :onMouseLeave (fn [e] (om/set-state! owner :overlay? false))}
                  (when overlay?
                    (om/build rotate-buttons page))
-                 (om/build page-image page {:opts {:size "thumbnail"}}))
-        (om/build page-image page {:opts {:size "thumbnail"}})))))
+                 (om/build page-image page {:opts {:size-fn min}}))
+        (om/build page-image page {:opts {:size-fn min}})))))
 
 (defn full [page owner _]
-  (page-image page owner {:size "full"}))
+  (page-image page owner {:size-fn max}))

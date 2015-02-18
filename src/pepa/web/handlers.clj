@@ -55,20 +55,33 @@
                            (::files ctx)
                            {:origin "scanner"})))
 
+(defresource page [id]
+  :allowed-methods #{:get}
+  :available-media-types ["application/transit+json"]
+  :exists? (fn [ctx]
+             (when-let [page (first (m/get-pages (get-in ctx [:request ::db])
+                                                 [(Integer/parseInt id)]))]
+               {::page (select-keys page
+                                    [:id :render-status :rotation])}))
+  :handle-ok ::page)
+
 (defresource page-image [id size]
   :allowed-methods #{:get}
   :available-media-types ["image/png"]
   :exists? (fn [ctx]
-             (let [db (get-in ctx [:request ::db])
-                   config (get-in ctx [:request ::config])
-                   dpi (or
-                        (get-in config [:rendering :png :dpi size])
-                        (get-in config [:web :default-page-dpi]))
-                   [{:keys [image hash]}] (db/query db ["SELECT image, hash FROM page_images WHERE page = ? AND dpi = ?"
-                                                        (Integer/parseInt id) dpi])]
-               (when image
-                 {::page (ByteArrayInputStream. image)
-                  ::hash hash})))
+             (try
+               (let [db (get-in ctx [:request ::db])
+                     config (get-in ctx [:request ::config])
+                     [{:keys [image hash]}] (if (= size ::max)
+                                              (db/query db ["SELECT image, hash FROM page_images WHERE page = ? ORDER BY dpi DESC LIMIT 1"
+                                                            (Integer/parseInt id)])
+                                              (db/query db ["SELECT image, hash FROM page_images WHERE page = ? AND dpi = ?"
+                                                            (Integer/parseInt id) (Integer/parseInt size)]))]
+                 (when image
+                   {::page (ByteArrayInputStream. image)
+                    ::hash hash}))
+               (catch NumberFormatException e
+                 nil)))
   :etag ::hash
   :handle-ok ::page)
 
@@ -280,9 +293,11 @@
           (ANY "/pages/:id/image/:size" [id size]
                (page-image id size))
           (ANY "/pages/:id/image" [id]
-               (page-image id "full"))
+               (page-image id ::max))
           (ANY "/pages/:id/rotation" [id]
                (page-rotation id))
+          (ANY "/pages/:id" [id]
+               (page id))
 
           (ANY "/documents" [] documents)
           (ANY "/documents/bulk" [] documents-bulk)
