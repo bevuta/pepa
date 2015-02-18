@@ -44,8 +44,7 @@
     (println "Rendering page" (:id page))
     (let [db (:db component)
           config (:config component)
-          dpis (set (or (-> config :rendering :png :dpi vals seq)
-                        #{150}))
+          dpis (set (-> config :rendering :png :dpi))
           images (render-page dpis page)]
       (db/with-transaction [db db]
         (let [status (if images

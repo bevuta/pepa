@@ -52,14 +52,15 @@
     (db/notify! db :pages/updated)
     (db/update! db :pages {:rotation rotation} ["id = ?" page-id])))
 
-(def ^:private pg-array->set (comp set #(.getArray %)))
+(def ^:private pg-array->set (comp set #(when % (.getArray %))))
 
 (defn get-pages [db ids]
   (->> (pepa.db/query db (db/sql+placeholders
-                          "SELECT id, rotation, number, render_status AS \"render-status\", ocr_status AS \"ocr-status\",
-                             (SELECT array_agg(dpi) from page_images where page = id) as dpi
-                           FROM pages
-                           WHERE id IN (%s)"
+                          "SELECT id, rotation, number, render_status AS \"render-status\", ocr_status AS \"ocr-status\", array_agg(dpi) AS dpi
+                           FROM pages AS p
+                           LEFT JOIN page_images AS pi ON pi.page = p.id
+                           WHERE id IN (%s)
+                           GROUP BY id"
                           ids))
        ;; Make  a set out of the strange Postgres-Array
        (map #(update-in % [:dpi] pg-array->set))))
@@ -95,7 +96,7 @@
       (map (fn [{:keys [id] :as document}]
              (assoc document
                     :pages (->> (vec (get pages id))
-                                (map #(update-in % [:dpi] pg-array->set)))
+                                (mapv #(update-in % [:dpi] pg-array->set)))
                     :tags (mapv :name (get tags id))))
            documents))))
 
