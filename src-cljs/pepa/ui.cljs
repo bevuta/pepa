@@ -1,7 +1,8 @@
 (ns pepa.ui
-  (:require [om.core :as om]
-            [garden.units :as u :refer [px em pt]]
-            [sablono.core :refer-macros [html]])
+  (:require
+   ;; Necessary for the `defcomponent' macro
+   om.core
+   sablono.core)
   (:require-macros pepa.ui))
 
 (defn css-fade [animation-name duration]
