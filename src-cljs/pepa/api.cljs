@@ -252,9 +252,9 @@
                                      "application/transit+json"
                                      (om/value (:seqs state))
                                      +poll-timeout+))]
-      (prn response)
       (when (:successful? response)
         (let [data (:response/transit response)]
+          (prn (assoc data :seqs '...))
           (when-let [seqs (:seqs data)]
             (om/transact! state :seqs #(merge % seqs))))))))
 
