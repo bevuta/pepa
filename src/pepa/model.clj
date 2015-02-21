@@ -444,7 +444,13 @@
                                  "SELECT DISTINCT dp.document
                                   FROM document_pages AS dp
                                   WHERE dp.page IN (%s)" pages))
-                   (mapv :document)))}))
+                   (mapv :document)))
+     :inbox (when (seq pages)
+              (->>
+               (db/query db (db/sql+placeholders
+                             "SELECT page FROM inbox
+                              WHERE page IN (%s)" pages))
+               (mapv :page)))}))
 
 (defmethod changed-entities* :page_images [db _ seq-num]
   (let [pages (->>
