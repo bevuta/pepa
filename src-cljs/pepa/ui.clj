@@ -44,15 +44,13 @@
     `(defn ~name [~@args]
        (reify
          om.core/IDisplayName
-         (~'display-name [~'_]
+         (~'display-name [_#]
            ~(clojure.string/capitalize name))
          ~@syms
          ~@impls))))
 
 (comment
   (defcomponent foo [state owner opts]
-    om/ICheckState
-    
     (did-update [_ prev-props prev-state]
       (when (and (not (contains? (:selected prev-state) tag))
                  (contains? (om/get-state owner :selected) tag))

@@ -1,6 +1,5 @@
 (ns pepa.components.draggable
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
             [cljs.core.async :as async]
 
             [pepa.ui :as ui]
@@ -43,10 +42,9 @@
 
 (ui/defcomponent resize-draggable [_ owner {:keys [sidebar]}]
   (render-state [_ {:keys [dragging?]}]
-    (html
-     [:.draggable {:class [(when dragging?
-                             "active")]
-                   :on-mouse-down (partial resize-mouse-down owner sidebar)}])))
+    [:.draggable {:class [(when dragging?
+                            "active")]
+                  :on-mouse-down (partial resize-mouse-down owner sidebar)}]))
 
 (defn limit
   ([width min max]

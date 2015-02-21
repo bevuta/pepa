@@ -1,6 +1,5 @@
 (ns pepa.components.pagination
-  (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]))
+  (:require [om.core :as om :include-macros true]))
 
 (def +items-per-page+ 10)
 

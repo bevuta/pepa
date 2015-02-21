@@ -1,7 +1,6 @@
 (ns pepa.workflows.inbox
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom]
-            [sablono.core :refer-macros [html]]
 
             [clojure.string :as s]
             [cljs.core.async :as async :refer [<!]]

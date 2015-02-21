@@ -6,7 +6,6 @@
             [pepa.data :as data]
             [pepa.api :as api]
             
-            [sablono.core :refer-macros [html]]
             [goog.style :as style]))
 
 (defn ^:private rotate [deg]

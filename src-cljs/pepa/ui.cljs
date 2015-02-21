@@ -1,6 +1,7 @@
 (ns pepa.ui
   (:require [om.core :as om]
-            [garden.units :as u :refer [px em pt]])
+            [garden.units :as u :refer [px em pt]]
+            [sablono.core :refer-macros [html]])
   (:require-macros pepa.ui))
 
 (defn css-fade [animation-name duration]

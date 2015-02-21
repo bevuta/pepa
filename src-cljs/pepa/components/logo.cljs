@@ -1,6 +1,5 @@
 (ns pepa.components.logo
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
             [clojure.browser.event :as event]
             [goog.style.transform :as transform]
             [goog.dom :as dom]

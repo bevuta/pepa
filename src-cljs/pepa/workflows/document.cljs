@@ -1,6 +1,5 @@
 (ns pepa.workflows.document
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
             [cljs.core.async :as async :refer [alts! <!]]
             [clojure.string :as s]
 
@@ -99,14 +98,13 @@
 
 (ui/defcomponent ^:private thumbnails [document owner]
   (render-state [_ state]
-    (html
-     [:.thumbnails
-      (om/build thumbnail-pane-header document)
-      (om/build draggable/resize-draggable nil
-                {:opts {:sidebar ::thumbnails}})
-      (om/build thumbnail-list (:pages document)
-                ;; Just pass down the whole state
-                {:state state})])))
+    [:.thumbnails
+     (om/build thumbnail-pane-header document)
+     (om/build draggable/resize-draggable nil
+               {:opts {:sidebar ::thumbnails}})
+     (om/build thumbnail-list (:pages document)
+               ;; Just pass down the whole state
+               {:state state})]))
 
 (ui/defcomponent ^:private pages-pane-header [document]
   (render [_]

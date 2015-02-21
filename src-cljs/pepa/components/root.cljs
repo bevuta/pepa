@@ -1,6 +1,5 @@
 (ns pepa.components.root
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
 
             [pepa.ui :as ui]
             [pepa.api :as api]

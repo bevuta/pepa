@@ -1,6 +1,5 @@
 (ns pepa.workflows.dashboard
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
             [cljs.reader :as reader]
             [cljs.core.async :as async]
             [clojure.string :as s]
@@ -112,10 +111,9 @@
      true
      "Dashboard")))
 
-(defn ^:private document-count [state]
-  (om/component
-   (html
-    [:span.document-count (str "(" (count (document-ids state)) ")")])))
+(ui/defcomponent ^:private document-count [state]
+  (render [_]
+    [:span.document-count (str "(" (count (document-ids state)) ")")]))
 
 ;;; Should be twice the document-height or so.
 (def +scroll-margin+ 500)

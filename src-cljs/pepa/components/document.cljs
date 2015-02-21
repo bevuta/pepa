@@ -1,6 +1,5 @@
 (ns pepa.components.document
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
             [clojure.string :as s]
             
             [pepa.ui :as ui]

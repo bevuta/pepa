@@ -1,6 +1,5 @@
 (ns pepa.components.tags
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
 
             [pepa.data :as data]
             [pepa.navigation :as nav]

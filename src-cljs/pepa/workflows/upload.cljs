@@ -1,6 +1,5 @@
 (ns pepa.workflows.upload
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
             [clojure.string :as s]
 
             [pepa.ui :as ui]
@@ -44,11 +43,10 @@
         (finally
           (om/update! row :working? false))))))
 
-(defn ^:provate progress-bar [progress]
-  (om/component
-   (html
+(ui/defcomponent ^:provate progress-bar [progress]
+  (render [_]
     [:.progress
-     [:.bar {:style {:width (str (* progress 100) "%")}}]])))
+     [:.bar {:style {:width (str (* progress 100) "%")}}]]))
 
 (defn ^:private byte->kb [byte]
   (Math/floor (/ byte 1024)))
@@ -90,12 +88,11 @@
                              (remove #{file})
                              vec))))
 
-(defn ^:private file-list [files]
-  (om/component
-   (html
+(ui/defcomponent ^:private file-list [files]
+  (render [_]
     [:ul.files
      (om/build-all file-row files
-                   {:init-state {:hide-fn (partial remove-file! files)}})])))
+                   {:init-state {:hide-fn (partial remove-file! files)}})]))
 
 (defn add-file [upload file]
   (update-in upload [:files]
