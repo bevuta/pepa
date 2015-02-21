@@ -50,25 +50,24 @@
          ~@impls))))
 
 (comment
-  (macroexpand-1
-   (defcomponent foo [state owner opts]
-     om/ICheckState
-     (did-update [_ prev-props prev-state]
-       (when (and (not (contains? (:selected prev-state) tag))
-                  (contains? (om/get-state owner :selected) tag))
-         (.focus (om/get-node owner))))
-     (render-state [_ {:keys [selected]}]
-       (html
-        [:li.tag {:tab-index 0
-                  :class [(when (contains? selected tag) "selected")]
-                  :on-click (fn [e]
-                              (.stopPropagation e))
-                  :on-focus #(send-event! owner [:focus tag])
-                  :on-blur  #(send-event! owner [:blur tag])
-                  :on-key-down (partial handle-tag-key-down! tag owner)
-                  :draggable true
-                  :on-drag-start (partial handle-drag-start tag)}
-         [:a {:href (when-not (om/get-state owner :events)
-                      (nav/tag-search tag))}
-          [:span.color {:style {:background-color (tag-color tag)}}]
-          [:span.tag-name tag]]])))))
+  (defcomponent foo [state owner opts]
+    om/ICheckState
+    
+    (did-update [_ prev-props prev-state]
+      (when (and (not (contains? (:selected prev-state) tag))
+                 (contains? (om/get-state owner :selected) tag))
+        (.focus (om/get-node owner))))
+    (render-state [_ {:keys [selected]}]
+      [:li.tag {:tab-index 0
+                :class [(when (contains? selected tag) "selected")]
+                :on-click (fn [e]
+                            (.stopPropagation e))
+                :on-focus #(send-event! owner [:focus tag])
+                :on-blur  #(send-event! owner [:blur tag])
+                :on-key-down (partial handle-tag-key-down! tag owner)
+                :draggable true
+                :on-drag-start (partial handle-drag-start tag)}
+       [:a {:href (when-not (om/get-state owner :events)
+                    (nav/tag-search tag))}
+        [:span.color {:style {:background-color (tag-color tag)}}]
+        [:span.tag-name tag]]])))

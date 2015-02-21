@@ -60,7 +60,8 @@
                            FROM pages AS p
                            LEFT JOIN page_images AS pi ON pi.page = p.id
                            WHERE id IN (%s)
-                           GROUP BY id"
+                           GROUP BY id
+                           ORDER BY p.file, p.number"
                           ids))
        ;; Make  a set out of the strange Postgres-Array
        (map #(update-in % [:dpi] pg-array->set))))
@@ -318,14 +319,15 @@
 
 ;;; Misc. Functions
 
+(declare get-pages)
+
 (defn inbox
   "Returns a vector of pages in the Inbox sorted by file and number."
   [db]
-  (vec (db/query db ["SELECT p.id, p.file, p.number, p.render_status AS \"render-status\"
-                      FROM inbox AS i
-                      LEFT JOIN pages AS p
-                        ON i.page = p.id
-                      ORDER BY p.file, p.number"])))
+  (db/with-transaction [db db]
+    (->> (db/query db ["SELECT page FROM inbox"])
+         (map :page)
+         (get-pages db))))
 
 (defn add-to-inbox!
   "Unconditionally adds PAGES to inbox."
