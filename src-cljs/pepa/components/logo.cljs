@@ -5,6 +5,7 @@
             [goog.style.transform :as transform]
             [goog.dom :as dom]
 
+            [pepa.ui :as ui]
             [pepa.navigation :as nav]))
 
 (defn ^:private normalize [[^number x ^number y]]
@@ -38,19 +39,15 @@
                                   eyeball-max)]
                       (transform/setTranslation eyeball tx ty))))))
 
-(defn xeyes [_ owner]
-  (reify
-    om/IDidMount
-    (did-mount [_]
-      (let [obj (om/get-node owner "logo")]
-        (event/listen obj "load" #(attach-eyeball-mover! obj))))
-    om/IRender
-    (render [_]
-      (html
-       [:a {:href (nav/dashboard-route)}
-        [:header
-         [:object.logo {:ref "logo"
-                        :data "img/logo-2.svg"
-                        :type "image/svg+xml"}]
-         [:span.brand "Pepa"]
-         [:span.name "DMS"]]]))))
+(ui/defcomponent xeyes [_ owner]
+  (did-mount [_]
+    (let [obj (om/get-node owner "logo")]
+      (event/listen obj "load" #(attach-eyeball-mover! obj))))
+  (render [_]
+    [:a {:href (nav/dashboard-route)}
+     [:header
+      [:object.logo {:ref "logo"
+                     :data "img/logo-2.svg"
+                     :type "image/svg+xml"}]
+      [:span.brand "Pepa"]
+      [:span.name "DMS"]]]))

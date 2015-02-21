@@ -3,6 +3,7 @@
             [sablono.core :refer-macros [html]]
             [cljs.core.async :as async]
 
+            [pepa.ui :as ui]
             [pepa.data :as data]
             [pepa.style :as css]
 
@@ -40,14 +41,12 @@
       (.preventDefault)
       (.stopPropagation))))
 
-(defn resize-draggable [_ owner {:keys [sidebar]}]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [dragging?]}]
-      (html
-       [:.draggable {:class [(when dragging?
-                               "active")]
-                     :on-mouse-down (partial resize-mouse-down owner sidebar)}]))))
+(ui/defcomponent resize-draggable [_ owner {:keys [sidebar]}]
+  (render-state [_ {:keys [dragging?]}]
+    (html
+     [:.draggable {:class [(when dragging?
+                             "active")]
+                   :on-mouse-down (partial resize-mouse-down owner sidebar)}])))
 
 (defn limit
   ([width min max]

@@ -184,6 +184,7 @@
   [document]
   (go
     (println "saving document" (pr-str document))
+    ;; TODO: Stop fetching the document here
     (let [server (<! (fetch-document (:id document)))
           title (when-not (= (:title document)
                              (:title server))

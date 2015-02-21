@@ -3,6 +3,7 @@
             [sablono.core :refer-macros [html]]
             [clojure.string :as s]
             
+            [pepa.ui :as ui]
             [pepa.navigation :as nav])
   (:import [goog.i18n DateTimeFormat]))
 
@@ -21,9 +22,8 @@
 (defmethod meta-row :modified [kw val]
   [(s/capitalize (name kw)) (format-date val)])
 
-(defn meta-table [document]
-  (om/component
-   (html
+(ui/defcomponent meta-table [document]
+  (render [_]
     [:ul.meta
      (for [prop [:title :created :modified :creator :size]]
        (let [name (name prop)
@@ -31,5 +31,5 @@
          [:li {:class [name], :key name}
           [:span.title title]
           [:span.value {:title (str value)}
-           value]]))])))
+           value]]))]))
 

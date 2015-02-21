@@ -67,29 +67,26 @@
     (send-event! owner [:remove tag])
     (.preventDefault e)))
 
-(defn tag [tag owner _]
-  (reify
-    om/IDidUpdate
-    (did-update [_ prev-props prev-state]
-      (when (and (not (contains? (:selected prev-state) tag))
-                 (contains? (om/get-state owner :selected) tag))
-        (.focus (om/get-node owner))))
-    om/IRenderState
-    (render-state [_ {:keys [selected]}]
-      (html
-       [:li.tag {:tab-index 0
-                 :class [(when (contains? selected tag) "selected")]
-                 :on-click (fn [e]
-                             (.stopPropagation e))
-                 :on-focus #(send-event! owner [:focus tag])
-                 :on-blur  #(send-event! owner [:blur tag])
-                 :on-key-down (partial handle-tag-key-down! tag owner)
-                 :draggable true
-                 :on-drag-start (partial handle-drag-start tag)}
-        [:a {:href (when-not (om/get-state owner :events)
-                     (nav/tag-search tag))}
-         [:span.color {:style {:background-color (tag-color tag)}}]
-         [:span.tag-name tag]]]))))
+(ui/defcomponent tag [tag owner _]
+  (did-update [_ prev-props prev-state]
+    (when (and (not (contains? (:selected prev-state) tag))
+               (contains? (om/get-state owner :selected) tag))
+      (.focus (om/get-node owner))))
+  (render-state [_ {:keys [selected]}]
+    [:li.tag {:tab-index 0
+              :class [(when (contains? selected tag) "selected")]
+              :on-click (fn [e]
+                          (.stopPropagation e))
+              :on-focus #(send-event! owner [:focus tag])
+              :on-blur  #(send-event! owner [:blur tag])
+              :on-key-down (partial handle-tag-key-down! tag owner)
+              :draggable true
+              :on-drag-start (partial handle-drag-start tag)}
+     [:a {:href (when-not (om/get-state owner :events)
+                  (nav/tag-search tag))}
+      [:span.color {:style {:background-color (tag-color tag)}}]
+      [:span.tag-name tag]]]))
+
 
 (defn ^:private remove-tag!
   "Removes tag. Might alter DOCUMENT or put [:remove TAG] into
@@ -168,58 +165,50 @@
           (om/get-node "tag-input")
           (.focus)))
 
-(defn tags-input [document owner _]
-  (reify
-    om/IInitState
-    (init-state [_]
-      {:selected #{}
-       :events (async/chan)})
-    om/IWillMount
-    (will-mount [_]
-      (go-loop []
-        (when-let [event (<! (om/get-state owner :events))]
-          (let [[event tag] event]
-            (case event
-              ;; Click just toggles selection-status
-              :focus (om/set-state! owner :selected #{tag})
-              :blur (om/update-state! owner :selected #(disj % tag))
-              :remove (do (remove-tag! document owner tag)
-                          (focus-tag-input owner)))
-            (recur)))))
-    om/IRenderState
-    (render-state [_ {:keys [events selected]}]
-      (html
-       [:ul.tags {:class "editable"
-                  :tab-index 0
-                  :on-click (fn [e]
-                              (focus-tag-input owner)
-                              (doto e
-                                (.preventDefault)
-                                (.stopPropagation)))
-                  ;; Catch keys coming from tags and redirect them to
-                  ;; the input field
-                  :on-key-down (fn [e]
-                                 (let [text (js/String.fromCharCode (.-keyCode e))]
-                                   (when (re-find #"\w" text)
-                                     (focus-tag-input owner)
-                                     (.stopPropagation e))))}
-        (ui/css-transition-group
-         {:transitionName "tag"}
-         (om/build-all tag (:tags document)
-                       {:key-fn identity
-                        :init-state {:events events}
-                        :state {:selected selected}}))
-        [:li.input
-         [:input {:ref "tag-input"
-                  :tab-index 0
-                  :on-key-down (partial handle-tags-key-down! document owner)
-                  :on-blur (partial handle-tags-blur! document owner)}]]]))))
+(ui/defcomponent tags-input [document owner _]
+  (init-state [_]
+    {:selected #{}
+     :events (async/chan)})
+  (will-mount [_]
+    (go-loop []
+      (when-let [event (<! (om/get-state owner :events))]
+        (let [[event tag] event]
+          (case event
+            ;; Click just toggles selection-status
+            :focus (om/set-state! owner :selected #{tag})
+            :blur (om/update-state! owner :selected #(disj % tag))
+            :remove (do (remove-tag! document owner tag)
+                        (focus-tag-input owner)))
+          (recur)))))
+  (render-state [_ {:keys [events selected]}]
+    [:ul.tags {:class "editable"
+               :tab-index 0
+               :on-click (fn [e]
+                           (focus-tag-input owner)
+                           (doto e
+                             (.preventDefault)
+                             (.stopPropagation)))
+               ;; Catch keys coming from tags and redirect them to
+               ;; the input field
+               :on-key-down (fn [e]
+                              (let [text (js/String.fromCharCode (.-keyCode e))]
+                                (when (re-find #"\w" text)
+                                  (focus-tag-input owner)
+                                  (.stopPropagation e))))}
+     (ui/css-transition-group
+      {:transitionName "tag"}
+      (om/build-all tag (:tags document)
+                    {:key-fn identity
+                     :init-state {:events events}
+                     :state {:selected selected}}))
+     [:li.input
+      [:input {:ref "tag-input"
+               :tab-index 0
+               :on-key-down (partial handle-tags-key-down! document owner)
+               :on-blur (partial handle-tags-blur! document owner)}]]]))
 
 ;;; TOOD: Support selection of multiple tags for drag&drop
-(defn tags-list [tags]
-  (reify
-    om/IRender
-    (render [_]
-      (html
-       [:ul.tags
-        (om/build-all tag tags {:key-fn identity})]))))
+(ui/defcomponent tags-list [tags]
+  (render [_]
+    [:ul.tags
+     (om/build-all tag tags {:key-fn identity})]))

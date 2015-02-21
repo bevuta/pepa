@@ -3,10 +3,11 @@
             [sablono.core :refer-macros [html]]
             [clojure.string :as s]
 
+            [pepa.ui :as ui]
             [pepa.api.upload :as upload]
             [pepa.data :as data]
-
             [pepa.navigation :as nav]
+            
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -52,39 +53,36 @@
 (defn ^:private byte->kb [byte]
   (Math/floor (/ byte 1024)))
 
-(defn ^:private file-row [row owner _]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [hide-fn]}]
-      (let [document-id (:document-id row)
-            file (:file row)
-            name (.-name file)
-            size (.-size file)
-            valid? (:valid? row)]
-        (html
-         [:li {:class [(when-not valid? "invalid")]
-               :title (when-not valid?
-                        "This file type isn't supported.")}
-          (if document-id
-            [:a.title {:href (when document-id
-                               (nav/document-route {:id document-id}))
-                       :title name}
-             name]
-            [:span.title (when valid? {:title name}) name])
-          (when valid?
-            [:span.size (str (byte->kb size) "kB")])
-          
-          
-          (if (or (not valid?) document-id)
-            [:.hide {:on-click (fn [e]
-                                 (when (fn? hide-fn)
-                                   (hide-fn (om/value row)))
-                                 (doto e
-                                   (.preventDefault)
-                                   (.stopPropagation)))}
-             "Hide"]
-            
-            (om/build progress-bar (or (:progress row) 0)))])))))
+(ui/defcomponent ^:private file-row [row owner _]
+  (render-state [_ {:keys [hide-fn]}]
+    (let [document-id (:document-id row)
+          file (:file row)
+          name (.-name file)
+          size (.-size file)
+          valid? (:valid? row)]
+      [:li {:class [(when-not valid? "invalid")]
+            :title (when-not valid?
+                     "This file type isn't supported.")}
+       (if document-id
+         [:a.title {:href (when document-id
+                            (nav/document-route {:id document-id}))
+                    :title name}
+          name]
+         [:span.title (when valid? {:title name}) name])
+       (when valid?
+         [:span.size (str (byte->kb size) "kB")])
+       
+       
+       (if (or (not valid?) document-id)
+         [:.hide {:on-click (fn [e]
+                              (when (fn? hide-fn)
+                                (hide-fn (om/value row)))
+                              (doto e
+                                (.preventDefault)
+                                (.stopPropagation)))}
+          "Hide"]
+         
+         (om/build progress-bar (or (:progress row) 0)))])))
 
 (defn ^:private remove-file! [files file]
   (om/transact! files (fn [files]
@@ -99,11 +97,13 @@
      (om/build-all file-row files
                    {:init-state {:hide-fn (partial remove-file! files)}})])))
 
-(declare add-file)
+(defn add-file [upload file]
+  (update-in upload [:files]
+             #(conj (vec %) {:file file
+                             :valid? (upload/allowed-file-type? (.-type file))})))
 
-(defn ^:private upload-button [upload owner]
-  (om/component
-   (html
+(ui/defcomponent ^:private upload-button [upload owner]
+  (render [_]
     [:form.upload {:on-submit #(.preventDefault %)}
      [:input {:type "file"
               :multiple true
@@ -112,41 +112,32 @@
                              (println "Adding" (count files) "files")
                              (om/transact! upload
                                            #(reduce add-file % files))
-                             (set! e.currentTarget.value nil)))}]])))
+                             (set! e.currentTarget.value nil)))}]]))
 
-(defn add-file [upload file]
-  (update-in upload [:files]
-             #(conj (vec %) {:file file
-                             :valid? (upload/allowed-file-type? (.-type file))})))
-
-(defn upload-dialog [upload owner _]
-  (reify
-    om/IDidUpdate
-    (did-update [_ prev-props _]
-      ;; Start upload for every new file in :files
-      (when (< (count (:files prev-props))
-               (count (:files upload)))
-        (let [new-files (filter (fn [file]
-                                  (and (not (:working? file))
-                                       (not (:document-id file))
-                                       (:valid? file)))
-                                (:files upload))]
-          (println "got new files" new-files)
-          (doseq [file new-files]
-            (upload-file! file)))))
-    om/IRenderState
-    (render-state [_ {:keys [mini?]}]
-      (let [files (:files upload)
-            toggle-mini (fn [e]
-                          (om/update-state! owner :mini? not)
-                          (.stopPropagation e))]
-        (html
-         [:div#upload {:class [(when mini? "mini")]
-                       :on-click (when mini? toggle-mini)}
-          (if-not mini?
-            (list
-             [:header {:on-click toggle-mini}]
-             ;; Not sure if {:key :file} works.
-             (om/build file-list files {:key :file})
-             (om/build upload-button upload))
-            "Upload Files")])))))
+(ui/defcomponent upload-dialog [upload owner _]
+  (did-update [_ prev-props _]
+    ;; Start upload for every new file in :files
+    (when (< (count (:files prev-props))
+             (count (:files upload)))
+      (let [new-files (filter (fn [file]
+                                (and (not (:working? file))
+                                     (not (:document-id file))
+                                     (:valid? file)))
+                              (:files upload))]
+        (println "got new files" new-files)
+        (doseq [file new-files]
+          (upload-file! file)))))
+  (render-state [_ {:keys [mini?]}]
+    (let [files (:files upload)
+          toggle-mini (fn [e]
+                        (om/update-state! owner :mini? not)
+                        (.stopPropagation e))]
+      [:div#upload {:class [(when mini? "mini")]
+                    :on-click (when mini? toggle-mini)}
+       (if-not mini?
+         (list
+          [:header {:on-click toggle-mini}]
+          ;; Not sure if {:key :file} works.
+          (om/build file-list files {:key :file})
+          (om/build upload-button upload))
+         "Upload Files")])))

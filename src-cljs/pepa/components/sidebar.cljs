@@ -4,6 +4,7 @@
             [clojure.string :as s]
             [cljs.core.async :as async]
 
+            [pepa.ui :as ui]
             [pepa.data :as data]
             [pepa.navigation :as nav]
             [pepa.api.upload :as upload]
@@ -15,28 +16,25 @@
             [pepa.search.parser :as parser])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(defn ^:private search-field [_ owner opts]
-  (reify
-    om/IInitState
-    (init-state [_]
-      {:query nil})
-    om/IRenderState
-    (render-state [_ {:keys [query]}]
-      (html [:form.search {:on-submit (fn [e]
-                                        (-> (if (seq query)
-                                              (nav/full-search query)
-                                              (nav/dashboard-route))
-                                            (nav/navigate!))
-                                        (.preventDefault e))
-                           ;; TODO: Search on tag-drop & document-drop (by id?)
-                           ;; :on-drop #(js/console.log %)
-                           }
-             [:input {:value (or query "")
-                      :placeholder "Search"
-                      :on-change (fn [e]
-                                   (om/set-state! owner :query
-                                                  e.currentTarget.value)
-                                   true)}]]))))
+(ui/defcomponent ^:private search-field [_ owner opts]
+  (init-state [_]
+    {:query nil})
+  (render-state [_ {:keys [query]}]
+    [:form.search {:on-submit (fn [e]
+                                (-> (if (seq query)
+                                      (nav/full-search query)
+                                      (nav/dashboard-route))
+                                    (nav/navigate!))
+                                (.preventDefault e))
+                   ;; TODO: Search on tag-drop & document-drop (by id?)
+                   ;; :on-drop #(js/console.log %)
+                   }
+     [:input {:value (or query "")
+              :placeholder "Search"
+              :on-change (fn [e]
+                           (om/set-state! owner :query
+                                          e.currentTarget.value)
+                           true)}]]))
 
 (defmulti ^:private navigation-element (fn [_ _ [name id _ route]] id))
 
@@ -106,25 +104,22 @@
         (and (set? workflows) (contains? workflows route))
         (and (fn? workflows) (workflows route)))))
 
-(defn sidebar-component [state owner opts]
-  (let [route (om/value (get-in state [:navigation :route]))]
-    (reify
-      om/IRenderState
-      (render-state [_ {:keys [width widths]}]
-        (html
-         [:#sidebar {:style (when width {:width width})}
-          (om/build resize-draggable nil
-                    {:opts {:sidebar :root/sidebar}})
-          (om/build logo/xeyes nil)
+(ui/defcomponent sidebar-component [state owner opts]
+  (render-state [_ {:keys [width widths]}]
+    (let [route (om/value (get-in state [:navigation :route]))]
+      [:#sidebar {:style (when width {:width width})}
+       (om/build resize-draggable nil
+                 {:opts {:sidebar :root/sidebar}})
+       (om/build logo/xeyes nil)
 
-          (om/build search-field nil
-                    {:state {:query (search-query state)}})
-          [:nav.workflows
-           [:ul
-            ;; TODO: Use build-all
-            (for [element nav/navigation-elements]
-              (let [[title ident routes href] element]
-                [:li {:class [(name ident)
-                              (when (route-matches? route routes) "active")]
-                      :key (name ident)}
-                 (om/build navigation-element state {:opts element})]))]]])))))
+       (om/build search-field nil
+                 {:state {:query (search-query state)}})
+       [:nav.workflows
+        [:ul
+         ;; TODO: Use build-all
+         (for [element nav/navigation-elements]
+           (let [[title ident routes href] element]
+             [:li {:class [(name ident)
+                           (when (route-matches? route routes) "active")]
+                   :key (name ident)}
+              (om/build navigation-element state {:opts element})]))]]])))
