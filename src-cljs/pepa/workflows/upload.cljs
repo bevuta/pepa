@@ -43,7 +43,7 @@
         (finally
           (om/update! row :working? false))))))
 
-(defn ^:provate progress-bar [progress]
+(defn ^:private progress-bar [progress]
   (om/component
    (html
     [:.progress
