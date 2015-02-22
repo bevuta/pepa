@@ -43,7 +43,7 @@
         (finally
           (om/update! row :working? false))))))
 
-(ui/defcomponent ^:provate progress-bar [progress]
+(ui/defcomponent ^:private progress-bar [progress]
   (render [_]
     [:.progress
      [:.bar {:style {:width (str (* progress 100) "%")}}]]))
