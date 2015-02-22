@@ -11,5 +11,5 @@ fi
 nixos-container start pepa-dev
 
 if [ $initial ]; then
-    $root/psql < "$root/../db/schema.sql"
+    $root/psql < "$root/../resources/schema.sql"
 fi
