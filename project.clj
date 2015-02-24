@@ -14,9 +14,9 @@
 
                  ;; Web
                  [org.immutant/web "2.0.0-beta2"]
-                 [compojure "1.3.1"]
+                 [compojure "1.3.2"]
                  [ring/ring-devel "1.3.2"]
-                 [com.cognitect/transit-clj "0.8.259"]
+                 [com.cognitect/transit-clj "0.8.267"]
                  [ring-transit "0.1.3"]
                  [ring/ring-json "0.3.1"]
                  [hiccup "1.0.5"]

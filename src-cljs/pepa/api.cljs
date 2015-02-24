@@ -80,8 +80,9 @@
                   (if (= "application/transit+json" content-type)
                     (transit/write writer data)
                     data)
-                  #js {"Content-Type" content-type
-                       "Accept" "application/transit+json"})))
+                  (clj->js
+                   (merge {"Accept" "application/transit+json"}
+                          (when data {"Content-Type" (when data content-type)}))) )))
        ch))
     ([uri method content-type data]
      (xhr-request! uri method content-type data +xhr-timeout+))
