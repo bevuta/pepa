@@ -6,7 +6,7 @@
             [cljs.core.async :as async :refer [<!]]
             [cljs.core.match]
 
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             [pepa.api :as api]
             [pepa.data :as data]
 
@@ -279,7 +279,7 @@
                             (when (inbox? document) "inbox")
                             ;; Footer Visibility
                             (when (seq selected-pages)
-                              "footer-visible")]}
+                              "barter-visible")]}
         (let [init-state (select-keys state [:events])]
           (if (inbox? document)
             (om/build inbox-title document
@@ -303,7 +303,7 @@
                                  ;; :drag-target (when (= target-page p)
                                  ;;                target-position)
                                  }}))))]
-        [:footer
+        [:barter
          (let [page-or-pages (if (= 1 (count selected-pages))
                                "Page"
                                "Pages")]

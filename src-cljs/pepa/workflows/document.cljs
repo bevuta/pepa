@@ -7,7 +7,7 @@
             [pepa.data :as data]
             [pepa.navigation :as nav]
             [pepa.style :as css]
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
 
             [pepa.components.utils :as utils]
             [pepa.components.page :as page]

@@ -2,7 +2,7 @@
   (:require [om.core :as om :include-macros true]
             [clojure.string :as s]
 
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             [pepa.api.upload :as upload]
             [pepa.data :as data]
             [pepa.navigation :as nav]

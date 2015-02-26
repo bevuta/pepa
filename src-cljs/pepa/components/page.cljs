@@ -2,7 +2,7 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom]
 
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             [pepa.data :as data]
             [pepa.api :as api]
             

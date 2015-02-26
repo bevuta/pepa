@@ -111,7 +111,7 @@
 
 (defparser grouped-expression []
   (between open-paren
-           ;; `either' to support dangling parentheses: (foo (bar)
+           ;; `either' to support dangling parentheses: (bar (bar)
            (either close-paren
                    (eof))
            (expr-rec)))

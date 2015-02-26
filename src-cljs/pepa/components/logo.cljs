@@ -4,7 +4,7 @@
             [goog.style.transform :as transform]
             [goog.dom :as dom]
 
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             [pepa.navigation :as nav]))
 
 (defn ^:private normalize [[^number x ^number y]]

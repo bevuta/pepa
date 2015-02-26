@@ -50,7 +50,8 @@
                                        [sablono "0.3.4" :exclusions [cljsjs/react]]
                                        [secretary "1.2.1"]
                                        [weasel "0.6.0-SNAPSHOT"]
-                                       [the/parsatron "0.0.7"]]}}
+                                       [the/parsatron "0.0.7"]
+                                       [org.clojars.the-kenny/nom "0.1.0-SNAPSHOT"]]}}
   ;; Cljsbuild configuration. Also see profiles.clj
   :cljsbuild {:builds {:pepa {:source-paths ["src-cljs/"]
                               :compiler {:output-to "resources/public/pepa.js"

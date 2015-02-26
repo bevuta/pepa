@@ -4,7 +4,7 @@
             [clojure.string :as s]
             [cljs.core.async :as async]
 
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             [pepa.data :as data]
             [pepa.navigation :as nav]
             [pepa.api.upload :as upload]

@@ -1,7 +1,7 @@
 (ns pepa.components.root
   (:require [om.core :as om :include-macros true]
 
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             [pepa.api :as api]
             [pepa.api.upload :as upload]
             [pepa.data :as data]

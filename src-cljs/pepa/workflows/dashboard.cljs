@@ -9,7 +9,7 @@
             [pepa.search :as search]
             [pepa.navigation :as nav]
             [pepa.style :as css]
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
 
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]

@@ -3,7 +3,7 @@
 
             [pepa.data :as data]
             [pepa.navigation :as nav]
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             
             [cljs.core.async :as async :refer [<!]]
             [cljs.core.match]

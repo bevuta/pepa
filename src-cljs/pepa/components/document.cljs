@@ -2,7 +2,7 @@
   (:require [om.core :as om :include-macros true]
             [clojure.string :as s]
             
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             [pepa.navigation :as nav])
   (:import [goog.i18n DateTimeFormat]))
 

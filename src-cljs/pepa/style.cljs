@@ -3,7 +3,7 @@
             [garden.units :as u :refer [px em pt]]
             [garden.stylesheet :refer [at-keyframes cssfn]]
             
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             [pepa.navigation :refer [navigation-elements]]
 
             [clojure.string :as s]
@@ -284,7 +284,7 @@
      [:td {:position :relative
            :vertical-align :top
            :border-right (str "1px solid " border-light)}]]]
-   (let [footer-height 40
+   (let [barter-height 40
          tags-height 30
          margin-top (+ header-height tags-height)]
      [:.document (list
@@ -354,16 +354,16 @@
         [:img {:max-width "100%"
                :max-height "100%"}]]]
 
-      [:footer {:display :none}]
-      [:&.footer-visible (calc-property :height
+      [:barter {:display :none}]
+      [:&.barter-visible (calc-property :height
                                         ["100%"
                                          - margin-top 
-                                         - footer-height])
+                                         - barter-height])
        [:&.inbox (calc-property :height ["100%"
                                          - header-height
-                                         - footer-height])]
-       [:footer {:position :absolute
-                 :height (px footer-height)
+                                         - barter-height])]
+       [:barter {:position :absolute
+                 :height (px barter-height)
                  :width "100%"
                  :background-color header-color
                  :bottom 0

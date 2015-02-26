@@ -2,7 +2,7 @@
   (:require [om.core :as om :include-macros true]
             [cljs.core.async :as async]
 
-            [pepa.ui :as ui]
+            [nom.ui :as ui]
             [pepa.data :as data]
             [pepa.style :as css]
 
