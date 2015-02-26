@@ -93,8 +93,9 @@
                            (.preventDefault e))
                :class [(when open? "open")]}
          title]
-        (when open?
-          (om/build tags/tags-list (data/sorted-tags state)))]))))
+        (ui/css-transition-group #js {:transitionName "tag-list"}
+         (when open?
+           (om/build tags/tags-list (data/sorted-tags state))))]))))
 
 (defn ^:private route-matches? [route workflows]
   (let [route (if (seqable? route)

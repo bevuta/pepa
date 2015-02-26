@@ -209,6 +209,8 @@
                                       
                                       ))
                  :overflow-y :auto}
+            (ui/css-fade "tag-list" (u/ms 50))
+            
             (let [color-size 12]
               [:li.tag {:display :list-item
                         :position :relative
