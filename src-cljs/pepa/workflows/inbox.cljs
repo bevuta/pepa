@@ -273,51 +273,51 @@
                                         ; :above/:below
           ]
       (assert (fn? view))
-      [:td
-       [:.document { ;; :on-drag-over (partial document-drag-over document owner)
-                    ;; :on-drop (constantly true)
-                    :class [ ;; (when (and drag-target? (nil? target-page)) "target")
-                            (when (inbox? document) "inbox")
-                            ;; Footer Visibility
-                            (when (seq selected-pages)
-                              "barter-visible")]}
-        (let [init-state (select-keys state [:events])]
-          (if (inbox? document)
-            (om/build inbox-title document
-                      {:key :id
-                       :init-state init-state})
-            (om/build editable-title document
-                      {:init-state init-state
-                       :key :id})))
-        [:ul.pages {:key :pages}
-         (let [page-events (:page-events state)]
-           (doall
-            (for [p pages]
-              ;; TODO: Use build-all here
-              (om/build document-page p
-                        {:key :id
-                         :init-state {:view view
-                                      :events page-events}
-                         :state {:selected? (and (contains? selected-pages p)
-                                                 (= selected-document (:id document)))
-                                 ;; :drag-active? drag-active?
-                                 ;; :drag-target (when (= target-page p)
-                                 ;;                target-position)
-                                 }}))))]
-        [:barter
-         (let [page-or-pages (if (= 1 (count selected-pages))
-                               "Page"
-                               "Pages")]
-           (if (inbox? document)
-             [:button.delete {:on-click (partial document-delete-pages! document owner)}
-              (str "Delete " page-or-pages)]
-             (list
-              (when (not= selected-document (:id document))
-                [:button.move {:on-click (partial document-pull-pages! document owner)}
-                 (str "Move " page-or-pages)])
-              (when (= selected-document (:id document))
-                [:button.remove {:on-click (partial document-remove-pages! document owner)}
-                 (str "Remove " page-or-pages)]))))]]])))
+      [:.pane.document { ;; :on-drag-over (partial document-drag-over document owner)
+                        ;; :on-drop (constantly true)
+                        :class [ ;; (when (and drag-target? (nil? target-page)) "target")
+                                (when (inbox? document) "inbox")
+                                ;; Footer Visibility
+                                (when (seq selected-pages)
+                                  "barter-visible")]}
+       (let [init-state (select-keys state [:events])]
+         (if (inbox? document)
+           (om/build inbox-title document
+                     {:key :id
+                      :init-state init-state})
+           (om/build editable-title document
+                     {:init-state init-state
+                      :key :id})))
+       [:ul.pages {:key :pages}
+        (let [page-events (:page-events state)]
+          (doall
+           (for [p pages]
+             ;; TODO: Use build-all here
+             (om/build document-page p
+                       {:key :id
+                        :init-state {:view view
+                                     :events page-events}
+                        :state {:selected? (and (contains? selected-pages p)
+                                                (= selected-document (:id document)))
+                                ;; :drag-active? drag-active?
+                                ;; :drag-target (when (= target-page p)
+                                ;;                target-position)
+                                }}))))]
+       (when (or (seq selected-pages))
+         [:barter
+          (let [page-or-pages (if (= 1 (count selected-pages))
+                                "Page"
+                                "Pages")]
+            (if (inbox? document)
+              [:button.delete {:on-click (partial document-delete-pages! document owner)}
+               (str "Delete " page-or-pages)]
+              (list
+               (when (not= selected-document (:id document))
+                 [:button.move {:on-click (partial document-pull-pages! document owner)}
+                  (str "Move " page-or-pages)])
+               (when (= selected-document (:id document))
+                 [:button.remove {:on-click (partial document-remove-pages! document owner)}
+                  (str "Remove " page-or-pages)]))))])])))
 
 ;;; The "Drag Target" Column
 
@@ -328,11 +328,11 @@
 (ui/defcomponent create-document-column [_ owner _]
   (render-state [_ _]
     (let [selected-pages (om/get-state owner :selection/pages)]
-      [:td.create-document { ;; :on-drag-over (partial new-document-drag-over state owner)
-                            :key :create-document
-                            :class [ ;; (when (= ::new-document (:target drag))
-                                    ;;   "active")
-                                    ]}
+      [:.pane.create-document { ;; :on-drag-over (partial new-document-drag-over state owner)
+                               :key :create-document
+                               :class [ ;; (when (= ::new-document (:target drag))
+                                       ;;   "active")
+                                       ]}
        [:.note
         ;; [:img {:src "/img/drop-arrow.svg"}]
         [:.arrow]
@@ -576,31 +576,29 @@
     [:.workflow.inbox { ;; :on-drag-end (partial workflow-drag-end state owner)
                        ;; :on-drop (partial workflow-drop state owner)
                        }
-     [:table
-      [:tr
-       (let [inbox (-> state :documents :inbox)
-             documents (dissoc (:documents state) :inbox)
+     (let [inbox (-> state :documents :inbox)
+           documents (dissoc (:documents state) :inbox)
 
-             selection (:selection state)
-             drag (:drag state)
-             
-             child-state {:selection/pages (:pages selection)
-                          :selection/document (:document selection)}]
-         (list
-          (om/build-all document (concat [inbox] (vals documents))
-                        {:key :id
-                         :init-state {:view (fn [page owner opts]
-                                              (page/thumbnail page owner
-                                                              (assoc opts :enable-rotate? true)))
-                                      :events events}
-                         ;; We pass the drag/state information down
-                         ;; the render tree via :state
-                         ;;
-                         ;; NOTE: We need to make sure the values are
-                         ;; *always* passed down, as om/build will
-                         ;; just *merge* the map, not override it
-                         :state child-state})
-          (om/build create-document-column nil
-                    {:init-state {:events events}
-                     :state child-state})))]]]))
+           selection (:selection state)
+           drag (:drag state)
+           
+           child-state {:selection/pages (:pages selection)
+                        :selection/document (:document selection)}]
+       (list
+        (om/build-all document (concat [inbox] (vals documents))
+                      {:key :id
+                       :init-state {:view (fn [page owner opts]
+                                            (page/thumbnail page owner
+                                                            (assoc opts :enable-rotate? true)))
+                                    :events events}
+                       ;; We pass the drag/state information down
+                       ;; the render tree via :state
+                       ;;
+                       ;; NOTE: We need to make sure the values are
+                       ;; *always* passed down, as om/build will
+                       ;; just *merge* the map, not override it
+                       :state child-state})
+        (om/build create-document-column nil
+                  {:init-state {:events events}
+                   :state child-state})))]))
 ;;; 

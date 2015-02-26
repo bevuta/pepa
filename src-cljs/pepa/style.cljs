@@ -274,128 +274,57 @@
 ;;; Inbox
 
 (def inbox-css
-  [:&.inbox {:overflow :auto}
-   [:table {:table-layout :fixed
-            :border-collapse :collapse}]
-   ;; Clearing all table properties. Sucks so hard.
-   [:table :tbody :thead :colgroup :tr :td
-    {:height "100%"
-     :padding 0, :margin 0, :border :none}
-    [:tr
-     [:td {:position :relative
-           :vertical-align :top
-           :border-right (str "1px solid " border-light)}]]]
-   (let [barter-height 40
-         tags-height 30
-         margin-top (+ header-height tags-height)]
-     [:.document (list
-                  {:margin-top (px margin-top)
-                   :width (px document-width)
-                   :overflow-y :auto}
-                  (calc-property :height ["100%" - margin-top]))
-      ;; Special handling for the inbox document (smaller header etc.)
-      [:&.inbox (list {:margin-top (px header-height)}
-                      (calc-property :height ["100%" - header-height]))
-       [:header {:height (px header-height)}]]
-      (let [header-width (- document-width
-                            (* 2 header-padding))]
-        ;; TODO(mu): Redo this section
-        [:header {:position :absolute
-                  :width (px header-width)
-                  :height (px margin-top)
-                  :top 0 :left 0
-                  :cursor :pointer}
-         [:.title {:max-width "70%" 
-                   :display :inline-block
-                   :white-space :nowrap}
-          [:&div {:overflow :hidden
-                  :white-space :nowrap
-                  :text-overflow :ellipsis
-                  }]
-          [:&input {:width (px header-width)}]]
-         [:button {:position :absolute
-                   :right (px header-padding)
-                   :top (px (/ header-height 2))
-                   :transform "translateY(-50%)"}]
-         [:.tags {:max-height (px (- tags-height 8))
-                  :padding-botton (px 8)}]])
-      [:ul.pages {:margin 0, :padding 0}
-       [:li.page {:width "100%"
-                  :list-style-type :none
-                  :user-select :none}
-
-        page-css
-        
-        [:&.dragging {:display :none}]
-        ;; Bars for drop targets above/below
-        [:&.above :&.below {:position :relative}
-         (let [bar-height 20
-               x {:content (pr-str "")
-                  :display :block
-                  :width "100%"
-                  :height (px bar-height)
-                  :background {:image (image-url "insertion.svg")
-                               :repeat :no-repeat
-                               :position [[:center :center]]}
-                  :position :absolute
-                  :left 0}
-               offset (px (- (/ bar-height 2)))]
-           (list
-            [:&.above [:&:before (assoc x :top offset)]]
-            [:&.below [:&:after  (assoc x :bottom offset)]]))]
-        [:&.selected
-         [:.thumbnail {:position :relative}
-          [:&:before {:content (pr-str " ")
-                      :display :block
-                      :width "100%", :height "100%"
-                      :position :absolute
-                      :top 0 :left 0
-                      :background-color "rgba(0,0,1,0.5)"
-                      :z-index 10}]]]
-        [:img {:max-width "100%"
-               :max-height "100%"}]]]
-
-      [:barter {:display :none}]
-      [:&.barter-visible (calc-property :height
-                                        ["100%"
-                                         - margin-top 
-                                         - barter-height])
-       [:&.inbox (calc-property :height ["100%"
-                                         - header-height
-                                         - barter-height])]
-       [:barter {:position :absolute
-                 :height (px barter-height)
-                 :width "100%"
-                 :background-color header-color
-                 :bottom 0
-                 :display :initial}
-        [:button {:position :relative
-                  :left "50%", :top "50%"
-                  :transform "translate(-50%,-50%)"}]]]])
-   ;; The drop-area to create new documents
-   [:td.create-document {:min-width (px document-width)
-                         :position :relative
-                         :display :block}
-    [:&.active {:background-color "lightgray"}]
-    [:.note {:width "100%"
-             :height "100"
-             :position :absolute
-             :top "50%", :left "50%"
-             :transform "translate(-50%, -50%)"
-             :text-align :center}
+  [:&.inbox {:overflow :auto
+             :display :flex
+             :flex-direction :row}
+   [:.pane {:height "100%"
+            :min-width (px document-width), :max-width (px document-width)
+            :display :flex
+            :flex-direction :column
+            :flex-grow 1}
+    [:header {:display :flex
+              :flex-flow [[:row :wrap]]
+              :align-items :center
+              :justify-content :space-between}]]
+   ;; Create Document Column
+   [:.create-document {:align-items :center
+                       :justify-content :space-around}
+    [:.note
      [:.arrow {:background {:image (image-url "drop-arrow.svg")
                             :repeat :no-repeat
                             :position :center
                             :size (px 72)}
-               :width "100%"
-               :height (px 72)}]
-     (let [font-size 12]
-       [:p {:font {:size (pt font-size)
-                   :style :italic
-                   :weight 100}
-            :line-height (pt (+ font-size 4))
-            :width (px 150)
-            :color grey-2}])]]])
+               :height (px 72)}]]]
+   ;; A 'Document' (with pages inside)
+   [:.document
+    [:header {:max-height :initial}
+     [:.tags {:margin-bottom (px 5)}]]
+    
+    [:ul.pages {:margin 0, :padding 0
+                :overflow-y :auto
+                :flex-shrink 999}
+     [:li.page {:width "100%"
+                :list-style-type :none
+                :user-select :none}
+      [:&.selected
+       [:.thumbnail {:position :relative}
+        [:&:before {:content (pr-str " ")
+                    :display :block
+                    :width "100%", :height "100%"
+                    :position :absolute
+                    :top 0 :left 0
+                    :background-color "rgba(0,0,1,0.5)"
+                    :z-index 10}]]]
+      page-css
+      [:img {:max-width "100%"
+             :max-height "100%"}]]]
+    [:barter {:min-height (px 40)
+              :max-height (px 40)
+              :display :flex
+              :flex-direction :row
+              :justify-content :space-around
+              :align-items :center
+              :background-color header-color}]]])
 
 ;;; Dashboard
 (def dashboard-css
