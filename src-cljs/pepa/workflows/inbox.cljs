@@ -108,7 +108,8 @@
   (async/put! (om/get-state owner :events)
               {:event :page-click
                :page (om/value page)
-               :keys (event-keys e)}))
+               :keys (event-keys e)})
+  (doto e (.preventDefault)))
 
 ;; (defn ^:private page-drag-over [page owner e]
 ;;   (async/put! (om/get-state owner :events)
