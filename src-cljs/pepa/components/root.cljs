@@ -57,7 +57,6 @@
 
 (ui/defcomponent root-component [state owner]
   om/ICheckState
-  
   (will-mount [_]
     (let [{:keys [route query-params]} (:navigation state)]
       (fetch-initial-data! state route)
@@ -73,6 +72,7 @@
         (transition-to! state route query-params))))
   (render-state [_ {:keys [file-drop?]}]
     (let [{:keys [route query-params]} (:navigation state)
+          ;; TODO: Move to sidebar-component
           sidebar-width (get (om/observe owner (data/ui-sidebars)) :root/sidebar
                              css/default-sidebar-width)]
       [:div.container {:on-drag-over (partial root-drag-over state owner)
@@ -81,7 +81,7 @@
                        :class [(when file-drop? "file-drop")]}
        (om/build sidebar-component state
                  {:state {:width sidebar-width}})
-       [:main {:style {:margin-left sidebar-width}}
+       [:main
         (match [(om/value route)]
           [:dashboard]  (om/build dashboard/dashboard state)
           [[:search _]] (om/build dashboard/dashboard state)

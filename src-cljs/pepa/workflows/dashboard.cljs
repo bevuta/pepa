@@ -178,7 +178,7 @@
           sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
                              css/default-sidebar-width)]
       [:.workflow.dashboard
-       [:.pane {:style {:width (str "calc(100% - " sidebar-width "px - 2px)")}}
+       [:.pane
         [:header
          (dashboard-title state owner)
          (om/build document-count state)]
@@ -189,7 +189,8 @@
                               (remove nil?))]
            (om/build-all document-preview documents
                          {:key :id}))]]
-       [:.pane {:style {:width sidebar-width}}
+       [:.pane {:style {:min-width sidebar-width
+                        :max-width sidebar-width}}
         (om/build filter-sidebar state)]])))
 
 (defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]

@@ -107,7 +107,8 @@
 (ui/defcomponent sidebar-component [state owner opts]
   (render-state [_ {:keys [width widths]}]
     (let [route (om/value (get-in state [:navigation :route]))]
-      [:#sidebar {:style (when width {:width width})}
+      [:#sidebar {:style (when width {:min-width width
+                                      :max-width width})}
        (om/build resize-draggable nil
                  {:opts {:sidebar :root/sidebar}})
        (om/build logo/xeyes nil)

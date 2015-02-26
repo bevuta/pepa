@@ -97,7 +97,8 @@
 (def generic-header-css
   ;; TODO(mu): Position header buttons here
   (let [header-height (- header-height 2)] ;handle border
-    [:header {:height (px header-height)
+    [:header {:min-height (px header-height)
+              :max-height (px header-height)
               :line-height (px header-height)
               :background-color header-color
               :padding {:left (px header-padding)
@@ -408,16 +409,16 @@
         document-padding 20
         page-padding 10]
     [:&.dashboard {:background-color light-background}
-     [:.pane {:float :left
-              :height "100%"}
-      [:header
+     [:.pane {:height "100%"
+              :display :flex
+              :flex-direction :column}
+      [:header {:flex [[1 "100%"]]}
        [:.document-count {:font-size (pt 9)
                           :padding-left (px 5)}]]
-      [:.documents (list
-                    {:overflow-y :auto}
-                    (calc-property :height ["100%" - header-height]))
-       [:.document {:display :inline-block
-                    :height (px document-height)
+      [:.documents {:overflow-y :auto
+                    :display :flex
+                    :flex-flow [[:row :wrap]]}
+       [:.document {:height (px document-height)
                     :width (px document-width)
                     :padding (px document-padding)
                     :cursor :pointer}
@@ -456,6 +457,7 @@
                     :text-overflow :ellipsis}])
         [:.tags {:width "100%"}]]]
       [:.sidebar {:height "100%"
+                  :width "100%"
                   :background-color dark-background
                   :border-left (str "1px solid " border-dark)
                   :position :relative}
@@ -468,49 +470,50 @@
              :vertical-align :top
              :white-space :nowrap
              :text-overflow :ellipsis}
-    [:form
-     [:button {:float :right
-               :margin-top (px (/ header-height 2))
-               :transform "translateY(-50%)"}]]]
-   [:.pane {:float :left
-            :height "100%"
-            :overflow :auto}
-    [:.thumbnails :.full :.sidebar {:height "100%"
-                                    :border-right (str "1px solid " border-dark)}
-     page-css
-     [:header {:font-weight 500}]
-     [:ul.pages (list
-                 (calc-property :height ["100%" - header-height])
-                 {:overflow :auto
-                  :margin 0, :padding 0})
+    [:form {:display :inline-flex
+            :align-items :center
+            :justify-content :space-between
+            :width "100%"
+            :height "100%"}
+     [:input {:flex-grow 999
+              :min-width 0
+              :margin-right (px 10)}]]]
+   [:.pane
+    [:&>div {:height "100%"
+             :border-right (str "1px solid " border-dark)
+             :display :flex
+             :flex-direction :column}
+     [:ul.pages {:overflow :auto
+                 :margin 0, :padding 0}
+      page-css
       [:li
        [:img {:max-width "100%"
               :border (str "1px solid " border-light)}]]]]
     ;; Page Thumbnails
-    [:.thumbnails {:position :relative}
+    [:.thumbnails {:position :relative} ; :relative for `draggable-css'
      [:header {:cursor :pointer}]
      (draggable-css :right)
+     ;; Counter implementation
      [:ul.pages {:counter-reset "page-counter"}
       (let [padding 20]
         [:li {:padding (px padding)}
          [:&:before {:content "counter(page-counter)"
                      :counter-increment "page-counter"
+                     :display :block
                      :text-align :center
                      :font-size (pt 10)
-                     :display :block
                      :margin-bottom (px 10)}]
          (let [border (str "1px solid " border-light)]
            ;; Padding: Make room for the 1px border
            [:&.current {:padding {:top (px (dec padding))
                                   :bottom (px (dec padding))}
-                        :border {:top border, :bottom border}
-                        :background light-background}
+                        :border {:top border, :bottom border}}
             [:img {:border "1px solid transparent"
                    :box-shadow (str "0px 0px 3px" blue-text)}]])])]]
     ;; Full Page View
     [:.full
      [:header {:text-align :right}]
-     [:ul.pages {:min-width (px 400)}
+     [:ul.pages #_{:min-width (px 400)}
       [:li
        (let [page-margin 20, page-border 1]
          [:img (list {:margin {:left (px page-margin)
@@ -546,8 +549,15 @@
                     (calc-property :width ["70%" - left-padding]))])]]]]])
 
 (def workflow-css
-  [:.workflow {:height "100%"
-               :overflow :auto}
+  [:.workflow {:height "100%" :width "100%"
+               :overflow-x :auto
+               :display :flex
+               :flex-direction :row}
+   [:.pane {:flex-grow 1
+            ;; Firefox workaround. necessry for stuff to shrink below
+            ;; their intrinsic width
+            :min-width 0    
+            :height "100%"}]
    generic-header-css
 
    dashboard-css
@@ -766,15 +776,26 @@
                    :user-select
                    :border-radius
                    :transform
-                   :filter
                    :appearance
-                   :box-shadow})
+                   :box-shadow
+                   :filter
+                   ;; All the flexboxiness!
+                   :flex
+                   :flex-direction
+                   :flex-flow
+                   :flex-wrap
+                   :flex-grow
+                   :flex-shrink
+                   :flex-basis
+                   :align-items
+                   :justify-content})
 
 (def css-string
   (css
    {:vendors ["webkit" "moz" "ms"]
     :output-to "resources/public/style.css"
-    :auto-prefix auto-prefix}
+    :auto-prefix auto-prefix
+    :auto-value-prefix {:display #{:flex :inline-flex}}}
    [:html :body :#app {:height "100%"
                        :font-weight "300"
                        :font-family default-font}]
@@ -792,7 +813,10 @@
     tags-css
     upload-css
 
-    [:main {:height "100%"}
+    [:main {:height "100%"
+            :overflow-x :hidden
+            ;; :display :flex
+            }
      workflow-css]]))
 
 ;;; Apply the CSS

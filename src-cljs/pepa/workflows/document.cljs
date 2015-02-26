@@ -212,19 +212,17 @@
           current-page (nth (:pages (om/value document))
                             (dec (or page-number 1)))]
       [:.workflow.document
-       [:.pane {:style {:width thumbnail-width}}
+       [:.pane {:style {:min-width thumbnail-width
+                        :max-width thumbnail-width}}
         (om/build thumbnails document
                   {:init-state {:events page-events}
                    :state {:current-page current-page}})]
-       [:.pane {:style {:width (str "calc("
-                                    "100%"
-                                    " - " thumbnail-width "px"
-                                    " - " meta-width "px"
-                                    ")")}}
+       [:.pane
         (om/build pages document
                   {:init-state {:events page-events}
                    :state {:current-page current-page}})]
-       [:.pane {:style {:width meta-width}}
+       [:.pane {:style {:min-width meta-width
+                        :max-width meta-width}}
         (om/build meta-pane document
                   {:init-state {:tags tag-changes}})]])))
 
