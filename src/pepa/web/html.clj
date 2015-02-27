@@ -77,7 +77,7 @@
   (html5
    [:html
     [:head
-     [:style#style {:style "text/css"}]]
+     [:style#style {:type "text/css"}]]
     [:body
      [:div#app]
      (include-js "pepa.js")]]))
