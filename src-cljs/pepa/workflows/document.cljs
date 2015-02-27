@@ -205,26 +205,26 @@
           page-events (:pages state)
           tag-changes (:tag-changes state)
           sidebars (om/observe owner (data/ui-sidebars))
-          meta-width (get sidebars ::meta
-                          css/default-sidebar-width)
-          thumbnail-width (get sidebars ::thumbnails
-                               css/default-sidebar-width)
           current-page (nth (:pages (om/value document))
                             (dec (or page-number 1)))]
       [:.workflow.document
-       [:.pane {:style {:min-width thumbnail-width
-                        :max-width thumbnail-width}}
-        (om/build thumbnails document
-                  {:init-state {:events page-events}
-                   :state {:current-page current-page}})]
+       ;; Left (thunbmail) pane
+       (let [width (get sidebars ::thumbnails
+                        css/default-sidebar-width)]
+         [:.pane {:style {:min-width width :max-width width}}
+          (om/build thumbnails document
+                    {:init-state {:events page-events}
+                     :state {:current-page current-page}})])
        [:.pane
         (om/build pages document
                   {:init-state {:events page-events}
                    :state {:current-page current-page}})]
-       [:.pane {:style {:min-width meta-width
-                        :max-width meta-width}}
-        (om/build meta-pane document
-                  {:init-state {:tags tag-changes}})]])))
+       ;; Right (meta) pane
+       (let [width (get sidebars ::meta
+                        css/default-sidebar-width)]
+         [:.pane {:style {:min-width width :max-width width}}
+          (om/build meta-pane document
+                    {:init-state {:tags tag-changes}})])])))
 
 (defmethod draggable/pos->width ::thumbnails [sidebars sidebar [x _]]
   (draggable/limit
