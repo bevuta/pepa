@@ -5,7 +5,6 @@
             [pepa.api :as api]
             [pepa.api.upload :as upload]
             [pepa.data :as data]
-            [pepa.style :as css]
             [pepa.components.sidebar :refer [sidebar-component]]
             [pepa.components.draggable :as draggable]
             [pepa.workflows.inbox :as inbox]
@@ -71,16 +70,12 @@
       (let [{:keys [route query-params]} (om/value (:navigation next-props))]
         (transition-to! state route query-params))))
   (render-state [_ {:keys [file-drop?]}]
-    (let [{:keys [route query-params]} (:navigation state)
-          ;; TODO: Move to sidebar-component
-          sidebar-width (get (om/observe owner (data/ui-sidebars)) :root/sidebar
-                             css/default-sidebar-width)]
+    (let [{:keys [route query-params]} (:navigation state)]
       [:div.container {:on-drag-over (partial root-drag-over state owner)
                        :on-drag-leave (partial root-drag-leave state owner)
                        :on-drop (partial root-drop state owner)
                        :class [(when file-drop? "file-drop")]}
-       (om/build sidebar-component state
-                 {:state {:width sidebar-width}})
+       (om/build sidebar-component state)
        [:main
         (match [(om/value route)]
           [:dashboard]  (om/build dashboard/dashboard state)

@@ -11,6 +11,7 @@
             [pepa.components.logo :as logo]
             [pepa.components.tags :as tags]
             [pepa.components.draggable :refer [resize-draggable]]
+            [pepa.style :as css]
 
             [pepa.search :refer [search-query]]
             [pepa.search.parser :as parser])
@@ -106,12 +107,14 @@
         (and (fn? workflows) (workflows route)))))
 
 (ui/defcomponent sidebar-component [state owner opts]
-  (render-state [_ {:keys [width widths]}]
-    (let [route (om/value (get-in state [:navigation :route]))]
+  (render [_]
+    (let [route (om/value (get-in state [:navigation :route]))
+          width (get (om/observe owner (data/ui-sidebars)) ::sidebar
+                     css/default-sidebar-width)]
       [:#sidebar {:style (when width {:min-width width
                                       :max-width width})}
        (om/build resize-draggable nil
-                 {:opts {:sidebar :root/sidebar}})
+                 {:opts {:sidebar ::sidebar}})
        (om/build logo/xeyes nil)
 
        (om/build search-field nil
