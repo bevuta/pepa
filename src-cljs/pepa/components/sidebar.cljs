@@ -40,10 +40,13 @@
 (defmulti ^:private navigation-element (fn [_ _ [name id _ route]] id))
 
 (defmethod navigation-element :default [state _ [title id _ href]]
-  (om/component
-   (html
-    [:a.menu-link {:href href}
-     [:div title]])))
+  (reify
+    om/IDisplayName (display-name [_] "DefaultNavigation")
+    om/IRender
+    (render [_]
+     (html
+       [:a.menu-link {:href href}
+        [:div title]]))))
 
 (defn ^:private inbox-drop! [state owner e]
   ;; NOTE: We need to handle all event-object interop BEFORE entering
@@ -66,6 +69,7 @@
 
 (defmethod navigation-element :inbox [state owner [title id _ href]]
   (reify
+    om/IDisplayName (display-name [_] "InboxNavigation")
     om/IRenderState
     (render-state [_ {:keys [drop? working?]}]
       (html
@@ -82,6 +86,7 @@
 
 (defmethod navigation-element :tags [state owner [title id _ href]]
   (reify
+    om/IDisplayName (display-name [_] "TagsNavigation")
     om/IInitState
     (init-state [_]
       {:open? true})
