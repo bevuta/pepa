@@ -433,7 +433,14 @@
                                   LEFT JOIN documents as d
                                     ON d.id = dt.document
                                   WHERE dt.state_seq > ?" seq-num])
-                   (mapv :id))})
+                   (mapv :id))
+   ;; Special case: Also send down used tags
+   :tags (->> (db/query db ["SELECT DISTINCT t.name
+                             FROM document_tags AS dt
+                             LEFT JOIN tags AS t
+                               ON t.id = dt.tag
+                             WHERE dt.state_seq > ?" seq-num])
+              (mapv :name))})
 
 (defmethod changed-entities* :pages [db _ seq-num]
   (let [pages (mapv :id (db/query db ["SELECT id FROM pages WHERE state_seq > ?" seq-num]))]
