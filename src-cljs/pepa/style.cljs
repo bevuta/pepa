@@ -127,12 +127,13 @@
   (list
    generic-header-css
    [:header {:text-decoration :none
-             :font-size (em 1.2)}
+             :font-size (em 1.2)
+             :display :flex
+             :flex-direction :row
+             :align-items :center}
     ;; Logo
     (let [logo-width 38]
-      [:.logo {:float :left
-               :margin-top (px 10)
-               :width (px logo-width)
+      [:.logo {:width (px logo-width)
                :height (px logo-width)}])
     [:span {:padding-left (px 5)}
      [:&.brand {:font-weight 400}]]]))
@@ -141,21 +142,23 @@
   (let [search-padding 10]
     [:.search {:height (px height)
                :position :relative
-               :border-bottom (str "1px solid " border-dark)}
-     [:input (list
-              {:position :absolute
-               :top "50%", :left "50%"
-               :transform "translate(-50%,-50%)"
-               :border (str "1px solid " border-dark)}
-              (calc-property :width ["100%" - (* 2 search-padding)]))]]))
+               :border-bottom (str "1px solid " border-dark)
+               :display :flex
+               :align-items :center
+               :justify-content :space-around}
+     [:input {:margin {:left (px search-padding)
+                       :right (px search-padding)}
+              :width "100%"
+              :border (str "1px solid " border-dark)}]]))
 
 (def sidebar-css
   (let [search-height 50]
     [:#sidebar {:height "100%"
-                :float :left
+                :display :flex
                 :background-color sidebar-color
                 :border-right (str "1px solid " border-dark)
-                :position :relative}
+                :position :relative
+                :flex-direction :column}
      (draggable-css :right)
      sidebar-header-css
      (sidebar-search-css search-height)
@@ -729,7 +732,9 @@
                  :color default-text
                  :letter-spacing (px 0.8)}]
    [:#app {:height "100%"}
-    [:.container {:height "100%"}]
+    [:.container {:height "100%"
+                  :display :flex
+                  :flex-direction :row}]
     [:&.file-drop
      {:background "red"}]
     clear-a-css
