@@ -7,5 +7,8 @@
   (eval put-clojure-indent 'let->> 1)
   
   (eval put 'defcomponent 'clojure-backtracking-indent '(4 (2)))
-  (eval put 'ui/defcomponent 'clojure-backtracking-indent '(4 (2)))))
+  (eval put 'ui/defcomponent 'clojure-backtracking-indent '(4 (2)))
+
+  (eval put 'defcomponentmethod 'clojure-backtracking-indent '(4 (2)))
+  (eval put 'ui/defcomponentmethod 'clojure-backtracking-indent '(4 (2)))))
 
