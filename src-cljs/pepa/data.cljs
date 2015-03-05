@@ -8,12 +8,13 @@
    [cljs.core.async.macros :refer [go-loop]]))
 
 (defrecord Page [id rotation render-status dpi])
-(defrecord Document [id title pages tags created modified notes])
+(defrecord Document [id title pages created modified notes])
 
-(defrecord State [documents navigation upload seqs])
+(defrecord State [documents navigation tags upload seqs])
 
 (defonce state (atom (map->State {:documents {}
                                   :navigation {:route :dashboard}
+                                  :tags {}
                                   :upload {}
                                   :ui/sidebars {}
                                   :seqs {}})))
@@ -76,7 +77,8 @@
 
 (defn sorted-tags [state]
   (->> (:tags state)
-       #_(remove (comp zero? val))
+       (om/value)
+       (remove (comp zero? val))
        (sort-by val >)
        (mapv key)))
 
