@@ -194,12 +194,10 @@
                                 (when (re-find #"\w" text)
                                   (focus-tag-input owner)
                                   (.stopPropagation e))))}
-     (ui/css-transition-group
-      {:transitionName "tag"}
-      (om/build-all tag (:tags document)
-                    {:key-fn identity
-                     :init-state {:events events}
-                     :state {:selected selected}}))
+     (om/build-all tag (:tags document)
+                   {:key-fn identity
+                    :init-state {:events events}
+                    :state {:selected selected}})
      [:li.input
       [:input {:ref "tag-input"
                :tab-index 0

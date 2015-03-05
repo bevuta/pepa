@@ -209,8 +209,6 @@
                                       
                                       ))
                  :overflow-y :auto}
-            (ui/css-fade "tag-list" (u/ms 50))
-            
             (let [color-size 12]
               [:li.tag {:display :list-item
                         :position :relative
@@ -538,9 +536,6 @@
                       :border (str "1px solid" border-dark)
                       :padding {:left (px 3)
                                 :right (px 3)}}]
-        ;; CSS Fade-{In,Out}
-        (ui/css-fade "tag" (u/ms 100))
-        
         (let [color-size 8]
           [:.color {:display :inline-block
                     :height (px color-size)
