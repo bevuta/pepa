@@ -245,8 +245,7 @@
   :available-media-types +default-media-types+
   :allowed-methods #{:get}
   :handle-ok (fn [ctx]
-               (let [tags (db/query (get-in ctx [:request ::db])
-                                    "SELECT t.name, COUNT(dt.document) FROM tags AS t JOIN document_tags AS dt ON dt.tag = t.id GROUP BY t.name")]
+               (let [tags (m/all-tags (get-in ctx [:request ::db]))]
                  (condp = (get-in ctx [:representation :media-type])
                    "text/html" (html/tags (map :name tags))
                    tags))))
@@ -275,8 +274,6 @@
   ;; NOTE: We still need to use the created-handler instead of ok
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
-
->
 
 (defn wrap-component [handler {:keys [config db bus]}]
   (fn [req]
