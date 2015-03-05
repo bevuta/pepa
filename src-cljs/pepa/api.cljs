@@ -222,15 +222,16 @@
       (when (= 200 (:status response))
         (:response/transit response)))))
 
+(defn ^:private store-tags! [state tags]
+  (om/transact! state :tags
+                (fn [old-tags]
+                  (merge old-tags
+                         (into {}
+                               (map (juxt :name :count) tags))))))
+
 (defn fetch-tags! [state]
   (go
-    (let [tags (<! (fetch-tags))]
-      (om/update! state :tags
-                  (reduce (fn
-                            [ts {:keys [name count]}]
-                            (assoc ts (data/normalize-tag name) count))
-                          {}
-                          tags)))))
+    (store-tags! state (<! (fetch-tags)))))
 
 ;;; Page Rotation
 
@@ -270,6 +271,10 @@
         (let [p (<! p)]
           ;; TODO: Apply the changes to the Inbox
           (js/console.warn "Not applying changes to Inbox: Not implemented"))))))
+
+(defmethod entities-changed* :tags [state _ changes]
+  (when-let [tags (:tags changes)]
+    (store-tags! state tags)))
 
 ;;; HACK
 (defmethod entities-changed* :deletions [state _ changes]
