@@ -482,7 +482,7 @@
 
 (def workflow-css
   [:.workflow {:height "100%" :width "100%"
-               :overflow-x :auto
+               :overflow-x :hidden
                :display :flex
                :flex-direction :row}
    [:.pane {:flex-grow 1
