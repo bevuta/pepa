@@ -4,8 +4,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [com.stuartsierra/component "0.2.2"]
-                 [org.clojure/tools.namespace "0.2.9"]
+                 [com.stuartsierra/component "0.2.3"]
+                 [org.clojure/tools.namespace "0.2.10"]
 
                  ;; DB
                  [org.clojure/java.jdbc "0.3.6"]
@@ -16,7 +16,7 @@
                  [org.immutant/web "2.0.0-beta2"]
                  [compojure "1.3.2"]
                  [ring/ring-devel "1.3.2"]
-                 [com.cognitect/transit-clj "0.8.267"]
+                 [com.cognitect/transit-clj "0.8.269"]
                  [ring-transit "0.1.3"]
                  [ring/ring-json "0.3.1"]
                  [hiccup "1.0.5"]
@@ -41,11 +41,12 @@
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-2850"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-2985"]
                                        [com.cemerick/piggieback "0.1.6-SNAPSHOT"]
                                        [com.cognitect/transit-cljs "0.8.205"]
                                        [org.omcljs/om "0.8.8" :exclusions [cljsjs/react]]
-                                       [cljsjs/react-with-addons "0.12.2-5"]
+                                       [cljsjs/react-with-addons "0.12.2-7"]
+                                       [org.clojars.the-kenny/nom "0.1.0"]
                                        [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"]
                                        [sablono "0.3.4" :exclusions [cljsjs/react]]
                                        [secretary "1.2.1"]
