@@ -105,12 +105,14 @@
       [:#sidebar {:style (when width {:min-width width
                                       :max-width width})}
        (om/build resize-draggable nil
-                 {:opts {:sidebar ::sidebar}})
-       (om/build logo/xeyes nil)
+                 {:opts {:sidebar ::sidebar}
+                  :react-key "draggable"})
+       (om/build logo/xeyes nil {:react-key "xeyes"})
 
        (om/build search-field nil
-                 {:state {:query (search-query state)}})
-       [:nav.workflows
+                 {:state {:query (search-query state)}
+                  :react-key "search-field"})
+       [:nav.workflows {:key "workflows"}
         [:ul
          ;; TODO: Use build-all
          (for [element nav/navigation-elements]

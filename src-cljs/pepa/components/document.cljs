@@ -27,8 +27,8 @@
      (for [prop [:title :created :modified :creator :size]]
        (let [name (name prop)
              [title value] (meta-row prop (get document prop))]
-         [:li {:class [name], :key name}
-          [:span.title title]
-          [:span.value {:title (str value)}
+         [:li {:class name, :key name}
+          [:span.title {:key "title"} title]
+          [:span.value {:key "value", :title (str value)}
            value]]))]))
 

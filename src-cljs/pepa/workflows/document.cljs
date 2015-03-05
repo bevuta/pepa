@@ -48,6 +48,7 @@
          (list
           [:form {:on-submit save-title!}
            [:input.title {:value title
+                          :key "title-input"
                           :ref "input"
                           :on-click #(.stopPropagation %)
                           :on-key-down (fn [e]
@@ -56,6 +57,7 @@
                           :on-change (fn [e]
                                        (om/set-state! owner :title e.currentTarget.value))}]
            [:button.save {:type :submit
+                          :key "save-button"
                           :on-click #(.stopPropagation %)}
             "Save"]])
          (:title document))])))
@@ -211,18 +213,20 @@
        ;; Left (thunbmail) pane
        (let [width (get sidebars ::thumbnails
                         css/default-sidebar-width)]
-         [:.pane {:style {:min-width width :max-width width}}
+         [:.pane {:style {:min-width width :max-width width}
+                  :key "thumbnail-pane"}
           (om/build thumbnails document
                     {:init-state {:events page-events}
                      :state {:current-page current-page}})])
-       [:.pane
+       [:.pane {:key "pages-pane"}
         (om/build pages document
                   {:init-state {:events page-events}
                    :state {:current-page current-page}})]
        ;; Right (meta) pane
        (let [width (get sidebars ::meta
                         css/default-sidebar-width)]
-         [:.pane {:style {:min-width width :max-width width}}
+         [:.pane {:style {:min-width width :max-width width}
+                  :key "meta-pane"}
           (om/build meta-pane document
                     {:init-state {:tags tag-changes}})])])))
 

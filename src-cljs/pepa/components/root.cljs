@@ -75,8 +75,9 @@
                        :on-drag-leave (partial root-drag-leave state owner)
                        :on-drop (partial root-drop state owner)
                        :class [(when file-drop? "file-drop")]}
-       (om/build sidebar-component state)
-       [:main
+       (om/build sidebar-component state
+                 {:react-key "sidebar"})
+       [:main {:key "main"}
         (match [(om/value route)]
           [:dashboard]  (om/build dashboard/dashboard state)
           [[:search _]] (om/build dashboard/dashboard state)
@@ -92,4 +93,5 @@
           :else (js/console.log "unmatched route" (pr-str route)))]
        (when-let [up (:upload state)]
          (om/build upload-dialog up
-                   {:init-state {:mini? true}}))])))
+                   {:init-state {:mini? true}
+                    :react-key "upload-dialog"}))])))

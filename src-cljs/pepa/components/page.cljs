@@ -20,17 +20,20 @@
 
 (defn ^:private page-image [page owner {:keys [size size-fn]}]
   (assert (or size (fn? size-fn)))
-  (om/component
-   (let [rendered? (= :processing-status/processed (:render-status page))
-         size (if (fn? size-fn)
-                (apply size-fn (:dpi page))
-                size)]
-     (dom/img #js {:src (if rendered?
-                          (str "/pages/" (:id page) "/image/" size)
-                          +pending-placeholder+)
-                   :style (rotate (:rotation page))
-                   :className (when-not rendered?
-                                "pending")}))))
+  (reify
+    om/IDisplayName (display-name [_] "PageImage")
+    om/IRender
+    (render [_]
+      (let [rendered? (= :processing-status/processed (:render-status page))
+            size (if (fn? size-fn)
+                   (apply size-fn (:dpi page))
+                   size)]
+        (dom/img #js {:src (if rendered?
+                             (str "/pages/" (:id page) "/image/" size)
+                             +pending-placeholder+)
+                      :style (rotate (:rotation page))
+                      :className (when-not rendered?
+                                   "pending")})))))
 
 (def +min-rotate-width+ 100)
 
@@ -46,9 +49,11 @@
     (let [rotation (or (:rotation page) 0)]
       [:.rotate
        [:.right {:on-click (partial rotate-clicked page (+ rotation 90))
-                 :title "Rotate Clockwise"}]
+                 :title "Rotate Clockwise"
+                 :key "right"}]
        [:.left  {:on-click (partial rotate-clicked page (- rotation 90))
-                 :title "Rotate Counterclockwise"}]])))
+                 :title "Rotate Counterclockwise"
+                 :key "left"}]])))
 
 (ui/defcomponent thumbnail [page owner {:keys [enable-rotate?]}]
   (render-state [_ {:keys [overlay?]}]

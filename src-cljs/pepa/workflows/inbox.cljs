@@ -335,9 +335,10 @@
                                        ]}
        [:.note
         ;; [:img {:src "/img/drop-arrow.svg"}]
-        [:.arrow]
+        [:.arrow {:key "arrow"}]
         [:button.create {:on-click (partial create-document! owner)
-                         :disabled (empty? selected-pages)}
+                         :disabled (empty? selected-pages)
+                         :key "create"}
          "Create New Document"]]])))
 
 ;;; Drag/DropHandling
@@ -573,32 +574,32 @@
               (om/update! state :selection {})))) 
         (recur))))
   (render-state [_ {:keys [events]}]
-    [:.workflow.inbox { ;; :on-drag-end (partial workflow-drag-end state owner)
-                       ;; :on-drop (partial workflow-drop state owner)
-                       }
-     (let [inbox (-> state :documents :inbox)
-           documents (dissoc (:documents state) :inbox)
+    (let [inbox (-> state :documents :inbox)
+          documents (dissoc (:documents state) :inbox)
 
-           selection (:selection state)
-           drag (:drag state)
-           
-           child-state {:selection/pages (:pages selection)
-                        :selection/document (:document selection)}]
-       (list
-        (om/build-all document (concat [inbox] (vals documents))
-                      {:key :id
-                       :init-state {:view (fn [page owner opts]
-                                            (page/thumbnail page owner
-                                                            (assoc opts :enable-rotate? true)))
-                                    :events events}
-                       ;; We pass the drag/state information down
-                       ;; the render tree via :state
-                       ;;
-                       ;; NOTE: We need to make sure the values are
-                       ;; *always* passed down, as om/build will
-                       ;; just *merge* the map, not override it
-                       :state child-state})
-        (om/build create-document-column nil
-                  {:init-state {:events events}
-                   :state child-state})))]))
+          selection (:selection state)
+          drag (:drag state)
+          
+          child-state {:selection/pages (:pages selection)
+                       :selection/document (:document selection)}]
+     [:.workflow.inbox { ;; :on-drag-end (partial workflow-drag-end state owner)
+                        ;; :on-drop (partial workflow-drop state owner)
+                        }
+      (om/build-all document (concat [inbox] (vals documents))
+                    {:key :id
+                     :init-state {:view (fn [page owner opts]
+                                          (page/thumbnail page owner
+                                                          (assoc opts :enable-rotate? true)))
+                                  :events events}
+                     ;; We pass the drag/state information down
+                     ;; the render tree via :state
+                     ;;
+                     ;; NOTE: We need to make sure the values are
+                     ;; *always* passed down, as om/build will
+                     ;; just *merge* the map, not override it
+                     :state child-state})
+      (om/build create-document-column nil
+                {:init-state {:events events}
+                 :state child-state
+                 :react-key "create-document-column"})])))
 ;;; 

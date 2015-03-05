@@ -42,19 +42,21 @@
                                (doto e
                                  (.stopPropagation)
                                  (.preventDefault)))}
-       [:.preview
+       [:.preview {:key "preview"}
         [:a {:href href}
-         (om/build page/thumbnail (-> document :pages first))
-         (om/build page-count (:pages document))]]
-       [:a.title {:href href}
+         (om/build page/thumbnail (-> document :pages first) {:key :id})
+         (om/build page-count (:pages document)
+                   {:react-key "page-count"})]]
+       [:a.title {:href href, :key "a.title"}
         (:title document)]
-       (om/build tags/tags-list (:tags document))])))
+       (om/build tags/tags-list (:tags document)
+                 {:react-key "tags-list"})])))
 
 (ui/defcomponent filter-sidebar [state owner _]
   (render [_]
-   [:.sidebar
-    [:header "Sorting & Filtering"]
-    (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})]))
+    [:.sidebar
+     [:header "Sorting & Filtering"]
+     (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})]))
 
 (defn ^:private document-ids [state]
   (:search/results state))
@@ -100,23 +102,27 @@
     :else
     (go (search/all-documents! state force-update?))))
 
-(defn ^:private dashboard-title [state owner]
-  (let [documents (document-ids state)]
-    (cond
-      (search/search-active? state)
-      "Loading..."
-      
-      (search/search-query state)
-      "Search Results"
-    
-      true
-      "Dashboard")))
-
 (ui/defcomponent ^:private document-count [state]
   (render [_]
     [:span.document-count
      (when-let [ids (seq (document-ids state))]
        (str "(" (count ids) ")"))]))
+
+(ui/defcomponent ^:private dashboard-title [state owner opts]
+  (render [_]
+    (let [documents (document-ids state)]
+      [:span
+       (cond
+         (search/search-active? state)
+         "Loading..."
+      
+         (search/search-query state)
+         "Search Results"
+    
+         true
+         "Dashboard")
+       (om/build document-count state
+                 {:react-key "document-count"})])))
 
 ;;; Should be twice the document-height or so.
 (def +scroll-margin+ 500)
@@ -178,18 +184,19 @@
           sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
                              css/default-sidebar-width)]
       [:.workflow.dashboard
-       [:.pane
-        [:header
-         (dashboard-title state owner)
-         (om/build document-count state)]
+       [:.pane {:key "documents-pane"}
+        [:header {:key "header"}
+         (om/build dashboard-title state {:react-key "title"})]
         [:.documents {:ref "documents"
+                      :key "documents"
                       :on-scroll (partial on-documents-scroll state owner)}
          (let [documents (->> document-ids
                               (map (partial get (:documents state)))
                               (remove nil?))]
            (om/build-all document-preview documents
                          {:key :id}))]]
-       [:.pane {:style {:min-width sidebar-width
+       [:.pane {:key "sidebar-pane"
+                :style {:min-width sidebar-width
                         :max-width sidebar-width}}
         (om/build filter-sidebar state)]])))
 

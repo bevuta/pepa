@@ -64,11 +64,14 @@
        (if document-id
          [:a.title {:href (when document-id
                             (nav/document-route {:id document-id}))
-                    :title name}
+                    :title name
+                    :key "title"}
           name]
-         [:span.title (when valid? {:title name}) name])
+         [:span.title (when valid? {:title name, :key "title"})
+          name])
        (when valid?
-         [:span.size (str (byte->kb size) "kB")])
+         [:span.size {:key "size"}
+          (str (byte->kb size) "kB")])
        
        
        (if (or (not valid?) document-id)
@@ -77,10 +80,12 @@
                                 (hide-fn (om/value row)))
                               (doto e
                                 (.preventDefault)
-                                (.stopPropagation)))}
+                                (.stopPropagation)))
+                  :key "hide"}
           "Hide"]
          
-         (om/build progress-bar (or (:progress row) 0)))])))
+         (om/build progress-bar (or (:progress row) 0)
+                   {:react-key "progress-bar"}))])))
 
 (defn ^:private remove-file! [files file]
   (om/transact! files (fn [files]
@@ -92,7 +97,8 @@
   (render [_]
     [:ul.files
      (om/build-all file-row files
-                   {:init-state {:hide-fn (partial remove-file! files)}})]))
+                   {:init-state {:hide-fn (partial remove-file! files)}
+                    :key :file})]))
 
 (defn add-file [upload file]
   (update-in upload [:files]
@@ -133,8 +139,9 @@
                     :on-click (when mini? toggle-mini)}
        (if-not mini?
          (list
-          [:header {:on-click toggle-mini}]
+          [:header {:on-click toggle-mini
+                    :key "header"}]
           ;; Not sure if {:key :file} works.
-          (om/build file-list files {:key :file})
-          (om/build upload-button upload))
+          (om/build file-list files {:react-key "file"})
+          (om/build upload-button upload {:react-key "upload-button"}))
          "Upload Files")])))
