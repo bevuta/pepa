@@ -744,10 +744,8 @@
     tags-css
     upload-css
 
-    [:main {:height "100%"
-            :overflow-x :hidden
-            ;; :display :flex
-            }
+    [:main {:height "100%", :width "100%"
+            :overflow-x :hidden}
      workflow-css]]))
 
 ;;; Apply the CSS
