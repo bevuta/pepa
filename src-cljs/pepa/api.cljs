@@ -254,14 +254,13 @@
 
 (defmulti ^:private entities-changed* (fn [state entity changes]
                                         entity))
-
-(comment
-  ;; Called like:
-  (entities-changed* :documents {:pages #{3 4 5}
-                                 :documents #{1 2 3}}))
+(defmethod entities-changed* :default [& _])
 
 (defmethod entities-changed* :documents [state _ changes]
-  (fetch-documents! (:documents changes)))
+  ;; Only fetch documents with a local copy
+  (let [ids (filter #(get-in @state [:documents %])
+                    (:documents changes))]
+    (fetch-documents! ids)))
 
 (defmethod entities-changed* :inbox [state _ changes]
   (go
@@ -272,7 +271,9 @@
           ;; TODO: Apply the changes to the Inbox
           (js/console.warn "Not applying changes to Inbox: Not implemented"))))))
 
-(defmethod entities-changed* :default [& _])
+;;; HACK
+(defmethod entities-changed* :deletions [state _ changes]
+  (js/console.warn "NOT applying deletions: Not implemented"))
 
 (defn entities-changed! [state changes]
   (doseq [entity (keys changes)]
