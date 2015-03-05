@@ -38,11 +38,8 @@
 (def +min-rotate-width+ 100)
 
 (defn ^:private rotate-clicked [page rotation e]
-  (println "rotating" page "to" rotation "degrees")
-  (api/rotate-page! page rotation)
-  (doto e
-    (.preventDefault)
-    (.stopPropagation)))
+  (ui/cancel-event e)
+  (api/rotate-page! page rotation))
 
 (ui/defcomponent ^:private rotate-buttons [page owner]
   (render [_]

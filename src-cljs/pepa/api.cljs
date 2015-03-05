@@ -16,22 +16,22 @@
 
 (let [reader (transit/reader :json)]
   (defn ^:private parse-xhr-response
-    "Takes a finished googl.net.XhrIo, returns a map with :status, :response/text, etc."
-    [xhr]
-    (let [text (.getResponseText xhr)
-          transit (try
-                    ;; Only parse body when it's transit
-                    (when (and (seq text)
-                               (re-find #"application/transit\+json"
-                                        (or (.getResponseHeader xhr "content-type") "")))
-                      (transit/read reader text))
-                    (catch js/Error e
-                      (js/console.error "Couldn't parse Transit" text)
-                      nil))]
-      {:status (.getStatus xhr)
-       :response/transit transit
-       :response/text (when-not transit text)
-       :successful? (.isSuccess xhr)})))
+  "Takes a finished googl.net.XhrIo, returns a map with :status, :response/text, etc."
+  [xhr]
+  (let [text (.getResponseText xhr)
+        transit (try
+                  ;; Only parse body when it's transit
+                  (when (and (seq text)
+                             (re-find #"application/transit\+json"
+                                      (or (.getResponseHeader xhr "content-type") "")))
+                    (transit/read reader text))
+                  (catch js/Error e
+                    (js/console.error "Couldn't parse Transit" text)
+                    nil))]
+    {:status (.getStatus xhr)
+     :response/transit transit
+     :response/text (when-not transit text)
+     :successful? (.isSuccess xhr)})))
 
 
 ;;; HACK: Because the current release of Google Closure doens't
@@ -55,41 +55,41 @@
 
 (let [writer (transit/writer :json)]
   (defn xhr-request!
-    "Performs an XmlHttpRequest to uri using method and payload data.
+  "Performs an XmlHttpRequest to uri using method and payload data.
 
   Returns a channel containing something."
-    ([uri method content-type data timeout & [progress]]
-     (let [ch (async/chan)]
-       (assert uri)
-       (let [factory (xhr-factory-dummy)
-             xhr (XhrIo. factory)] 
-         (let [put! (fn [d] (when progress (async/put! progress d)))]
-           (doto (.-upload (.createInstance factory))
-             (.addEventListener "progress" #(put! (/ (.-loaded %) (.-total %))))
-             (.addEventListener "load "    #(put! :loaded))
-             (.addEventListener "error"    #(put! :error))
-             (.addEventListener "abort"    #(put! :abort))))
-         (doto xhr
-           (.setTimeoutInterval timeout)
-           (event/listen "complete" (fn [e]
-                                      (when progress
-                                        (async/close! progress))
-                                      (async/put! ch (parse-xhr-response e.target))))
-           (.send uri
-                  (s/upper-case (name method))
-                  (if (= "application/transit+json" content-type)
-                    (transit/write writer data)
-                    data)
-                  (clj->js
-                   (merge {"Accept" "application/transit+json"}
-                          (when data {"Content-Type" (when data content-type)}))) )))
-       ch))
-    ([uri method content-type data]
-     (xhr-request! uri method content-type data +xhr-timeout+))
-    ([uri method data]
-     (xhr-request! uri method "application/transit+json" data))
-    ([uri method]
-     (xhr-request! uri method nil))))
+  ([uri method content-type data timeout & [progress]]
+   (let [ch (async/chan)]
+     (assert uri)
+     (let [factory (xhr-factory-dummy)
+           xhr (XhrIo. factory)] 
+       (let [put! (fn [d] (when progress (async/put! progress d)))]
+         (doto (.-upload (.createInstance factory))
+           (.addEventListener "progress" #(put! (/ (.-loaded %) (.-total %))))
+           (.addEventListener "load "    #(put! :loaded))
+           (.addEventListener "error"    #(put! :error))
+           (.addEventListener "abort"    #(put! :abort))))
+       (doto xhr
+         (.setTimeoutInterval timeout)
+         (event/listen "complete" (fn [e]
+                                    (when progress
+                                      (async/close! progress))
+                                    (async/put! ch (parse-xhr-response e.target))))
+         (.send uri
+                (s/upper-case (name method))
+                (if (= "application/transit+json" content-type)
+                  (transit/write writer data)
+                  data)
+                (clj->js
+                 (merge {"Accept" "application/transit+json"}
+                        (when data {"Content-Type" (when data content-type)}))) )))
+     ch))
+  ([uri method content-type data]
+   (xhr-request! uri method content-type data +xhr-timeout+))
+  ([uri method data]
+   (xhr-request! uri method "application/transit+json" data))
+  ([uri method]
+   (xhr-request! uri method nil))))
 
 (defn fetch-document-ids
   "Fetches all document-ids from the server."
@@ -184,7 +184,7 @@
   state (wether DOCUMENT is a cursor or not)."
   [document]
   (go
-    (println "saving document" (pr-str document))
+    (println "saving document" (:id document))
     ;; TODO: Stop fetching the document here
     (let [server (<! (fetch-document (:id document)))
           title (when-not (= (:title document)
@@ -234,6 +234,13 @@
 
 ;;; Page Rotation
 
+(defn fetch-page [id]
+  (go
+    (some-> (xhr-request! (str "/pages/" id) :get)
+            (<!)
+            (:response/transit)
+            (data/map->Page))))
+
 (defn rotate-page! [page rotation]
   (go
     (when-not (= rotation (:rotation page))
@@ -243,24 +250,57 @@
         (when (and (:successful? res) (om/cursor? page))
           (om/update! page :rotation rotation))))))
 
+;;; Change Handling
+
+(defmulti ^:private entities-changed* (fn [state entity changes]
+                                        entity))
+
+(comment
+  ;; Called like:
+  (entities-changed* :documents {:pages #{3 4 5}
+                                 :documents #{1 2 3}}))
+
+(defmethod entities-changed* :documents [state _ changes]
+  (fetch-documents! (:documents changes)))
+
+(defmethod entities-changed* :inbox [state _ changes]
+  (go
+    (let [page-ids (:inbox changes)
+          pages (mapv fetch-page page-ids)]
+      (doseq [p pages]
+        (let [p (<! p)]
+          ;; TODO: Apply the changes to the Inbox
+          (js/console.warn "Not applying changes to Inbox: Not implemented"))))))
+
+(defmethod entities-changed* :default [& _])
+
+(defn entities-changed! [state changes]
+  (doseq [entity (keys changes)]
+    (entities-changed* state entity changes)))
+
 ;;; Polling
 
 (def +poll-timeout+ (* 30 1000))
 
-(defn poll! [state]
+(defn ^:private poll! [state]
   (go
-    (let [response (<! (xhr-request! "/poll"
-                                     :post
-                                     "application/transit+json"
-                                     (om/value (:seqs state))
-                                     +poll-timeout+))]
-      (when (:successful? response)
-        (let [data (:response/transit response)]
-          (prn (assoc data :seqs '...))
-          (when-let [seqs (:seqs data)]
-            (om/transact! state :seqs #(merge % seqs))))))))
+    (try
+      (let [response (<! (xhr-request! "/poll"
+                                       :post
+                                       "application/transit+json"
+                                       (:seqs @state)
+                                       +poll-timeout+))]
+        (when (:successful? response)
+          (let [data (:response/transit response)]
+            (println "[poll]" (pr-str (assoc data :seqs '...)))
+            (when-let [seqs (:seqs data)]
+              (om/transact! state :seqs #(merge % seqs)))
+            (entities-changed! state (dissoc data :seqs)))))
+      (catch ExceptionInfo e
+        (js/console.error "[poll] Caught Exception: " e)))))
 
-(go-loop []
-  (<! (async/timeout 1000))
-  (<! (poll! (om/root-cursor data/state)))
-  (recur))
+(defn start-polling! [state]
+  (go-loop []
+    (<! (poll! state))
+    (<! (async/timeout 1000))
+    (recur)))

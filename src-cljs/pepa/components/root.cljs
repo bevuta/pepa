@@ -63,7 +63,10 @@
         (transition-to! state route query-params))
 
       ;; Handle all (global) resize events for sidebars
-      (draggable/resize-handle-loop owner)))
+      (draggable/resize-handle-loop owner)
+
+      ;; Start Polling
+      (api/start-polling! state)))
   (will-update [_ next-props next-state]
     (when-not (= (get-in (om/get-props owner) [:navigation :route])
                  (get-in next-props [:navigation :route]))
