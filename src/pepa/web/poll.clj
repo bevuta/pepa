@@ -44,9 +44,7 @@
         bus-changes (bus/subscribe-all bus (async/sliding-buffer 1))]
     (go-loop []
       (if-let [changed (m/changed-entities db seqs)]
-        (do
-          (println "changed" (pr-str changed))
-          (send! ch changed))
+        (send! ch changed)
         ;; NOTE: We have to manually close the channels after a timeout,
         ;; else they stay open for forever & hog memory!
         (let [[val port] (async/alts! [timeout bus-changes])]
@@ -59,10 +57,8 @@
               (recur))
             ;; Hit a timeout or channel is closed
             (or (= port timeout) (not (async-web/open? ch)))
-            (do
-              (println "Closing long-polling channel...")
-              (when (async-web/open? ch)
-                (async-web/close ch)))))))))
+            (when (async-web/open? ch)
+              (async-web/close ch))))))))
 
 (defn ^:private poll-handler* [req]
   (let [method (:request-method req)
