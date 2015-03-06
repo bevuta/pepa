@@ -66,25 +66,31 @@
     (send-event! owner [:remove tag])
     (.preventDefault e)))
 
+;;; `tag' can either be a string or a vector [name document-count]
 (ui/defcomponent tag [tag owner _]
   (did-update [_ prev-props prev-state]
     (when (and (not (contains? (:selected prev-state) tag))
                (contains? (om/get-state owner :selected) tag))
       (.focus (om/get-node owner))))
   (render-state [_ {:keys [selected]}]
-    [:li.tag {:tab-index 0
-              :class [(when (contains? selected tag) "selected")]
-              :on-click (fn [e]
-                          (.stopPropagation e))
-              :on-focus #(send-event! owner [:focus tag])
-              :on-blur  #(send-event! owner [:blur tag])
-              :on-key-down (partial handle-tag-key-down! tag owner)
-              :draggable true
-              :on-drag-start (partial handle-drag-start tag)}
-     [:a {:href (when-not (om/get-state owner :events)
-                  (nav/tag-search tag))}
-      [:span.color {:style {:background-color (tag-color tag)}}]
-      [:span.tag-name tag]]]))
+    (let [[tag document-count] (if (string? tag) [tag nil]
+                                   tag)]
+      [:li.tag {:tab-index 0
+                :class [(when (contains? selected tag) "selected")]
+                :on-click (fn [e]
+                            (.stopPropagation e))
+                :on-focus #(send-event! owner [:focus tag])
+                :on-blur  #(send-event! owner [:blur tag])
+                :on-key-down (partial handle-tag-key-down! tag owner)
+                :draggable true
+                :on-drag-start (partial handle-drag-start tag)}
+       [:a {:href (when-not (om/get-state owner :events)
+                    (nav/tag-search tag))}
+        [:span.color {:style {:background-color (tag-color tag)}}]
+        [:span.tag-name tag]
+        (when (number? document-count)
+          [:span.count {:title (str document-count " documents have this tag")}
+           document-count])]])))
 
 
 (defn ^:private remove-tag!

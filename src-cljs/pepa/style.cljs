@@ -208,9 +208,7 @@
             [:&:before {:background-image (image-url "menu-icons/tags-open.svg")}]]
            [:ul {:list-style-type :none
                  :padding-left (px (+ (* 2 padding-left)
-                                      icon-size
-                                      
-                                      ))
+                                      icon-size))
                  :overflow-y :auto}
             (let [color-size 12]
               [:li.tag {:display :list-item
@@ -225,6 +223,8 @@
                             :top "50%" :transform "translateY(-50%)"
                             :overflow :hidden
                             :text-overflow :ellipsis}]
+               [:.count {:float :right
+                         :padding {:left (px 4), :right (px 4)}}]
                [:.color {:width (px color-size)
                          :height (px color-size)
                          :float :right}]])]]

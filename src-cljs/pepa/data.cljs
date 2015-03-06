@@ -82,6 +82,15 @@
        (sort-by val >)
        (mapv key)))
 
+(defn tag-document-count-pairs
+  "Returns a seq of [tag-name document-count] pairs."
+  [state]
+  (->> (:tags state)
+       (om/value)
+       (seq)
+       (sort-by second >)
+       (vec)))
+
 ;;; Page Movement
 
 (declare move-pages)
