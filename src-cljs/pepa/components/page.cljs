@@ -54,18 +54,22 @@
 
 (ui/defcomponent thumbnail [page owner {:keys [enable-rotate?]}]
   (render-state [_ {:keys [overlay?]}]
-    (if (and enable-rotate?
-             (= :processing-status/processed (:render-status page)))
-      (dom/div #js {:className "thumbnail"
-                    :onMouseEnter (fn [e]
-                                    (when (>= (.-width (style/getSize (om/get-node owner)))
-                                              +min-rotate-width+)
-                                      (om/set-state! owner :overlay? true)))
-                    :onMouseLeave (fn [e] (om/set-state! owner :overlay? false))}
-               (when overlay?
-                 (om/build rotate-buttons page))
-               (om/build page-image page {:opts {:size-fn min}}))
-      (om/build page-image page {:opts {:size-fn min}}))))
+    (let [page-image (om/build page-image page
+                               {:opts {:size-fn min}
+                                :key :id})]
+      (if (and enable-rotate?
+               (= :processing-status/processed (:render-status page)))
+        (dom/div #js {:className "thumbnail"
+                      :onMouseEnter (fn [e]
+                                      (when (>= (.-width (style/getSize (om/get-node owner)))
+                                                +min-rotate-width+)
+                                        (om/set-state! owner :overlay? true)))
+                      :onMouseLeave (fn [e] (om/set-state! owner :overlay? false))}
+                 (when overlay?
+                   (om/build rotate-buttons page))
+                 page-image)
+        page-image))))
 
 (defn full [page owner _]
-  (page-image page owner {:size-fn max}))
+  (page-image page owner {:size-fn max
+                          :key :id}))
