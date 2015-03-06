@@ -22,6 +22,7 @@ DROP TABLE IF EXISTS deletions CASCADE;DROP TABLE IF EXISTS deletions_state_seq 
 
 
 DROP TYPE IF EXISTS PROCESSING_STATUS;
+DROP TYPE IF EXISTS ENTITY;
 
 CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
 CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox');
@@ -63,6 +64,19 @@ CREATE TRIGGER insert_files_state_seq_trigger
   FOR EACH ROW
   EXECUTE PROCEDURE update_files_state_seq_func();
 
+
+CREATE OR REPLACE FUNCTION delete_files_track_func() RETURNS TRIGGER AS $$
+       BEGIN
+         INSERT INTO deletions (entity, id) VALUES ('files', OLD.id);
+         RETURN OLD;
+       END;
+$$ LANGUAGE PLPGSQL;
+
+CREATE TRIGGER delete_files_track_trigger
+  AFTER DELETE ON files
+  FOR EACH ROW
+  EXECUTE PROCEDURE delete_files_track_func();
+
 CREATE TABLE documents (
        id SERIAL PRIMARY KEY CHECK(id > 0),
        title TEXT NOT NULL,
@@ -101,6 +115,19 @@ CREATE TRIGGER insert_documents_state_seq_trigger
   FOR EACH ROW
   EXECUTE PROCEDURE update_documents_state_seq_func();
 
+
+CREATE OR REPLACE FUNCTION delete_documents_track_func() RETURNS TRIGGER AS $$
+       BEGIN
+         INSERT INTO deletions (entity, id) VALUES ('documents', OLD.id);
+         RETURN OLD;
+       END;
+$$ LANGUAGE PLPGSQL;
+
+CREATE TRIGGER delete_documents_track_trigger
+  AFTER DELETE ON documents
+  FOR EACH ROW
+  EXECUTE PROCEDURE delete_documents_track_func();
+
 CREATE TABLE pages (
        id SERIAL PRIMARY KEY CHECK(id > 0),
        file INT NOT NULL REFERENCES files,
@@ -138,6 +165,19 @@ CREATE TRIGGER insert_pages_state_seq_trigger
   ON pages
   FOR EACH ROW
   EXECUTE PROCEDURE update_pages_state_seq_func();
+
+
+CREATE OR REPLACE FUNCTION delete_pages_track_func() RETURNS TRIGGER AS $$
+       BEGIN
+         INSERT INTO deletions (entity, id) VALUES ('pages', OLD.id);
+         RETURN OLD;
+       END;
+$$ LANGUAGE PLPGSQL;
+
+CREATE TRIGGER delete_pages_track_trigger
+  AFTER DELETE ON pages
+  FOR EACH ROW
+  EXECUTE PROCEDURE delete_pages_track_func();
 
 CREATE TABLE page_images (
        page INT NOT NULL REFERENCES pages,
@@ -278,6 +318,19 @@ CREATE TRIGGER insert_inbox_state_seq_trigger
   ON inbox
   FOR EACH ROW
   EXECUTE PROCEDURE update_inbox_state_seq_func();
+
+
+CREATE OR REPLACE FUNCTION delete_inbox_track_func() RETURNS TRIGGER AS $$
+       BEGIN
+         INSERT INTO deletions (entity, id) VALUES ('inbox', OLD.page);
+         RETURN OLD;
+       END;
+$$ LANGUAGE PLPGSQL;
+
+CREATE TRIGGER delete_inbox_track_trigger
+  AFTER DELETE ON inbox
+  FOR EACH ROW
+  EXECUTE PROCEDURE delete_inbox_track_func();
 
 CREATE TABLE deletions (
        id INT NOT NULL,
