@@ -97,8 +97,7 @@
   (render [_]
     [:ul.files
      (om/build-all file-row files
-                   {:init-state {:hide-fn (partial remove-file! files)}
-                    :key :file})]))
+                   {:init-state {:hide-fn (partial remove-file! files)}})]))
 
 (defn add-file [upload file]
   (update-in upload [:files]
