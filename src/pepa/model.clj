@@ -452,6 +452,7 @@
                                   WHERE dt.state_seq > ?" seq-num])
                    (mapv :id))
    ;; Special case: Also send down used tags
+   ;; TODO: We return a wrong count of tags here.
    :tags (->> (db/query db ["SELECT t.name, COUNT(dt.document)
                              FROM tags AS t
                              JOIN document_tags AS dt ON t.id = dt.tag
