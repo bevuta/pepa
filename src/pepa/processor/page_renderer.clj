@@ -38,7 +38,12 @@
 (extend-type PageRenderer
   IProcessor
   (next-item [component]
-    "SELECT p.id, p.number, f.data FROM pages AS p JOIN files AS f ON p.file = f.id WHERE p.render_status = 'pending' ORDER BY p.id LIMIT 1")
+    "SELECT p.id, p.number, f.data 
+     FROM pages AS p 
+     JOIN files AS f ON p.file = f.id 
+     WHERE p.render_status = 'pending'
+     ORDER BY p.number, p.id
+     LIMIT 1")
 
   (process-item [component page]
     (println "Rendering page" (:id page))
