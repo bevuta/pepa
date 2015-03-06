@@ -50,7 +50,8 @@
 
   (stop [component]
     (println ";; Stopping bus")
-    (async/close! (:input component))
+    (when-let [input (:input component)]
+      (async/close! input))
     (assoc component
            :input nil
            :mult nil
