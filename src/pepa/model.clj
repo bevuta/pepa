@@ -55,16 +55,18 @@
 (def ^:private pg-array->set (comp set #(when % (.getArray %))))
 
 (defn get-pages [db ids]
-  (->> (pepa.db/query db (db/sql+placeholders
-                          "SELECT id, rotation, number, render_status AS \"render-status\", ocr_status AS \"ocr-status\", array_agg(dpi) AS dpi
-                           FROM pages AS p
-                           LEFT JOIN page_images AS pi ON pi.page = p.id
-                           WHERE id IN (%s)
-                           GROUP BY id
-                           ORDER BY p.file, p.number"
-                          ids))
-       ;; Make  a set out of the strange Postgres-Array
-       (map #(update-in % [:dpi] pg-array->set))))
+  (if-not (seq ids)
+    []
+    (->> (pepa.db/query db (db/sql+placeholders
+                            "SELECT id, rotation, number, render_status AS \"render-status\", ocr_status AS \"ocr-status\", array_agg(dpi) AS dpi
+                             FROM pages AS p
+                             LEFT JOIN page_images AS pi ON pi.page = p.id
+                             WHERE id IN (%s)
+                             GROUP BY id
+                             ORDER BY p.file, p.number"
+                            ids))
+         ;; Make a set out of the strange Postgres-Array
+         (mapv #(update-in % [:dpi] pg-array->set)))))
 
 
 
@@ -84,22 +86,29 @@
 
 (defn get-documents [db ids]
   (db/with-transaction [conn db]
-    (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, notes FROM documents WHERE id IN (%s)" ids))
-          pages (get-associated conn "SELECT dp.document, p.id, p.rotation, p.render_status AS \"render-status\",
-                                        (SELECT array_agg(dpi) from page_images where page = id) AS dpi
-                                      FROM pages AS p
-                                      JOIN document_pages AS dp
-                                        ON dp.page = p.id
-                                      WHERE dp.document IN (%s)
-                                      ORDER BY dp.number"
-                                ids :document)
-          tags (get-associated conn "SELECT dt.document, t.name FROM document_tags AS dt JOIN tags AS t ON t.id = dt.tag WHERE dt.document IN (%s) ORDER BY dt.seq" ids :document)]
-      (map (fn [{:keys [id] :as document}]
-             (assoc document
-                    :pages (->> (vec (get pages id))
-                                (mapv #(update-in % [:dpi] pg-array->set)))
-                    :tags (mapv :name (get tags id))))
-           documents))))
+    (if-not (seq ids)
+      []
+      (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, notes FROM documents WHERE id IN (%s)" ids))
+            pages (get-associated conn "SELECT dp.document, p.id, p.rotation, p.render_status AS \"render-status\",
+                                          (SELECT array_agg(dpi) from page_images where page = id) AS dpi
+                                        FROM pages AS p
+                                        JOIN document_pages AS dp
+                                          ON dp.page = p.id
+                                        WHERE dp.document IN (%s)
+                                        ORDER BY dp.number"
+                                  ids :document)
+            tags (get-associated conn "SELECT dt.document, t.name 
+                                       FROM document_tags AS dt
+                                       JOIN tags AS t ON t.id = dt.tag
+                                       WHERE dt.document IN (%s) 
+                                       ORDER BY dt.seq"
+                                 ids :document)]
+        (map (fn [{:keys [id] :as document}]
+               (assoc document
+                      :pages (->> (vec (get pages id))
+                                  (mapv #(update-in % [:dpi] pg-array->set)))
+                      :tags (mapv :name (get tags id))))
+             documents)))))
 
 (defn get-document [db id]
   (first (get-documents db [id])))
@@ -344,8 +353,9 @@
 
 (defn remove-from-inbox! [db page-ids]
   (db/with-transaction [db db]
-    (db/notify! db :inbox/removed {:pages page-ids})
-    (db/delete! db :inbox (db/sql+placeholders "page IN (%s)" page-ids))))
+    (when (seq page-ids)
+      (db/notify! db :inbox/removed {:pages page-ids})
+      (db/delete! db :inbox (db/sql+placeholders "page IN (%s)" page-ids)))))
 
 ;;; TODO(mu): We need to cache this stuff.
 ;;; TODO: Handle render-status here
@@ -356,6 +366,7 @@
   [db document-id]
   ;; If the document has an associated file we can short-circuit the split&merge path
   (let [pages (document-pages db document-id)]
+    (assert (seq pages))
     (if-let [document-file (and (every? #(zero? (:rotation %)) pages)
                                 (document-file db document-id))]
       (let [f (java.io.File/createTempFile "pepa" ".pdf")
@@ -449,37 +460,34 @@
               (set))})
 
 (defmethod changed-entities* :pages [db _ seq-num]
-  (let [pages (mapv :id (db/query db ["SELECT id FROM pages WHERE state_seq > ?" seq-num]))]
+  (when-let [pages (mapv :id (db/query db ["SELECT id FROM pages WHERE state_seq > ?" seq-num]))]
     {:pages pages
-     :documents (when (seq pages)
-                  (->>
-                   (db/query db (db/sql+placeholders
-                                 "SELECT DISTINCT dp.document
-                                  FROM document_pages AS dp
-                                  WHERE dp.page IN (%s)" pages))
-                   (mapv :document)))
-     :inbox (when (seq pages)
-              (->>
-               (db/query db (db/sql+placeholders
-                             "SELECT page FROM inbox
-                              WHERE page IN (%s)" pages))
-               (mapv :page)))}))
+     :documents (->>
+                 (db/query db (db/sql+placeholders
+                               "SELECT DISTINCT dp.document
+                                FROM document_pages AS dp
+                                WHERE dp.page IN (%s)" pages))
+                 (mapv :document))
+     :inbox (->>
+             (db/query db (db/sql+placeholders
+                           "SELECT page FROM inbox
+                            WHERE page IN (%s)" pages))
+             (mapv :page))}))
 
 (defmethod changed-entities* :page_images [db _ seq-num]
-  (let [pages (->>
-               (db/query db ["SELECT DISTINCT p.id
-                              FROM page_images as pi
-                              LEFT JOIN pages as p ON p.id = pi.page
-                              WHERE pi.state_seq > ?" seq-num])
-               (map :id))]
+  (when-let [pages (->>
+                    (db/query db ["SELECT DISTINCT p.id
+                                   FROM page_images as pi
+                                   LEFT JOIN pages as p ON p.id = pi.page
+                                   WHERE pi.state_seq > ?" seq-num])
+                    (map :id))]
     {:pages pages
-     :documents (when (seq pages)
-                  (->>
-                   (db/query db (db/sql+placeholders
-                                 "SELECT DISTINCT dp.document
-                                  FROM document_pages AS dp
-                                  WHERE dp.page IN (%s)" pages))
-                   (mapv :document)))}))
+     :documents (->>
+                 (db/query db (db/sql+placeholders
+                               "SELECT DISTINCT dp.document
+                                FROM document_pages AS dp
+                                WHERE dp.page IN (%s)" pages))
+                 (mapv :document))}))
 
 (defmethod changed-entities* :files [db _ seq-num]
   {:files (->> (db/query db ["SELECT id FROM files WHERE state_seq > ?" seq-num])

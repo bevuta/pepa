@@ -54,6 +54,7 @@
   (apply str (interpose ", " (map (constantly "?") coll))))
 
 (defn sql+placeholders [sql-format-str coll]
+  (assert (seq coll))
   (vec (cons (format sql-format-str (placeholders coll)) coll)))
 
 (def advisory-lock-prefix 1952539)
