@@ -183,10 +183,8 @@
     [:ul.tags {:class "editable"
                :tab-index 0
                :on-click (fn [e]
-                           (focus-tag-input owner)
-                           (doto e
-                             (.preventDefault)
-                             (.stopPropagation)))
+                           (ui/cancel-event e)
+                           (focus-tag-input owner))
                ;; Catch keys coming from tags and redirect them to
                ;; the input field
                :on-key-down (fn [e]
