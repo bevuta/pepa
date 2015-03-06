@@ -460,34 +460,36 @@
               (set))})
 
 (defmethod changed-entities* :pages [db _ seq-num]
-  (when-let [pages (mapv :id (db/query db ["SELECT id FROM pages WHERE state_seq > ?" seq-num]))]
-    {:pages pages
-     :documents (->>
-                 (db/query db (db/sql+placeholders
-                               "SELECT DISTINCT dp.document
-                                FROM document_pages AS dp
-                                WHERE dp.page IN (%s)" pages))
-                 (mapv :document))
-     :inbox (->>
-             (db/query db (db/sql+placeholders
-                           "SELECT page FROM inbox
-                            WHERE page IN (%s)" pages))
-             (mapv :page))}))
+  (let [pages (mapv :id (db/query db ["SELECT id FROM pages WHERE state_seq > ?" seq-num]))]
+    (when (seq pages)
+      {:pages pages
+       :documents (->>
+                   (db/query db (db/sql+placeholders
+                                 "SELECT DISTINCT dp.document
+                                  FROM document_pages AS dp
+                                  WHERE dp.page IN (%s)" pages))
+                   (mapv :document))
+       :inbox (->>
+               (db/query db (db/sql+placeholders
+                             "SELECT page FROM inbox
+                              WHERE page IN (%s)" pages))
+               (mapv :page))})))
 
 (defmethod changed-entities* :page_images [db _ seq-num]
-  (when-let [pages (->>
-                    (db/query db ["SELECT DISTINCT p.id
-                                   FROM page_images as pi
-                                   LEFT JOIN pages as p ON p.id = pi.page
-                                   WHERE pi.state_seq > ?" seq-num])
-                    (map :id))]
-    {:pages pages
-     :documents (->>
-                 (db/query db (db/sql+placeholders
-                               "SELECT DISTINCT dp.document
+  (let [pages (->>
+               (db/query db ["SELECT DISTINCT p.id
+                              FROM page_images as pi
+                              LEFT JOIN pages as p ON p.id = pi.page
+                              WHERE pi.state_seq > ?" seq-num])
+               (map :id))]
+    (when (seq pages)
+      {:pages pages
+       :documents (->>
+                   (db/query db (db/sql+placeholders
+                                 "SELECT DISTINCT dp.document
                                 FROM document_pages AS dp
                                 WHERE dp.page IN (%s)" pages))
-                 (mapv :document))}))
+                   (mapv :document))})))
 
 (defmethod changed-entities* :files [db _ seq-num]
   {:files (->> (db/query db ["SELECT id FROM files WHERE state_seq > ?" seq-num])
