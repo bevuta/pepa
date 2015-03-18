@@ -9,7 +9,7 @@
 
                  ;; DB
                  [org.clojure/java.jdbc "0.3.6"]
-                 [com.mchange/c3p0 "0.9.2.1"]
+                 [com.mchange/c3p0 "0.9.5"]
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
 
                  ;; Web
@@ -41,18 +41,18 @@
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-2985"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-3123"]
                                        [com.cemerick/piggieback "0.1.6-SNAPSHOT"]
                                        [com.cognitect/transit-cljs "0.8.205"]
                                        [org.omcljs/om "0.8.8" :exclusions [cljsjs/react]]
-                                       [cljsjs/react-with-addons "0.12.2-7"]
+                                       [cljsjs/react-with-addons "0.13.0-0"]
                                        [org.clojars.the-kenny/nom "0.1.1"]
                                        [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"]
                                        [sablono "0.3.4" :exclusions [cljsjs/react]]
-                                       [secretary "1.2.1"]
+                                       [secretary "1.2.2"]
                                        [the/parsatron "0.0.7"]
 
-                                       [weasel "0.6.1-SNAPSHOT"]]}}
+                                       [org.clojars.the-kenny/weasel "0.6.1-SNAPSHOT"]]}}
   ;; Cljsbuild configuration. Also see profiles.clj
   :cljsbuild {:builds {:pepa {:source-paths ["src-cljs/"]
                               :compiler {:output-to "resources/public/pepa.js"
