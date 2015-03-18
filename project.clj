@@ -27,6 +27,10 @@
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojure/core.match "0.2.2"]
 
+                 ;; Logging
+                 [org.clojure/tools.logging "0.3.1"]
+                 [log4j/log4j "1.2.17"]
+
                  ;; E-Mail
                  [javax.mail/mail "1.4.7"
                   :exclusions [javax.activation/activation]]
