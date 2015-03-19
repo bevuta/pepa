@@ -63,6 +63,9 @@
       (pdf/with-reader [pdf (:data page)]
         (let [run-ocr (run-ocr-fn component (get-in component [:config :ocr]))
               [status text] (pdf/call-with-rendered-page-file pdf (:number page) :png 300 run-ocr)]
+          (log/debug component "Got OCR result for page" (:id page)
+                     {:status status
+                      :text-length (count text)})
           (db/update! db
                       :pages
                       {:ocr_text text
