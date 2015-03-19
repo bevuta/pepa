@@ -1,7 +1,8 @@
 (ns user
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh]]
-            [pepa.core :as pepa]))
+            [pepa.core :as pepa]
+            [pepa.log :as log]))
 
 (defonce system nil)
 
@@ -14,7 +15,10 @@
 
 (defn stop []
   (alter-var-root #'system
-                  (fn [s] (when s (component/stop s)))))
+                  (fn [s]
+                    (when s
+                      (log/info s "======== STOPPING SYSTEM ========")
+                      (component/stop s)))))
 
 (defn go []
   (init)

@@ -389,7 +389,8 @@
     (if-let [document-file (and (every? #(zero? (:rotation %)) pages)
                                 (document-file db document-id))]
       (do
-        (log/debug "document-pdf" "short-circuiting because document"
+        (log/debug db
+                   "[document-pdf] short-circuiting because document"
                    document-id
                    "has associated file"
                    document-file)

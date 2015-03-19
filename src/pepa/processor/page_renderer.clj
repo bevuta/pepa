@@ -2,7 +2,8 @@
   (:require [com.stuartsierra.component :as component]
             [pepa.db :as db]
             [pepa.pdf :as pdf]
-            [pepa.processor :as processor :refer [IProcessor]])
+            [pepa.processor :as processor :refer [IProcessor]]
+            [pepa.log :as log])
   (:import java.security.MessageDigest
            java.math.BigInteger))
 
@@ -20,12 +21,12 @@
     (.update md bs)
     (format "%032x" (BigInteger. 1 (.digest md)))))
 
-(defn ^:private render-page [dpis page]
+(defn ^:private render-page [renderer dpis page]
   (try
     (pdf/with-reader [pdf (:data page)]
       ;; Render images in all configured DPI settings
       (mapv (fn [dpi]
-              (println "Rendering with" dpi "dpi")
+              (log/debug renderer "Rendering" (:id page) "with" dpi "dpi")
               (let [image (pdf/render-page pdf (:number page) :png dpi)]
                 {:page (:id page)
                  :dpi dpi
@@ -33,7 +34,7 @@
                  :hash (hash-data image)}))
             dpis))
     (catch Exception e
-      (println "Rendering failed:" (str e)))))
+      (log/error renderer "Rendering failed:" (str e)))))
 
 (extend-type PageRenderer
   IProcessor
@@ -46,11 +47,11 @@
      LIMIT 1")
 
   (process-item [component page]
-    (println "Rendering page" (:id page))
+    (log/info component "Rendering page" (:id page))
     (let [db (:db component)
           config (:config component)
           dpis (set (-> config :rendering :png :dpi))
-          images (render-page dpis page)]
+          images (render-page component dpis page)]
       (db/with-transaction [db db]
         (let [status (if images
                        (do (db/insert-coll! db :page_images images)
@@ -64,13 +65,13 @@
 
   component/Lifecycle
   (start [component]
-    (println ";; Starting page renderer")
+    (log/info component "Starting page renderer")
     (assoc component
-      :processor (processor/start component :pages/new)))
+           :processor (processor/start component :pages/new)))
 
   (stop [component]
-    (println ";; Stopping page renderer")
+    (log/info component "Stopping page renderer")
     (when-let [processor (:processor component)]
       (processor/stop processor))
     (assoc component
-      :processor nil)))
+           :processor nil)))

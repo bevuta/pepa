@@ -41,7 +41,7 @@
 (defrecord Bus [input mult output]
   component/Lifecycle
   (start [component]
-    (log/info component "Starting")
+    (log/info component "Starting Bus")
     (let [input (async/chan)
           mult (async/mult input)
           output-tap (async/chan)
@@ -53,7 +53,7 @@
              :output output)))
 
   (stop [component]
-    (log/info component "Stopping")
+    (log/info component "Stopping Bus")
     (when-let [input (:input component)]
       (async/close! input))
     (assoc component

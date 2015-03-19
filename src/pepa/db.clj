@@ -2,14 +2,15 @@
   (:require [com.stuartsierra.component :as component]
             [clojure.java.jdbc :as jdbc]
             [clojure.string :as s]
-            [pepa.bus :as bus])
+            [pepa.bus :as bus]
+            [pepa.log :as log])
   (:import com.mchange.v2.c3p0.ComboPooledDataSource
            org.postgresql.util.PGobject))
 
 (defrecord Database [config datasource]
   component/Lifecycle
   (start [component]
-    (println ";; Starting database")
+    (log/info component "Starting database")
     (let [spec (:db config)
           cpds (doto (ComboPooledDataSource.)
                  (.setDriverClass "org.postgresql.Driver")
@@ -24,9 +25,9 @@
       (assoc component :datasource cpds)))
 
   (stop [component]
-    (println ";; Stopping database")
+    (log/info component "Stopping database")
     (when datasource
-      (println ";; Closing DB connection")
+      (log/info component "Closing DB connection")
       (.close datasource))
     (assoc component :datasource nil)))
 

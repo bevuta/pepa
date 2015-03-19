@@ -1,7 +1,8 @@
 (ns pepa.smtp
   (:require [com.stuartsierra.component :as component]
             [pepa.model :as m]
-            [pepa.db :as db])
+            [pepa.db :as db]
+            [pepa.log :as log])
   (:import org.subethamail.smtp.helper.SimpleMessageListener
            org.subethamail.smtp.helper.SimpleMessageListenerAdapter
            org.subethamail.smtp.server.SMTPServer
@@ -13,7 +14,7 @@
   component/Lifecycle
   (start [component]
     (when (get-in component [:config :smtp :enable])
-      (println ";; Starting SMTP server")
+      (log/info component "Starting SMTP Server")
       (let [config (:smtp config)
             host (:host config)
             port (:port config)
@@ -52,7 +53,7 @@
 
   (stop [component]
     (when-let [server (:server component)]
-      (println ";; Stopping SMTP server")
+      (log/info component "Stopping SMTP Server")
       (.stop server))
     (assoc component :server nil)))
 
