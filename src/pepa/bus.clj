@@ -1,6 +1,8 @@
 (ns pepa.bus
   (:require [com.stuartsierra.component :as component]
-            [clojure.core.async :as async :refer [>!!]]))
+            [clojure.core.async :as async :refer [>!!]]
+
+            [pepa.log :as log]))
 
 ;;; pepa.bus is a simple application-wide notification bus. Clients
 ;;; can subscribe for any topic they want and will receive a value for
@@ -10,6 +12,7 @@
   "Returns a channel with that will receive a value when `notify!' is
   called for that topic." 
   ([bus topic buf]
+   (log/debug bus "subscribe" {:topic topic :buf buf})
    (let [chan (async/chan buf)]
      (async/sub (:output bus) topic chan)
      chan))
@@ -18,7 +21,7 @@
 
 (defn notify!
   ([bus topic data]
-   (println "notify!" topic data)
+   (log/debug bus "notify!" {:topic topic :data data})
    (>!! (:input bus) (assoc data ::topic topic)))
   ([bus topic]
    (notify! bus topic {})))
@@ -26,6 +29,7 @@
 (defn subscribe-all
   "Returns a channel receiving all messages sent over the bus."
   ([bus buf]
+   (log/debug bus "subscribe-all" {:buf buf})
    (let [ch (async/chan buf)]
      (async/tap (:mult bus) ch)))
   ([bus]
@@ -37,7 +41,7 @@
 (defrecord Bus [input mult output]
   component/Lifecycle
   (start [component]
-    (println ";; Starting bus")
+    (log/info component "Starting")
     (let [input (async/chan)
           mult (async/mult input)
           output-tap (async/chan)
@@ -49,7 +53,7 @@
              :output output)))
 
   (stop [component]
-    (println ";; Stopping bus")
+    (log/info component "Stopping")
     (when-let [input (:input component)]
       (async/close! input))
     (assoc component

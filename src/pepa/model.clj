@@ -4,6 +4,8 @@
             [pepa.model.query :as query]
             [pepa.mime :as mime]
             [pepa.util :refer [slurp-bytes with-temp-file]]
+            [pepa.log :as log]
+            
             [clojure.string :as s]
             [clojure.set :as set]
             [clojure.java.io :as io]))
@@ -19,18 +21,20 @@
   (->> (db/query db ["SELECT id FROM pages WHERE file = ? ORDER BY number" file])
        (map :id)))
 
-(defn store-file! [db {:keys [content-type origin name data]}]
-  (assert content-type)
-  (assert origin)
-  (assert data)
-  (let [file (db/insert! db
-                         :files
-                         {:content_type content-type
-                          :origin origin
-                          :name name
-                          :data data})]
-    (db/notify! db :files/new)
-    (first file)))
+(defn store-file! [db file]
+  (let [{:keys [content-type origin name data]} file]
+    (assert content-type)
+    (assert origin)
+    (assert data)
+    (log/info db "Storing file" file)
+    (let [file (db/insert! db
+                           :files
+                           {:content_type content-type
+                            :origin origin
+                            :name name
+                            :data data})]
+      (db/notify! db :files/new)
+      (first file))))
 
 (defn store-files! [db files extra-attrs]
   (db/with-transaction [db db]
@@ -48,6 +52,7 @@
 
 (defn rotate-page [db page-id rotation]
   (assert (zero? (mod rotation 90)))
+  (log/info db "Rotating page" page-id "to" rotation "degrees")
   (db/with-transaction [db db]
     (db/notify! db :pages/updated)
     (db/update! db :pages {:rotation rotation} ["id = ?" page-id])))
@@ -163,6 +168,7 @@
                         (range))))
 
 (defn add-pages! [db document page-ids]
+  (log/info db "Adding pages to document" (str document ":") page-ids)
   (db/with-transaction [db db]
     (add-pages*! db document page-ids)
     (db/notify! db :documents/updated {:id document})))
@@ -178,6 +184,7 @@
       (add-pages*! conn document (page-ids conn file)))))
 
 (defn link-file! [db document file]
+  (log/info db "Linking document" document "to" file)
   (db/with-transaction [db db]
     (link-file*! db document file)
     (db/notify! db :documents/updated {:id document})))
@@ -194,6 +201,11 @@
             ;; XOR
             (and (or p q) (not (and p q))))
           "Can't pass page-ids AND file.")
+  (log/info db "Creating document" {:title title
+                                    :tags tags
+                                    :notes notes
+                                    :page-ids page-ids
+                                    :file file})
   (db/with-transaction [conn db]
     (let [[{:keys [id]}] (db/insert! conn :documents
                                      {:title title
@@ -216,7 +228,9 @@
   (assert (every? string? added-tags))
   (assert (every? string? removed-tags))
   (assert (every? #{:title} (keys props)))
-
+  (log/info db "Updating document" id {:props props
+                                       :tags/added added-tags
+                                       :tags/removed removed-tags})
   (db/with-transaction [conn db]
     (if-let [document (get-document conn id)]
       (let [added-tags (set added-tags)
@@ -291,6 +305,7 @@
                            {:document document-id :tag tag}))))))
 
 (defn add-tags! [db document-id tags]
+  (log/info db "Adding tags to document" document-id (set tags))
   (db/with-transaction [db db]
     (add-tags*! db document-id tags)
     (db/notify! db :documents/updated {:id document-id, :tags/new tags})))
@@ -307,6 +322,7 @@
                             [document-id]))))))
 
 (defn remove-tags! [db document-id tags]
+  (log/info db "Removing tags from document" document-id (set tags))
   (db/with-transaction [db db]
     (remove-tags*! db document-id tags)
     (db/notify! db :documents/updated {:id document-id, :tags/removed tags})))
@@ -347,11 +363,13 @@
 (defn add-to-inbox!
   "Unconditionally adds PAGES to inbox."
   [db page-ids]
+  (log/info db "Adding pages" page-ids "to inbox")
   (db/with-transaction [db db]
     (db/notify! db :inbox/added {:pages page-ids})
     (db/insert-coll! db :inbox (for [id page-ids] {:page id}))))
 
 (defn remove-from-inbox! [db page-ids]
+  (log/info db "Removing pages" page-ids "from inbox")
   (db/with-transaction [db db]
     (when (seq page-ids)
       (db/notify! db :inbox/removed {:pages page-ids})
@@ -364,17 +382,23 @@
   pointing to the (temporary) file. Caller must make sure to delete
   this file."
   [db document-id]
+  (log/info db "Generating PDF for" document-id)
   ;; If the document has an associated file we can short-circuit the split&merge path
   (let [pages (document-pages db document-id)]
     (assert (seq pages))
     (if-let [document-file (and (every? #(zero? (:rotation %)) pages)
                                 (document-file db document-id))]
-      (let [f (java.io.File/createTempFile "pepa" ".pdf")
-            data (-> (db/query db ["SELECT data FROM files WHERE id = ?" document-file]) first :data)]
-        (with-open [out (io/output-stream f)]
-          (io/copy data out)
-          (.flush out))
-        f)
+      (do
+        (log/debug "document-pdf" "short-circuiting because document"
+                   document-id
+                   "has associated file"
+                   document-file)
+        (let [f (java.io.File/createTempFile "pepa" ".pdf")
+              data (-> (db/query db ["SELECT data FROM files WHERE id = ?" document-file]) first :data)]
+          (with-open [out (io/output-stream f)]
+            (io/copy data out)
+            (.flush out))
+          f))
       ;; ...if not: Split all source PDFs and merge the pages together
       (let [files (db/query db (db/sql+placeholders "SELECT f.id, f.data FROM files as f WHERE f.id in (%s)"
                                                     (into #{} (map :file pages))))
