@@ -60,6 +60,7 @@
             (when (async-web/open? ch)
               (async-web/close ch))))))))
 
+;;; TODO(mu): Logging: We need to pass the :web component into this
 (defn ^:private poll-handler* [req]
   (let [method (:request-method req)
         allowed-methods #{:get :post}
