@@ -75,13 +75,16 @@
 
 ;;; Extend Logger 
 
+(defn ^:private component-name [c]
+  (.getSimpleName (class c)))
+
 (extend-type CTLLogger
   ILogger
   (-log
     ([logger component level throwable message]
-     (clojure.tools.logging/log (.getName (type component)) level throwable message))
+     (clojure.tools.logging/log (component-name component) level throwable message))
     ([logger component level message]
-     (clojure.tools.logging/log (.getName (type component)) level nil message))))
+     (clojure.tools.logging/log (component-name component) level nil message))))
 
 (extend-type DummyLogger
   ILogger
