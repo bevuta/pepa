@@ -15,13 +15,15 @@
                  ;; Web
                  [org.immutant/web "2.0.0-beta2"]
                  [compojure "1.3.2"]
-                 [ring/ring-devel "1.3.2"]
+                 [ring/ring-devel "1.3.2"
+                  :exclusions [ring/ring-core]]
                  [com.cognitect/transit-clj "0.8.269"]
                  [ring-transit "0.1.3"]
                  [ring/ring-json "0.3.1"]
                  [hiccup "1.0.5"]
                  [liberator "0.12.2"]
                  [io.clojure/liberator-transit "0.3.0"]
+                 [org.clojure/data.json "0.2.6"]
 
                  ;; Utility
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
@@ -29,23 +31,27 @@
 
                  ;; Logging
                  [org.clojure/tools.logging "0.3.1"]
-                 [log4j/log4j "1.2.17"]
+                 [ch.qos.logback/logback-classic "1.1.2"]
 
                  ;; E-Mail
                  [javax.mail/mail "1.4.7"
                   :exclusions [javax.activation/activation]]
-                 [org.subethamail/subethasmtp "3.1.7"]]
+                 [org.subethamail/subethasmtp "3.1.7"
+                  :exclusions [org.slf4j/slf4j-api]]]
+  :exclusions [org.clojure/data.json
+               log4j/log4j]
   :plugins [[lein-cljsbuild "1.0.4"]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"
              "-XX:MaxPermSize=128M"]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
-  :profiles {:repl {:plugins [[cider/cider-nrepl "0.8.2"]]
+  :profiles {:repl {:plugins [[cider/cider-nrepl "0.8.2"
+                               :exclusions [org.clojure/java.classpath]]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-3123"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-3126"]
                                        [com.cemerick/piggieback "0.1.6-SNAPSHOT"]
                                        [com.cognitect/transit-cljs "0.8.205"]
                                        [org.omcljs/om "0.8.8" :exclusions [cljsjs/react]]
