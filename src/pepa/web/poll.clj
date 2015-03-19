@@ -50,7 +50,7 @@
         (let [[val port] (async/alts! [timeout bus-changes])]
           (cond
             ;; Something changed
-            (= port bus-changes)
+            (and val (= port bus-changes))
             (let [topic (bus/topic val)]
               (lock! db topic)
               ;; Recur to trigger the then-part of the if.
