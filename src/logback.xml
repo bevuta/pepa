@@ -5,7 +5,9 @@
     </encoder>
   </appender>
 
-  <root level="info">
+  <root level="INFO">
     <appender-ref ref="stdout" />
   </root>
+
+  <logger name="com.mchange.v2" level="ERROR" />
 </configuration>
