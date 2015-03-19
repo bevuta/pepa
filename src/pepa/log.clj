@@ -1,4 +1,4 @@
-(ns pepa.logging
+(ns pepa.log
   (:require [com.stuartsierra.component :as component]
             clojure.tools.logging))
 

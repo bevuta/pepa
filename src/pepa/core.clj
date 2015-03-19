@@ -10,7 +10,7 @@
             [pepa.processor.page-renderer :as page-renderer]
             [pepa.init :as init]
 
-            [pepa.logging :refer [wrap-logging]]
+            [pepa.log :refer [wrap-logging]]
 
             [clojure.core.match :refer [match]])
   (:gen-class))
