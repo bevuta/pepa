@@ -48,13 +48,15 @@
 
 (defn log
   ([component level & args]
-   ;; TODO(mu): Not sure if we should *log* if no logger is available.
-   ;; Very philosophical question.
-   (when-let [logger (::logger component)]
+   (if-let [logger (::logger component)]
      (let [-log (partial -log logger component level)]
        (if (instance? Throwable (first args))
          (-log (first args) (apply print-str (rest args)))
-         (-log (apply print-str args)))))))
+         (-log (apply print-str args))))
+     (throw (ex-info "Couldn't get ::logger from component"
+                     {:component component
+                      :level level
+                      :args args})))))
 
 (defmacro ^:private defloglevel [level]
   (let [level-kw (keyword level)]
