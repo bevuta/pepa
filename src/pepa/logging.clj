@@ -14,10 +14,12 @@
 ;;; a dependency in every component we want to log something.
 
 (defprotocol ILogger
-  (-log [logger component level throwable message]
+  (-log
+    [logger component level throwable message]
+    [logger component level message]
     "The generic logging function. Takes a ILogger instance, the
-    component that initiated the logging, a log-level, a
-    throwable (might be nil) and a message."))
+    component that initiated the logging, a log-level, an optional
+    throwable and a message."))
 
 (defrecord CTLLogger [config])
 (defrecord DummyLogger [config])
@@ -45,23 +47,22 @@
    (wrap-logging system (make-ctl-logger))))
 
 (defn log
-  ([component level throwable message]
+  ([component level & args]
    ;; TODO(mu): Not sure if we should *log* if no logger is available.
    ;; Very philosophical question.
    (when-let [logger (::logger component)]
-     (-log logger component level throwable message)))
-  ([component level message]
-   (log component level nil message)))
+     (let [-log (partial -log logger component level)]
+       (if (instance? Throwable (first args))
+         (-log (first args) (apply print-str (rest args)))
+         (-log (apply print-str args)))))))
 
 (defmacro ^:private defloglevel [level]
   (let [level-kw (keyword level)]
     `(defn ~level
-       {:arglists '([~'component ~'throwable ~'message]
-                    [~'component ~'message])}
-       ([component# throwable# message#]
-        (log component# ~level-kw throwable# message#))
-       ([component# message#]
-        (log component# ~level-kw nil message#)))))
+       {:arglists '([~'component ~'throwable ~'& ~'msgs]
+                    [~'component ~'& ~'msgs])}
+       ([component# & more#]
+        (apply log component# ~level-kw more#)))))
 
 (defloglevel trace)
 (defloglevel debug)
@@ -74,9 +75,12 @@
 
 (extend-type CTLLogger
   ILogger
-  (-log [logger component level throwable message]
-    (clojure.tools.logging/log (.getName (type component)) level throwable message)))
+  (-log
+    ([logger component level throwable message]
+     (clojure.tools.logging/log (.getName (type component)) level throwable message))
+    ([logger component level message]
+     (clojure.tools.logging/log (.getName (type component)) level nil message))))
 
 (extend-type DummyLogger
   ILogger
-  (-log [logger component level throwable message]))
+  (-log [& _]))
