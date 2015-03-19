@@ -17,9 +17,11 @@
   (pdf/with-reader [pdf data]
     (doseq [page (range 0 (pdf/page-count pdf))]
       (log/info processor "Processing page" page)
+      (log/debug processor "Extracting text of page" page)
       (let [text (-> (pdf/extract-page-text pdf page)
                      ;; Postgres can't handle NULL-bytes in TEXT
                      (s/replace "\0" ""))]
+        (log/debug processor "Inserting page" page "into the database")
         (db/insert! (:db processor) :pages
                     {:file file-id
                      :number page
