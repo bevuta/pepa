@@ -34,7 +34,7 @@
 (defn ^:private send-seqs! [db ch content-type]
   ((send-fn content-type) ch {:seqs (m/sequence-numbers db)}))
 
-(defn lock! [db topic]
+(defn ^:private lock-all! [db topic]
   (db/with-transaction [db db]
     (doseq [lock db/advisory-locks]
       (db/advisory-xact-lock! db lock))))
@@ -56,9 +56,9 @@
             ;; Something changed
             (= port bus-changes)
             (let [topic (bus/topic val)]
-              (log/debug web "lock!")
-              (lock! db topic)
-              (log/debug web "lock! finished")
+              (log/debug web "lock-all!")
+              (lock-all! db topic)
+              (log/debug web "lock-all! finished")
               ;; Recur to trigger the then-part of the if.
               (recur))
             ;; Hit a timeout or channel is closed
