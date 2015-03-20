@@ -54,7 +54,7 @@
         (let [[val port] (async/alts! [timeout bus-changes])]
           (cond
             ;; Something changed
-            (= port bus-changes)
+            (and val (= port bus-changes))
             (let [topic (bus/topic val)]
               (log/debug web "lock-all!")
               (lock-all! db topic)
