@@ -19,24 +19,32 @@
   (->> (db/query db ["SELECT id FROM pages WHERE file = ? ORDER BY number" file])
        (map :id)))
 
-(defn store-file! [db {:keys [content-type origin name data]}]
+(defn ^:private store-file*! [db {:keys [content-type origin name data]}]
   (assert content-type)
   (assert origin)
   (assert data)
-  (let [file (db/insert! db
-                         :files
-                         {:content_type content-type
-                          :origin origin
-                          :name name
-                          :data data})]
-    (db/notify! db :files/new)
-    (first file)))
+  (let [[file] (db/insert! db
+                           :files
+                           {:content_type content-type
+                            :origin origin
+                            :name name
+                            :data data})]
+
+    file))
+
+(defn store-file! [db attrs]
+  (db/with-transaction [db db]
+    (let [file (store-file*! db attrs)]
+      (db/notify! db :files/new {:files [(:id file)]})
+      file)))
 
 (defn store-files! [db files extra-attrs]
   (db/with-transaction [db db]
-    (doall (map (fn [file]
-                  (store-file! db (merge extra-attrs file)))
-                files))))
+    (let [files (mapv (fn [file]
+                        (store-file*! db (merge extra-attrs file)))
+                      files)]
+      (db/notify! db :files/new {:files (mapv :id files)})
+      files)))
 
 (defn file-documents
   "Returns a list of document-ids which are linked to FILE."
