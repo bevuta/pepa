@@ -40,3 +40,7 @@
                 :ip "0.0.0.0"
                 :port 9009
                 :working-dir "resources/public/out"))))
+
+(defn set-logback-level! [level]
+  (doto (org.slf4j.LoggerFactory/getLogger ch.qos.logback.classic.Logger/ROOT_LOGGER_NAME)
+    (.setLevel (ch.qos.logback.classic.Level/toLevel (name level)))))
