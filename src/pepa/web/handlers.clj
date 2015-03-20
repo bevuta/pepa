@@ -298,9 +298,10 @@
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
 
-(defn wrap-component [handler {:keys [config db bus]}]
+(defn wrap-component [handler {:keys [config db bus] :as web}]
   (fn [req]
     (handler (assoc req
+                    ::web web
                     ::config config
                     ::db db
                     ::bus bus))))
