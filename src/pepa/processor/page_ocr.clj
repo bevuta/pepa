@@ -64,11 +64,13 @@
       (pdf/with-reader [pdf (:data page)]
         (let [run-ocr (run-ocr-fn (get-in component [:config :ocr]))
               [status text] (pdf/call-with-rendered-page-file pdf (:number page) :png 300 run-ocr)]
-          (db/update! db
-                      :pages
-                      {:ocr_text text
-                       :ocr_status status}
-                      ["id = ?" (:id page)])))))
+          (db/with-transaction [db db]
+            (db/notify! db :pages/updated)
+            (db/update! db
+                        :pages
+                        {:ocr_text text
+                         :ocr_status status}
+                        ["id = ?" (:id page)]))))))
 
   component/Lifecycle
   (start [component]
