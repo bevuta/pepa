@@ -58,25 +58,36 @@
 (defresource page [id]
   :allowed-methods #{:get}
   :available-media-types ["application/transit+json"]
+  :malformed? (fn [ctx]
+                (try [false {::id (Integer/parseInt id)}]
+                     (catch NumberFormatException e
+                       true)))
   :exists? (fn [ctx]
-             (when-let [page (first (m/get-pages (get-in ctx [:request ::db])
-                                                 [(Integer/parseInt id)]))]
-               {::page (select-keys page
-                                    [:id :render-status :rotation])}))
+             (let [[page] (m/get-pages (get-in ctx [:request ::db])
+                                       [(::id ctx)])]
+               (when page
+                 {::page (select-keys page [:id :render-status :rotation])})))
   :handle-ok ::page)
 
 (defresource page-image [id size]
   :allowed-methods #{:get}
   :available-media-types ["image/png"]
+  :malformed? (fn [ctx]
+                (try [false {::id (Integer/parseInt id)
+                             ::size (if (= ::max size)
+                                      size
+                                      (Integer/parseInt size))}]
+                     (catch NumberFormatException e
+                       true)))
   :exists? (fn [ctx]
              (try
                (let [db (get-in ctx [:request ::db])
                      config (get-in ctx [:request ::config])
                      [{:keys [image hash]}] (if (= size ::max)
                                               (db/query db ["SELECT image, hash FROM page_images WHERE page = ? ORDER BY dpi DESC LIMIT 1"
-                                                            (Integer/parseInt id)])
+                                                            (::id ctx)])
                                               (db/query db ["SELECT image, hash FROM page_images WHERE page = ? AND dpi = ?"
-                                                            (Integer/parseInt id) (Integer/parseInt size)]))]
+                                                            (::id ctx) (::size ctx)]))]
                  (when image
                    {::page (ByteArrayInputStream. image)
                     ::hash hash}))
@@ -88,17 +99,23 @@
 (defresource page-rotation [id]
   :allowed-methods #{:post}
   :available-media-types +default-media-types+
+  :malformed? (fn [ctx]
+                (try
+                  (let [id (Integer/parseInt id)
+                        rotation (get-in ctx [:request :body :rotation])]
+                    (if (and (integer? rotation)
+                             (zero? (mod rotation 90)))
+                      [false {::rotation (mod rotation 360)
+                              ::id id}]
+                      [true "Invalid rotation"]))
+                  (catch NumberFormatException e
+                    [true "Malformed ID"])))
   :exists? (fn [ctx]
              (let [db (get-in ctx [:request ::db])
-                   [{:keys [id]}] (db/query db ["SELECT id FROM pages WHERE id = ?" (Integer/parseInt id)])]
+                   [{:keys [id]}] (db/query db ["SELECT id FROM pages WHERE id = ?" (::id ctx)])]
                (when id {::page-id id})))
   :can-post-to-missing? false
-  :malformed? (fn [ctx]
-                (let [rotation (get-in ctx [:request :body :rotation])]
-                  (if (and (integer? rotation)
-                           (zero? (mod rotation 90)))
-                    [false {::rotation (mod rotation 360)}]
-                    [true "Invalid rotation"])))
+
   :post! (fn [ctx]
            (let [db (get-in ctx [:request ::db])
                  id (::page-id ctx)
@@ -108,11 +125,13 @@
 (defresource document [id]
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
+  :malformed? (fn [ctx]
+                (try [false {::id (Integer/parseInt id)}]
+                     (catch NumberFormatException e
+                       true)))
   :exists? (fn [ctx]
-             (let [id (Integer/parseInt id)]
-               (when-let [d (m/get-document (get-in ctx [:request ::db]) id)]
-                 {::document d
-                  ::id id})))
+             (when-let [d (m/get-document (get-in ctx [:request ::db]) (::id ctx))]
+               {::document d}))
   :post-redirect? true
   :location (fn [ctx] (str "/documents/" id))
   :post! (fn [ctx]
@@ -155,6 +174,10 @@
 (defresource document-download [id]
   :allowed-methods #{:get}
   :available-media-types ["application/pdf"]
+  :malformed? (fn [ctx]
+                (try [false {::id (Integer/parseInt id)}]
+                     (catch NumberFormatException e
+                       true)))
   :exists? (fn [ctx]
              (let [db (get-in ctx [:request ::db])
                    id (Integer/parseInt id)
@@ -227,7 +250,7 @@
                      tagging (get-in request [::config :tagging])]
                  ;; NOTE: auto-tag*! so we don't trigger updates on the notification bus
                  (m/auto-tag*! conn id tagging
-                              {:origin origin})
+                               {:origin origin})
                  {::document (m/get-document conn id)}))))
   :handle-created ::document
   :handle-ok (fn [ctx]
