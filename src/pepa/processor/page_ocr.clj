@@ -66,11 +66,13 @@
           (log/debug component "Got OCR result for page" (:id page)
                      {:status status
                       :text-length (count text)})
-          (db/update! db
-                      :pages
-                      {:ocr_text text
-                       :ocr_status status}
-                      ["id = ?" (:id page)])))))
+          (db/with-transaction [db db]
+            (db/notify! db :pages/updated)
+            (db/update! db
+                        :pages
+                        {:ocr_text text
+                         :ocr_status status}
+                        ["id = ?" (:id page)]))))))
 
   component/Lifecycle
   (start [component]
