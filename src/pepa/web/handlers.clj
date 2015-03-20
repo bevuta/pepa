@@ -51,7 +51,7 @@
   :handle-ok (fn [ctx]
                "Created")
   :post! (fn [ctx]
-           (m/store-files! (get-in ctx [:request ::db])
+           (m/store-files! (get-in ctx [:request :pepa/db])
                            (::files ctx)
                            {:origin "scanner"})))
 
@@ -63,7 +63,7 @@
                      (catch NumberFormatException e
                        true)))
   :exists? (fn [ctx]
-             (let [[page] (m/get-pages (get-in ctx [:request ::db])
+             (let [[page] (m/get-pages (get-in ctx [:request :pepa/db])
                                        [(::id ctx)])]
                (when page
                  {::page (select-keys page [:id :render-status :rotation])})))
@@ -81,8 +81,8 @@
                        true)))
   :exists? (fn [ctx]
              (try
-               (let [db (get-in ctx [:request ::db])
-                     config (get-in ctx [:request ::config])
+               (let [db (get-in ctx [:request :pepa/db])
+                     config (get-in ctx [:request :pepa/config])
                      [{:keys [image hash]}] (if (= size ::max)
                                               (db/query db ["SELECT image, hash FROM page_images WHERE page = ? ORDER BY dpi DESC LIMIT 1"
                                                             (::id ctx)])
@@ -111,13 +111,13 @@
                   (catch NumberFormatException e
                     [true "Malformed ID"])))
   :exists? (fn [ctx]
-             (let [db (get-in ctx [:request ::db])
+             (let [db (get-in ctx [:request :pepa/db])
                    [{:keys [id]}] (db/query db ["SELECT id FROM pages WHERE id = ?" (::id ctx)])]
                (when id {::page-id id})))
   :can-post-to-missing? false
 
   :post! (fn [ctx]
-           (let [db (get-in ctx [:request ::db])
+           (let [db (get-in ctx [:request :pepa/db])
                  id (::page-id ctx)
                  rotation (::rotation ctx)]
              (m/rotate-page db id rotation))))
@@ -130,7 +130,7 @@
                      (catch NumberFormatException e
                        true)))
   :exists? (fn [ctx]
-             (when-let [d (m/get-document (get-in ctx [:request ::db]) (::id ctx))]
+             (when-let [d (m/get-document (get-in ctx [:request :pepa/db]) (::id ctx))]
                {::document d}))
   :post-redirect? true
   :location (fn [ctx] (str "/documents/" id))
@@ -143,7 +143,7 @@
                  {added-tags :added, removed-tags :removed} (:tags params)]
              (assert (every? string? added-tags))
              (assert (every? string? removed-tags))
-             (db/with-transaction [db (::db req)]
+             (db/with-transaction [db (:pepa/db req)]
                (m/update-document! db id attrs added-tags removed-tags)
                {::document (m/get-document db id)})))
   :handle-created ::document
@@ -179,7 +179,7 @@
                      (catch NumberFormatException e
                        true)))
   :exists? (fn [ctx]
-             (let [db (get-in ctx [:request ::db])
+             (let [db (get-in ctx [:request :pepa/db])
                    id (Integer/parseInt id)
                    [{:keys [title]}]
                    (db/query db ["SELECT title FROM documents WHERE id = ?" id])]
@@ -198,11 +198,11 @@
   :allowed-methods #{:get :delete}
   :available-media-types +default-media-types+
   :delete! (fn [ctx]
-             (let [db (get-in ctx [:request ::db])]
+             (let [db (get-in ctx [:request :pepa/db])]
                (when-let [pages (seq (get-in ctx [:request :body]))]
                  (m/remove-from-inbox! db pages))))
   :handle-ok (fn [ctx]
-               (let [pages (m/inbox (get-in ctx [:request ::db]))]
+               (let [pages (m/inbox (get-in ctx [:request :pepa/db]))]
                  (condp = (get-in ctx [:representation :media-type])
                    "text/html" (html/inbox pages)
                    pages))))
@@ -212,7 +212,7 @@
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
                 (try
-                  (let [db (get-in ctx [:request ::db])]
+                  (let [db (get-in ctx [:request :pepa/db])]
                     (if-let [query (some-> ctx
                                            (get-in [:request :query-params "q"])
                                            (edn/read-string))]
@@ -224,7 +224,7 @@
                   (catch SQLException e
                     [true {::error "Query string generated invalid SQL"}])))
   :post! (fn [{:keys [request, representation] :as ctx}]
-           (db/with-transaction [conn (::db request)]
+           (db/with-transaction [conn (:pepa/db request)]
              (let [params (:body request)
                    file (:upload/file params)
                    pages (seq (:pages params))
@@ -247,7 +247,7 @@
                              pages
                              (assoc attrs :page-ids pages))
                      id (m/create-document! conn (assoc attrs :origin origin))
-                     tagging (get-in request [::config :tagging])]
+                     tagging (get-in request [:pepa/config :tagging])]
                  ;; NOTE: auto-tag*! so we don't trigger updates on the notification bus
                  (m/auto-tag*! conn id tagging
                                {:origin origin})
@@ -268,13 +268,13 @@
   :available-media-types +default-media-types+
   :allowed-methods #{:get}
   :handle-ok (fn [ctx]
-               (let [tags (m/all-tags (get-in ctx [:request ::db]))]
+               (let [tags (m/all-tags (get-in ctx [:request :pepa/db]))]
                  (condp = (get-in ctx [:representation :media-type])
                    "text/html" (html/tags (map :name tags))
                    tags))))
 
 (defn handle-get-objects-for-tag [req tag]
-  (db/with-transaction [conn (::db req)]
+  (db/with-transaction [conn (:pepa/db req)]
     (let [[{tag-id :id}] (db/query conn ["SELECT id FROM tags WHERE name = ?" tag])
           files (db/query conn ["SELECT f.id, f.origin, f.name FROM files AS f JOIN file_tags AS ft ON f.id = ft.file WHERE ft.tag = ?" tag-id])
           pages (db/query conn ["SELECT p.id, dp.page FROM pages AS p JOIN document_pages AS dp ON p.id = dp.document JOIN page_tags AS pt ON p.id = pt.page WHERE pt.tag = ?" tag-id])
@@ -289,7 +289,7 @@
   :exists? (fn [ctx]
              (when-let [ids (get-in ctx [:request :body])]
                {::ids ids
-                ::documents (m/get-documents (get-in ctx [:request ::db]) ids)}))
+                ::documents (m/get-documents (get-in ctx [:request :pepa/db]) ids)}))
   ;; Change the status code to 200
   :as-response (fn [d ctx]
                  (-> (as-response d ctx)
@@ -301,10 +301,10 @@
 (defn wrap-component [handler {:keys [config db bus] :as web}]
   (fn [req]
     (handler (assoc req
-                    ::web web
-                    ::config config
-                    ::db db
-                    ::bus bus))))
+                    :pepa/web web
+                    :pepa/config config
+                    :pepa/db db
+                    :pepa/bus bus))))
 
 (def handlers
   (routes (GET "/" [] (html/root))
@@ -338,7 +338,7 @@
 
 (defn wrap-logging [handler]
   (fn [req]
-    (when (get-in req [::config :web :log-requests?])
+    (when (get-in req [:pepa/config :web :log-requests?])
       (pprint req))
     (handler req)))
 

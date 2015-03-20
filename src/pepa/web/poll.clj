@@ -2,6 +2,7 @@
   (:require [pepa.model :as m]
             [pepa.db :as db]
             [pepa.bus :as bus]
+            [pepa.log :as log]
 
             [clojure.data.json :as json]
             [cognitect.transit :as transit]
@@ -38,13 +39,16 @@
     (doseq [lock db/advisory-locks]
       (db/advisory-xact-lock! db lock))))
 
-(defn ^:private handle-poll! [config db bus ch seqs content-type]
-  (let [send! (send-fn content-type)
+(defn ^:private handle-poll! [web config ch seqs content-type]
+  (let [{:keys [db bus]} web
+        send! (send-fn content-type)
         timeout (async/timeout (* 1000 (:timeout config)))
         bus-changes (bus/subscribe-all bus (async/sliding-buffer 1))]
     (go-loop []
       (if-let [changed (m/changed-entities db seqs)]
-        (send! ch changed)
+        (do
+          (log/debug web "Got changes from DB:" (pr-str changed))
+          (send! ch changed))
         ;; NOTE: We have to manually close the channels after a timeout,
         ;; else they stay open for forever & hog memory!
         (let [[val port] (async/alts! [timeout bus-changes])]
@@ -52,15 +56,17 @@
             ;; Something changed
             (= port bus-changes)
             (let [topic (bus/topic val)]
+              (log/debug web "lock!")
               (lock! db topic)
+              (log/debug web "lock! finished")
               ;; Recur to trigger the then-part of the if.
               (recur))
             ;; Hit a timeout or channel is closed
             (or (= port timeout) (not (async-web/open? ch)))
             (when (async-web/open? ch)
+              (log/debug web "closing poll channel" ch)
               (async-web/close ch))))))))
 
-;;; TODO(mu): Logging: We need to pass the :web component into this
 (defn ^:private poll-handler* [req]
   (let [method (:request-method req)
         allowed-methods #{:get :post}
@@ -69,10 +75,11 @@
                             #"^application/json"])
         seqs (:body req)
         
-        config (get-in req [:pepa.web.handlers/config :web :poll])
-        db (:pepa.web.handlers/db req)
-        bus (:pepa.web.handlers/bus req)
-        handle-poll! (partial handle-poll! config db bus)]
+        poll-config (get-in req [:pepa/config :web :poll])
+        db (:pepa/db req)
+        bus (:pepa/bus req)
+        web (:pepa/web req)
+        handle-poll! (partial handle-poll! web poll-config)]
     (cond
       (not content-type)
       {:status 406}
@@ -91,7 +98,7 @@
                          (send-seqs! db ch content-type)
                          (handle-poll! ch seqs content-type)))
             :on-error (fn [ch throwable]
-                        (println "Caught exception:" throwable)
+                        (log/error web "Caught exception:" throwable)
                         (async-web/close ch))})
           (assoc-in [:headers "content-type"] content-type)))))
 
