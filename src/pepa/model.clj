@@ -195,7 +195,7 @@
       (add-pages*! conn document (page-ids conn file)))))
 
 (defn link-file! [db document file]
-  (log/info db "Linking document" document "to" file)
+  (log/info db "Linking document" document "to file" file)
   (db/with-transaction [db db]
     (link-file*! db document file)
     (db/notify! db :documents/updated {:id document})))
