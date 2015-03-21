@@ -21,26 +21,29 @@
             address (and host (InetAddress/getByName host))
             server (->
                     (proxy [SimpleMessageListener] []
-                      (accept [from to] true)
+                      (accept [from to]
+                        (log/info component "Accepting mail" (str "(from: " from ", to: " to ")"))
+                        true)
                       (deliver [from to data]
                         (db/with-transaction [db (:db component)]
                           ;; TODO: Use proper mail address parser
-                          (let [origin (if (.startsWith to "scanner@") "scanner" "email")
-                                files (m/store-files! db
-                                                      (m/mime-message->files data)
-                                                      {:origin origin})]
-                            (when (= origin "email")
-                              (doseq [file files]
-                                (let [id (m/create-document! db {:file (:id file)
-                                                                 :title (:name file)})
-                                      tagging (get-in component [:config :tagging])]
-                                  ;; NOTE: auto-tag*! so we don't
-                                  ;; trigger an update on the
-                                  ;; notification bus
-                                  (m/auto-tag*! db id tagging
-                                               {:origin origin
-                                                :mail/from from
-                                                :mail/to to}))))))))
+                          (if-let [files (seq (m/mime-message->files data))]
+                            (let [origin (if (.startsWith to "scanner@") "scanner" "email")
+                                  files (m/store-files! db files {:origin origin})]
+                              (when (= origin "email")
+                                (doseq [file files]
+                                  (let [id (m/create-document! db {:file (:id file)
+                                                                   :title (:name file)})
+                                        tagging (get-in component [:config :tagging])]
+                                    ;; NOTE: auto-tag*! so we don't
+                                    ;; trigger an update on the
+                                    ;; notification bus
+                                    (log/info component "adding tags to created document")
+                                    (m/auto-tag*! db id tagging
+                                                  {:origin origin
+                                                   :mail/from from
+                                                   :mail/to to})))))
+                            (log/warn component "Got mail from" from "without attachments")))))
                     (SimpleMessageListenerAdapter.)
                     (SMTPServer.))]
         (doto server
