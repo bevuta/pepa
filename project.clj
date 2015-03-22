@@ -24,6 +24,8 @@
                  [liberator "0.12.2"]
                  [io.clojure/liberator-transit "0.3.0"]
                  [org.clojure/data.json "0.2.6"]
+                 [com.cemerick/friend "0.2.1"
+                  :exclusions [org.clojure/core.cache]]
 
                  ;; Utility
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
