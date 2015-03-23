@@ -35,6 +35,9 @@
                             "application/json"
                             "application/transit+json"])
 
+;;; TODO(mu): Write `defresource' macro that automatically adds
+;;; defaults for :authorized? and :available-media-types.
+
 (defresource file-scanner [web]
   :allowed-methods #{:post}
   :available-media-types +default-media-types+
@@ -49,7 +52,7 @@
                     [false {::files files}]
                     [true {::error (str "Unsupported content type: " (:content-type req))}])))
   :handle-malformed ::error
-  ;; TODO: :authorized?
+  ;; TODO(mu): :authorized?
   :handle-ok (fn [ctx]
                "Created")
   :post! (fn [ctx]
