@@ -74,6 +74,8 @@
   overwrite existing filters."
   [handler filter]
   (fn [req]
+    (when-let [filter (db-filter (:pepa/db req))]
+      (log/warn (:pepa/web req) "Overwriting existing filter:" filter))
     (handler (update-in req [:pepa/db] restrict-db filter))))
 
 (defn ^:private validation-fn [entity]
