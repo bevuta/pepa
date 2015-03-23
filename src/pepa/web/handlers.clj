@@ -3,6 +3,7 @@
             [pepa.model :as m]
             [pepa.web.html :as html]
             [pepa.web.poll :refer [poll-handler]]
+            [pepa.authorization :as auth]
             
             [pepa.util :refer [slurp-bytes]]
             [clojure.java.io :as io]
@@ -48,6 +49,7 @@
                     [false {::files files}]
                     [true {::error (str "Unsupported content type: " (:content-type req))}])))
   :handle-malformed ::error
+  ;; TODO: :authorized?
   :handle-ok (fn [ctx]
                "Created")
   :post! (fn [ctx]
@@ -62,6 +64,7 @@
                 (try [false {::id (Integer/parseInt id)}]
                      (catch NumberFormatException e
                        true)))
+  :authorized? (auth/authorization-fn :page ::id)
   :exists? (fn [ctx]
              (let [[page] (m/get-pages (get-in ctx [:request :pepa/db])
                                        [(::id ctx)])]
@@ -79,6 +82,7 @@
                                       (Integer/parseInt size))}]
                      (catch NumberFormatException e
                        true)))
+  :authorized? (auth/authorization-fn :page ::id)
   :exists? (fn [ctx]
              (try
                (let [db (get-in ctx [:request :pepa/db])
@@ -110,6 +114,7 @@
                       [true "Invalid rotation"]))
                   (catch NumberFormatException e
                     [true "Malformed ID"])))
+  :authorized? (auth/authorization-fn :page ::id)
   :exists? (fn [ctx]
              (let [db (get-in ctx [:request :pepa/db])
                    [{:keys [id]}] (db/query db ["SELECT id FROM pages WHERE id = ?" (::id ctx)])]
@@ -129,6 +134,7 @@
                 (try [false {::id (Integer/parseInt id)}]
                      (catch NumberFormatException e
                        true)))
+  :authorized? (auth/authorization-fn :document ::id)
   :exists? (fn [ctx]
              (when-let [d (m/get-document (get-in ctx [:request :pepa/db]) (::id ctx))]
                {::document d}))
@@ -178,6 +184,7 @@
                 (try [false {::id (Integer/parseInt id)}]
                      (catch NumberFormatException e
                        true)))
+  :authorized? (auth/authorization-fn :document ::id)
   :exists? (fn [ctx]
              (let [db (get-in ctx [:request :pepa/db])
                    id (Integer/parseInt id)
@@ -197,6 +204,7 @@
 (defresource inbox
   :allowed-methods #{:get :delete}
   :available-media-types +default-media-types+
+  ;; TODO: :authorized?
   :delete! (fn [ctx]
              (let [db (get-in ctx [:request :pepa/db])]
                (when-let [pages (seq (get-in ctx [:request :body]))]
@@ -223,6 +231,8 @@
                     [true {::error "Invalid query string"}])
                   (catch SQLException e
                     [true {::error "Query string generated invalid SQL"}])))
+  ;; TODO(mu): Validate POST
+  :authorized? (auth/authorization-fn :documents ::results)
   :post! (fn [{:keys [request, representation] :as ctx}]
            (db/with-transaction [conn (:pepa/db request)]
              (let [params (:body request)
@@ -267,6 +277,7 @@
 (defresource tags
   :available-media-types +default-media-types+
   :allowed-methods #{:get}
+  ;; TODO(mu): :authorized?
   :handle-ok (fn [ctx]
                (let [tags (m/all-tags (get-in ctx [:request :pepa/db]))]
                  (condp = (get-in ctx [:representation :media-type])
@@ -286,8 +297,14 @@
   :allowed-methods #{:post}
   :available-media-types ["application/json"
                           "application/transit+json"]
+  :malformed? (fn [ctx]
+                (if-let [ids (seq (get-in ctx [:request :body]))]
+                  [false {::ids ids}]
+                  [true {::error "Malformed Request Body"}]))
+  :handle-malformed ::error
+  :authorized? (auth/authorization-fn :documents ::ids)
   :exists? (fn [ctx]
-             (when-let [ids (get-in ctx [:request :body])]
+             (when-let [ids (::ids ctx)]
                {::ids ids
                 ::documents (m/get-documents (get-in ctx [:request :pepa/db]) ids)}))
   ;; Change the status code to 200
@@ -344,6 +361,8 @@
 
 (defn make-handlers [web-component]
   (-> #'handlers
+      (auth/wrap-authorization-warnings)
+      (auth/wrap-filter auth/null-filter)
       ;; NOTE: *first* transit, then JSON
       (wrap-transit-body)
       (wrap-params)
