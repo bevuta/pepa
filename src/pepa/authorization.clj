@@ -60,23 +60,12 @@
 (defn wrap-authorization-warnings
   "Ring middleware that logs a warning if the request contains a
   database which isn't restricted via `restrict-db'."
-  [handler]
+  [handler web]
   (fn [req]
-    (let [db (:pepa/db req)]
-      (when-not (db-filter db)
-        (log/warn db "Got HTTP request with unrestricted DB:"
-                  (dissoc req :pepa/web :pepa/bus :pepa/config)))
-      (handler (update-in req [:pepa/db] restrict-db
-                          (or (db-filter db) null-filter))))))
-
-(defn wrap-filter
-  "Ring middleware that adds a given filter to the request. Doesn't
-  overwrite existing filters."
-  [handler filter]
-  (fn [req]
-    (when-let [filter (db-filter (:pepa/db req))]
-      (log/warn (:pepa/web req) "Overwriting existing filter:" filter))
-    (handler (update-in req [:pepa/db] restrict-db filter))))
+    (let [filter (db-filter (:db web))]
+      (when-not filter
+        (log/error web "Got HTTP request with unrestricted DB:" req))
+      (handler req))))
 
 (defn ^:private validation-fn [entity]
   (case entity
@@ -92,15 +81,16 @@
     :tags (comp seq filter-tags)))
 
 ;;; TODO(mu): We need to handle PUT/POST here too.
-(defn authorization-fn [entity key]
+(defn authorization-fn [web entity key]
   (let [validation-fn (validation-fn entity)]
     (fn [ctx]
-      (let [web (get-in ctx [:request :pepa/web])
-            db (get-in ctx [:request :pepa/db])
+      (let [db (:db web)
             value (get ctx key)]
         (log/debug web "Validating" entity (str "(" value ")"))
         (let [result (validation-fn db value)]
-          (when-not result
-            (log/warn web "Client unauthorized to access resource:"
-                      (get-in ctx [:request :uri])))
-          (boolean result))))))
+          (if result
+            [true {key result}]
+            (do
+              (log/warn web "Client unauthorized to access resource:"
+                        (get-in ctx [:request :uri]))
+              false)))))))

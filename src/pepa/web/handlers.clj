@@ -35,7 +35,7 @@
                             "application/json"
                             "application/transit+json"])
 
-(defresource file-scanner
+(defresource file-scanner [web]
   :allowed-methods #{:post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
@@ -53,26 +53,25 @@
   :handle-ok (fn [ctx]
                "Created")
   :post! (fn [ctx]
-           (m/store-files! (get-in ctx [:request :pepa/db])
+           (m/store-files! (:db web)
                            (::files ctx)
                            {:origin "scanner"})))
 
-(defresource page [id]
+(defresource page [web id]
   :allowed-methods #{:get}
   :available-media-types ["application/transit+json"]
   :malformed? (fn [ctx]
                 (try [false {::id (Integer/parseInt id)}]
                      (catch NumberFormatException e
                        true)))
-  :authorized? (auth/authorization-fn :page ::id)
+  :authorized? (auth/authorization-fn web :page ::id)
   :exists? (fn [ctx]
-             (let [[page] (m/get-pages (get-in ctx [:request :pepa/db])
-                                       [(::id ctx)])]
+             (let [[page] (m/get-pages (:db web) [(::id ctx)])]
                (when page
                  {::page (select-keys page [:id :render-status :rotation])})))
   :handle-ok ::page)
 
-(defresource page-image [id size]
+(defresource page-image [web id size]
   :allowed-methods #{:get}
   :available-media-types ["image/png"]
   :malformed? (fn [ctx]
@@ -82,11 +81,10 @@
                                       (Integer/parseInt size))}]
                      (catch NumberFormatException e
                        true)))
-  :authorized? (auth/authorization-fn :page ::id)
+  :authorized? (auth/authorization-fn web :page ::id)
   :exists? (fn [ctx]
              (try
-               (let [db (get-in ctx [:request :pepa/db])
-                     config (get-in ctx [:request :pepa/config])
+               (let [db (:db web)
                      [{:keys [image hash]}] (if (= size ::max)
                                               (db/query db ["SELECT image, hash FROM page_images WHERE page = ? ORDER BY dpi DESC LIMIT 1"
                                                             (::id ctx)])
@@ -100,7 +98,7 @@
   :etag ::hash
   :handle-ok ::page)
 
-(defresource page-rotation [id]
+(defresource page-rotation [web id]
   :allowed-methods #{:post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
@@ -114,29 +112,27 @@
                       [true "Invalid rotation"]))
                   (catch NumberFormatException e
                     [true "Malformed ID"])))
-  :authorized? (auth/authorization-fn :page ::id)
+  :authorized? (auth/authorization-fn web :page ::id)
   :exists? (fn [ctx]
-             (let [db (get-in ctx [:request :pepa/db])
-                   [{:keys [id]}] (db/query db ["SELECT id FROM pages WHERE id = ?" (::id ctx)])]
+             (let [[{:keys [id]}] (db/query (:db web) ["SELECT id FROM pages WHERE id = ?" (::id ctx)])]
                (when id {::page-id id})))
   :can-post-to-missing? false
 
   :post! (fn [ctx]
-           (let [db (get-in ctx [:request :pepa/db])
-                 id (::page-id ctx)
-                 rotation (::rotation ctx)]
-             (m/rotate-page db id rotation))))
+           (m/rotate-page (:db web)
+                          (::page-id ctx)
+                          (::rotation ctx))))
 
-(defresource document [id]
+(defresource document [web id]
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
                 (try [false {::id (Integer/parseInt id)}]
                      (catch NumberFormatException e
                        true)))
-  :authorized? (auth/authorization-fn :document ::id)
+  :authorized? (auth/authorization-fn web :document ::id)
   :exists? (fn [ctx]
-             (when-let [d (m/get-document (get-in ctx [:request :pepa/db]) (::id ctx))]
+             (when-let [d (m/get-document (:db web) (::id ctx))]
                {::document d}))
   :post-redirect? true
   :location (fn [ctx] (str "/documents/" id))
@@ -149,7 +145,7 @@
                  {added-tags :added, removed-tags :removed} (:tags params)]
              (assert (every? string? added-tags))
              (assert (every? string? removed-tags))
-             (db/with-transaction [db (:pepa/db req)]
+             (db/with-transaction [db (:db web)]
                (m/update-document! db id attrs added-tags removed-tags)
                {::document (m/get-document db id)})))
   :handle-created ::document
@@ -177,17 +173,17 @@
         (finally
           (proxy-super close))))))
 
-(defresource document-download [id]
+(defresource document-download [web id]
   :allowed-methods #{:get}
   :available-media-types ["application/pdf"]
   :malformed? (fn [ctx]
                 (try [false {::id (Integer/parseInt id)}]
                      (catch NumberFormatException e
                        true)))
-  :authorized? (auth/authorization-fn :document ::id)
+  :authorized? (auth/authorization-fn web :document ::id)
   :exists? (fn [ctx]
-             (let [db (get-in ctx [:request :pepa/db])
-                   id (Integer/parseInt id)
+             (let [db (:db web)
+                   id (::id ctx)
                    [{:keys [title]}]
                    (db/query db ["SELECT title FROM documents WHERE id = ?" id])]
                (when title
@@ -201,26 +197,25 @@
                      (assoc-in [:headers "content-disposition"] (::filename ctx))))
   :handle-ok ::pdf-file)
 
-(defresource inbox
+(defresource inbox [web]
   :allowed-methods #{:get :delete}
   :available-media-types +default-media-types+
   ;; TODO: :authorized?
   :delete! (fn [ctx]
-             (let [db (get-in ctx [:request :pepa/db])]
-               (when-let [pages (seq (get-in ctx [:request :body]))]
-                 (m/remove-from-inbox! db pages))))
+             (when-let [pages (seq (get-in ctx [:request :body]))]
+               (m/remove-from-inbox! (:db web) pages)))
   :handle-ok (fn [ctx]
-               (let [pages (m/inbox (get-in ctx [:request :pepa/db]))]
+               (let [pages (m/inbox (:db web))]
                  (condp = (get-in ctx [:representation :media-type])
                    "text/html" (html/inbox pages)
                    pages))))
 
-(defresource documents
+(defresource documents [web]
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
                 (try
-                  (let [db (get-in ctx [:request :pepa/db])]
+                  (let [db (:db web)]
                     (if-let [query (some-> ctx
                                            (get-in [:request :query-params "q"])
                                            (edn/read-string))]
@@ -232,9 +227,9 @@
                   (catch SQLException e
                     [true {::error "Query string generated invalid SQL"}])))
   ;; TODO(mu): Validate POST
-  :authorized? (auth/authorization-fn :documents ::results)
+  :authorized? (auth/authorization-fn web :documents ::results)
   :post! (fn [{:keys [request, representation] :as ctx}]
-           (db/with-transaction [conn (:pepa/db request)]
+           (db/with-transaction [conn (:db web)]
              (let [params (:body request)
                    file (:upload/file params)
                    pages (seq (:pages params))
@@ -257,7 +252,7 @@
                              pages
                              (assoc attrs :page-ids pages))
                      id (m/create-document! conn (assoc attrs :origin origin))
-                     tagging (get-in request [:pepa/config :tagging])]
+                     tagging (get-in web [:config :tagging])]
                  ;; NOTE: auto-tag*! so we don't trigger updates on the notification bus
                  (m/auto-tag*! conn id tagging
                                {:origin origin})
@@ -274,18 +269,18 @@
                         (into [])))))
   :handle-malformed ::error)
 
-(defresource tags
+(defresource tags [web]
   :available-media-types +default-media-types+
   :allowed-methods #{:get}
   ;; TODO(mu): :authorized?
   :handle-ok (fn [ctx]
-               (let [tags (m/all-tags (get-in ctx [:request :pepa/db]))]
+               (let [tags (m/all-tags (:db web))]
                  (condp = (get-in ctx [:representation :media-type])
                    "text/html" (html/tags (map :name tags))
                    tags))))
 
-(defn handle-get-objects-for-tag [req tag]
-  (db/with-transaction [conn (:pepa/db req)]
+(defn handle-get-objects-for-tag [web req tag]
+  (db/with-transaction [conn (:db web)]
     (let [[{tag-id :id}] (db/query conn ["SELECT id FROM tags WHERE name = ?" tag])
           files (db/query conn ["SELECT f.id, f.origin, f.name FROM files AS f JOIN file_tags AS ft ON f.id = ft.file WHERE ft.tag = ?" tag-id])
           pages (db/query conn ["SELECT p.id, dp.page FROM pages AS p JOIN document_pages AS dp ON p.id = dp.document JOIN page_tags AS pt ON p.id = pt.page WHERE pt.tag = ?" tag-id])
@@ -293,7 +288,7 @@
       {:status 200
        :body (html/objects-for-tag tag files pages documents)})))
 
-(defresource documents-bulk 
+(defresource documents-bulk [web]
   :allowed-methods #{:post}
   :available-media-types ["application/json"
                           "application/transit+json"]
@@ -302,11 +297,11 @@
                   [false {::ids ids}]
                   [true {::error "Malformed Request Body"}]))
   :handle-malformed ::error
-  :authorized? (auth/authorization-fn :documents ::ids)
+  :authorized? (auth/authorization-fn web :documents ::ids)
   :exists? (fn [ctx]
              (when-let [ids (::ids ctx)]
                {::ids ids
-                ::documents (m/get-documents (get-in ctx [:request :pepa/db]) ids)}))
+                ::documents (m/get-documents (:db web) ids)}))
   ;; Change the status code to 200
   :as-response (fn [d ctx]
                  (-> (as-response d ctx)
@@ -315,56 +310,66 @@
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
 
-(defn wrap-component [handler {:keys [config db bus] :as web}]
-  (fn [req]
-    (handler (assoc req
-                    :pepa/web web
-                    :pepa/config config
-                    :pepa/db db
-                    :pepa/bus bus))))
+;; (defn wrap-component [handler {:keys [config db bus] :as web}]
+;;   (fn [req]
+;;     (handler (assoc req
+;;                     :pepa/web web
+;;                     :pepa/config config
+;;                     :pepa/db db
+;;                     :pepa/bus bus))))
 
-(def handlers
-  (routes (GET "/" [] (html/root))
-          (ANY "/inbox" [] inbox)
-          (ANY "/files/scanner" [] file-scanner)
+(defn handlers [web]
+  (let [web (update-in web [:db] auth/restrict-db auth/null-filter)]
+    (routes (GET "/" []
+                 (html/root))
+            (ANY "/inbox" []
+                 (inbox web))
+            (ANY "/files/scanner" []
+                 (file-scanner web))
 
-          (ANY "/pages/:id/image/:size" [id size]
-               (page-image id size))
-          (ANY "/pages/:id/image" [id]
-               (page-image id ::max))
-          (ANY "/pages/:id/rotation" [id]
-               (page-rotation id))
-          (ANY "/pages/:id" [id]
-               (page id))
+            (ANY "/pages/:id/image/:size" [id size]
+                 (page-image web id size))
+            (ANY "/pages/:id/image" [id]
+                 (page-image web id ::max))
+            (ANY "/pages/:id/rotation" [id]
+                 (page-rotation web id))
+            (ANY "/pages/:id" [id]
+                 (page web id))
 
-          (ANY "/documents" [] documents)
-          (ANY "/documents/bulk" [] documents-bulk)
-          (ANY "/documents/:id" [id]
-               (document id))
-          (ANY "/documents/:id/download" [id]
-               (document-download id))
+            (ANY "/documents" []
+                 (documents web))
+            (ANY "/documents/bulk" []
+                 (documents-bulk web))
+            (ANY "/documents/:id" [id]
+                 (document web id))
+            (ANY "/documents/:id/download" [id]
+                 (document-download web id))
 
-          (ANY "/tags" [] tags)
-          (GET "/tags/:tag" [tag :as req]
-               (handle-get-objects-for-tag req tag))
+            (ANY "/tags" []
+                 (tags web))
+            (GET "/tags/:tag" [tag :as req]
+                 (handle-get-objects-for-tag web req tag))
 
-          (ANY "/poll" [] poll-handler)
+            (ANY "/poll" []
+                 (partial poll-handler web))
 
-          (route/resources "/")
-          (route/not-found "Nothing here")))
+            (route/resources "/")
+            (route/not-found "Nothing here"))))
 
-(defn wrap-logging [handler]
-  (fn [req]
-    (when (get-in req [:pepa/config :web :log-requests?])
-      (pprint req))
-    (handler req)))
+(defn wrap-logging [handler web]
+  (if (get-in web [:config :web :log-requests?])
+    (fn [req]
+      (pprint req)
+      (handler req))
+    handler))
 
 (defn make-handlers [web-component]
-  (-> #'handlers
-      (auth/wrap-authorization-warnings)
-      (auth/wrap-filter auth/null-filter)
+  (-> (#'handlers web-component)
+      (auth/wrap-authorization-warnings web-component)
+      ;; (auth/wrap-filter auth/null-filter)
       ;; NOTE: *first* transit, then JSON
       (wrap-transit-body)
       (wrap-params)
-      (wrap-logging)
-      (wrap-component web-component)))
+      (wrap-logging web-component)
+      ;; (wrap-component web-component)
+      ))

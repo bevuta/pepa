@@ -67,7 +67,7 @@
               (log/debug web "closing poll channel" ch)
               (async-web/close ch))))))))
 
-(defn ^:private poll-handler* [req]
+(defn ^:private poll-handler* [web req]
   (let [method (:request-method req)
         allowed-methods #{:get :post}
         content-type (some #(re-find % (:content-type req))
@@ -75,10 +75,7 @@
                             #"^application/json"])
         seqs (:body req)
         
-        poll-config (get-in req [:pepa/config :web :poll])
-        db (:pepa/db req)
-        bus (:pepa/bus req)
-        web (:pepa/web req)
+        poll-config (get-in web [:config :web :poll])
         handle-poll! (partial handle-poll! web poll-config)]
     (cond
       (not content-type)
@@ -95,7 +92,7 @@
           (async-web/as-channel
            {:on-open (fn [ch]
                        (if (empty? seqs)
-                         (send-seqs! db ch content-type)
+                         (send-seqs! (:db web) ch content-type)
                          (handle-poll! ch seqs content-type)))
             :on-error (fn [ch throwable]
                         (log/error web "Caught exception:" throwable)
