@@ -93,7 +93,12 @@
 (defn authorization-fn [entity key]
   (let [validation-fn (validation-fn entity)]
     (fn [ctx]
-      (let [db (get-in ctx [:request :pepa/db])
+      (let [web (get-in ctx [:request :pepa/web])
+            db (get-in ctx [:request :pepa/db])
             value (get ctx key)]
-        (log/debug db "Validating" entity (str "(" value ")"))
-        (boolean (validation-fn db value))))))
+        (log/debug web "Validating" entity (str "(" value ")"))
+        (let [result (validation-fn db value)]
+          (when-not result
+            (log/warn web "Client unauthorized to access resource:"
+                      (get-in ctx [:request :uri])))
+          (boolean result))))))
