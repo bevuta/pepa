@@ -310,14 +310,6 @@
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
 
-;; (defn wrap-component [handler {:keys [config db bus] :as web}]
-;;   (fn [req]
-;;     (handler (assoc req
-;;                     :pepa/web web
-;;                     :pepa/config config
-;;                     :pepa/db db
-;;                     :pepa/bus bus))))
-
 (defn handlers [web]
   (let [web (update-in web [:db] auth/restrict-db auth/null-filter)]
     (routes (GET "/" []
@@ -366,10 +358,7 @@
 (defn make-handlers [web-component]
   (-> (#'handlers web-component)
       (auth/wrap-authorization-warnings web-component)
-      ;; (auth/wrap-filter auth/null-filter)
       ;; NOTE: *first* transit, then JSON
       (wrap-transit-body)
       (wrap-params)
-      (wrap-logging web-component)
-      ;; (wrap-component web-component)
-      ))
+      (wrap-logging web-component)))
