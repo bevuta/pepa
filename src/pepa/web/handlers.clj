@@ -126,9 +126,20 @@
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
-                (try [false {::id (Integer/parseInt id)}]
-                     (catch NumberFormatException e
-                       true)))
+                (try
+                  (let [req (:request ctx)
+                        params (:body req)
+                        attrs (select-keys params [:title])
+                        attrs (into {} (remove (comp nil? val) attrs))]
+                    (if (and (every? string? (get-in params [:tags :added]))
+                             (every? string? (get-in params [:tags :removed])))
+                      [false {::id (Integer/parseInt id)
+                              ::attrs attrs
+                              ::tags (:tags params)}]
+                      true))
+                  (catch NumberFormatException e
+                    true)))
+  ;; TODO(mu): Need to check for POST too
   :authorized? (auth/authorization-fn web :document ::id)
   :exists? (fn [ctx]
              (when-let [d (m/get-document (:db web) (::id ctx))]
@@ -137,13 +148,8 @@
   :location (fn [ctx] (str "/documents/" id))
   :post! (fn [ctx]
            (let [id (::id ctx)
-                 req (:request ctx)
-                 params (:body req)
-                 attrs (select-keys params [:title])
-                 attrs (into {} (remove (comp nil? val) attrs))
-                 {added-tags :added, removed-tags :removed} (:tags params)]
-             (assert (every? string? added-tags))
-             (assert (every? string? removed-tags))
+                 attrs (::attrs ctx)
+                 {added-tags :added, removed-tags :removed} (::tags ctx)]
              (db/with-transaction [db (:db web)]
                (m/update-document! db id attrs added-tags removed-tags)
                {::document (m/get-document db id)})))
