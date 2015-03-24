@@ -4,30 +4,26 @@
             [pepa.web.html :as html]
             [pepa.web.poll :refer [poll-handler]]
             [pepa.authorization :as auth]
-            
+            [pepa.log :as log]
             [pepa.util :refer [slurp-bytes]]
+            
             [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
             [clojure.string :as s]
             [clojure.edn :as edn]
             [compojure.core :refer :all]
             [compojure.route :as route]
-            [hiccup.page :refer [html5]]
             [ring.middleware.params :refer [wrap-params]]
-            [ring.util.response :refer [redirect-after-post]]
             [ring.middleware.transit :refer [wrap-transit-response
                                              wrap-transit-body]]
             [ring.middleware.json :refer [wrap-json-body]]
             
             [liberator.core :refer [defresource]]
             [liberator.representation :refer [as-response]]
-            [io.clojure.liberator-transit]
+            io.clojure.liberator-transit
 
-            [immutant.web.async :as async-web]
-            [clojure.core.async :as async :refer [go <!]])
-  (:import java.io.ByteArrayOutputStream
-           java.io.ByteArrayInputStream
-           java.io.FileInputStream
+            [immutant.web.async :as async-web])
+  (:import java.io.FileInputStream
            java.net.URLEncoder
            java.sql.SQLException))
 
@@ -94,7 +90,7 @@
                                               (db/query db ["SELECT image, hash FROM page_images WHERE page = ? AND dpi = ?"
                                                             (::id ctx) (::size ctx)]))]
                  (when image
-                   {::page (ByteArrayInputStream. image)
+                   {::page (io/input-stream image)
                     ::hash hash}))
                (catch NumberFormatException e
                  nil)))
@@ -354,7 +350,7 @@
 (defn wrap-logging [handler web]
   (if (get-in web [:config :web :log-requests?])
     (fn [req]
-      (pprint req)
+      (log/debug web "HTTP Request" req)
       (handler req))
     handler))
 

@@ -40,8 +40,7 @@
                   :exclusions [javax.activation/activation]]
                  [org.subethamail/subethasmtp "3.1.7"
                   :exclusions [org.slf4j/slf4j-api]]]
-  :exclusions [org.clojure/data.json
-               log4j/log4j]
+  :exclusions [org.clojure/data.json log4j/log4j]
   :plugins [[lein-cljsbuild "1.0.4"]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"
@@ -53,18 +52,19 @@
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-3126"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-3149"]
                                        [com.cemerick/piggieback "0.1.6-SNAPSHOT"]
                                        [com.cognitect/transit-cljs "0.8.205"]
-                                       [org.omcljs/om "0.8.8" :exclusions [cljsjs/react]]
-                                       [cljsjs/react-with-addons "0.13.0-0"]
+                                       [org.omcljs/om "0.8.8"]
+                                       [cljsjs/react-with-addons "0.12.2-8"]
                                        [org.clojars.the-kenny/nom "0.1.1"]
                                        [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"]
-                                       [sablono "0.3.4" :exclusions [cljsjs/react]]
+                                       [sablono "0.3.4"]
                                        [secretary "1.2.2"]
                                        [the/parsatron "0.0.7"]
 
-                                       [org.clojars.the-kenny/weasel "0.6.1-SNAPSHOT"]]}}
+                                       [org.clojars.the-kenny/weasel "0.6.1-SNAPSHOT"]]
+                        :exclusions [cljsjs/react]}}
   ;; Cljsbuild configuration. Also see profiles.clj
   :cljsbuild {:builds {:pepa {:source-paths ["src-cljs/"]
                               :compiler {:output-to "resources/public/pepa.js"
@@ -78,6 +78,4 @@
   :clean-targets ^{:protect false} [[:cljsbuild :builds :pepa :compiler :output-to]
                                     [:cljsbuild :builds :pepa :compiler :source-map]
                                     [:cljsbuild :builds :pepa :compiler :output-dir]
-                                    :target-path :compile-path]
-  :repositories [["Immutant incremental builds"
-                  "http://downloads.immutant.org/incremental/"]])
+                                    :target-path :compile-path])
