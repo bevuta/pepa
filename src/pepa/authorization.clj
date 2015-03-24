@@ -88,6 +88,10 @@
             value (get ctx key)]
         (log/debug web "Validating" entity (str "(" value ")"))
         (let [result (validation-fn db value)]
+          (when (and (sequential? value)
+                     (or (nil? result) (< (count result) (count value))))
+            (log/warn web "Client tried to access *some* entities he wasn't allowed to"
+                      (str "(" entity "):") (set (remove (set result) value))))
           (if result
             [true {key result}]
             (do
