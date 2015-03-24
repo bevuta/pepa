@@ -47,7 +47,7 @@
 
 ;;; Extend pepa.db.Database to delegate to the filter. That allows to
 ;;; just run `filter-*' like: `(filter-files db ...)'.
-(extend-type Database
+(extend-type pepa.db.Database
   AccessFilter
   (filter-files     [db files]
     (filter-files (db-filter db) files))
