@@ -360,10 +360,20 @@
       (handler req))
     handler))
 
+(defn wrap-stacktrace
+  [handler web]
+  (fn [request]
+    (try
+      (handler request)
+      (catch Throwable t
+        (log/error web t "Caught exception in Ring")
+        {:status 500}))))
+
 (defn make-handlers [web-component]
   (-> (#'handlers web-component)
       (auth/wrap-authorization-warnings web-component)
       ;; NOTE: *first* transit, then JSON
       (wrap-transit-body)
       (wrap-params)
-      (wrap-logging web-component)))
+      (wrap-logging web-component)
+      (wrap-stacktrace web-component)))

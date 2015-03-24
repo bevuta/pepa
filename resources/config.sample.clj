@@ -3,7 +3,6 @@
       :dbname "pepa"}
  :web {:port 4035
        :host "localhost"
-       :show-traces true
        :log-requests? false
        :default-page-dpi 150
        ;; 30s Long-Polling timeout

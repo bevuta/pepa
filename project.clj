@@ -15,8 +15,6 @@
                  ;; Web
                  [org.immutant/web "2.0.0-beta2"]
                  [compojure "1.3.2"]
-                 [ring/ring-devel "1.3.2"
-                  :exclusions [ring/ring-core]]
                  [com.cognitect/transit-clj "0.8.269"]
                  [ring-transit "0.1.3"]
                  [ring/ring-json "0.3.1"]
