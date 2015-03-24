@@ -371,7 +371,7 @@
 
 (defn make-handlers [web-component]
   (-> (#'handlers web-component)
-      (auth/wrap-authorization-warnings web-component)
+      #_(auth/wrap-authorization-warnings web-component)
       ;; NOTE: *first* transit, then JSON
       (wrap-transit-body)
       (wrap-params)
