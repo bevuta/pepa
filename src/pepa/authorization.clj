@@ -3,6 +3,9 @@
   (:import pepa.db.Database))
 
 (defprotocol AccessFilter
+  ;; NOTE: The second arg can either be a list of maps containing an
+  ;; :id key or just an id. Implementations must handle this.
+  ;; TODO(mu): Provide wrappers to sanitize this?
   (filter-files     [filter files])
   (filter-documents [filter documents])
   (filter-pages     [filter pages])
@@ -88,13 +91,24 @@
             value (get ctx key)]
         (log/debug web "Validating" entity (str "(" value ")"))
         (let [result (validation-fn db value)]
-          (when (and (sequential? value)
-                     (or (nil? result) (< (count result) (count value))))
-            (log/warn web "Client tried to access *some* entities he wasn't allowed to"
-                      (str "(" entity "):") (set (remove (set result) value))))
-          (if result
-            [true {key result}]
+          (cond
+            ;; If the input is a list and the original value is empty,
+            ;; the request is allowed unconditionally
+            (and (sequential? value) (empty? value))
+            true
+            
+            ;; If value is a list of entities & result has less
+            ;; entities, forbid request completely
+            (and (sequential? value)
+                 (or (nil? result) (< (count result) (count value))))
             (do
-              (log/warn web "Client unauthorized to access resource:"
-                        (get-in ctx [:request :uri]))
-              false)))))))
+              (log/warn web "Client tried to access *some* entities he wasn't allowed to"
+                        (str "(" entity "):") (set (remove (set result) value)))
+              false)
+
+            result
+            [true {key result}]
+
+            ;; Default case: forbidden
+            true
+            false))))))
