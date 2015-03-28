@@ -27,9 +27,6 @@
                      :number page
                      :text text})))))
 
-(defn ^:private inbox-origin? [config origin]
-  (contains? (set (get-in config [:inbox :origins])) origin))
-
 (extend-type FilePageExtractor
   IProcessor
   (next-item [component]
@@ -57,7 +54,7 @@
               (log/info component "Adding pages from file" id "to document" document)
               (m/link-file! db document id))
             ;; Move to inbox if the file's origin dictates that
-            (when (inbox-origin? config origin)
+            (when (m/inbox-origin? config origin)
               (log/info component "Moving pages from file" id "to inbox")
               (m/add-to-inbox! db (m/page-ids db id))))))
       (log/info component "Finished processing of file" id)))

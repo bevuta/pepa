@@ -4,7 +4,9 @@
 (defrecord Config []
   component/Lifecycle
   (start [component]
-    (into component (load-file "config.clj")))
+    (into component (let [file (or (System/getenv "PEPA_CONFIG")
+                                   "config.clj")]
+                      (load-file file))))
 
   (stop [component]
     (->Config)))

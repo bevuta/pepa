@@ -363,6 +363,9 @@
 
 (declare get-pages)
 
+(defn inbox-origin? [config origin]
+  (contains? (set (get-in config [:inbox :origins])) origin))
+
 (defn inbox
   "Returns a vector of pages in the Inbox sorted by file and number."
   [db]
