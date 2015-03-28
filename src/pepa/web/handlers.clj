@@ -20,7 +20,7 @@
             
             [liberator.core :refer [defresource]]
             [liberator.representation :refer [as-response]]
-            [io.clojure.liberator-transit]
+            io.clojure.liberator-transit
 
             [immutant.web.async :as async-web]
             [clojure.core.async :as async :refer [go <!]])
