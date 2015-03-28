@@ -15,9 +15,9 @@
   (start [component]
     (when (get-in component [:config :smtp :enable])
       (log/info component "Starting SMTP Server")
-      (let [config (:smtp config)
-            host (:host config)
-            port (:port config)
+      (let [smtp-config (:smtp config)
+            host (:host smtp-config)
+            port (:port smtp-config)
             address (and host (InetAddress/getByName host))
             server (->
                     (proxy [SimpleMessageListener] []
@@ -28,7 +28,9 @@
                         (db/with-transaction [db (:db component)]
                           ;; TODO: Use proper mail address parser
                           (if-let [files (seq (m/mime-message->files data))]
-                            (let [origin (if (.startsWith to "scanner@") "scanner" "email")
+                            (let [[_ origin] (re-find #"(.+)@" to)
+                                  origin (or (and (m/inbox-origin? config origin) origin)
+                                             "email")
                                   files (m/store-files! db files {:origin origin})]
                               (when (= origin "email")
                                 (doseq [file files]
