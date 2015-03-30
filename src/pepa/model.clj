@@ -283,18 +283,27 @@
   [db]
   (mapv :name (db/query db ["SELECT name FROM tags ORDER BY name"])))
 
+(defn document-tags [db document-id]
+  (map :tag (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])))
+
 (defn tag-document-counts
   "Returns a map from tag-name -> document-count."
   [db]
   (->> (db/query db ["SELECT t.name, COUNT(dt.document)
-                 FROM tags AS t
-                 JOIN document_tags AS dt ON dt.tag = t.id
-                 GROUP BY t.name"])
+                      FROM tags AS t
+                      JOIN document_tags AS dt ON dt.tag = t.id
+                      GROUP BY t.name"])
        (map (juxt :name :count))
        (into {})))
 
-(defn document-tags [db document-id]
-  (map :tag (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])))
+(defn tag-documents [db tag]
+  (->> (db/query db ["SELECT dt.document
+                      FROM document_tags AS dt
+                      JOIN tags AS t ON dt.tag = t.id
+                      WHERE t.name = ?
+                      GROUP BY dt.document"
+                     tag])
+       (mapv :document)))
 
 (defn get-or-create-tags!
   "Gets tags for TAG-VALUES from DB. Creates them if necessary."
@@ -493,14 +502,7 @@
                    (mapv :id))})
 
 (defmethod changed-entities* :document_tags [db _ seq-num]
-  (let [documents (->> (db/query db ["SELECT DISTINCT d.id
-                                  FROM document_tags AS dt
-                                  LEFT JOIN documents as d
-                                    ON d.id = dt.document
-                                  WHERE dt.state_seq > ?" seq-num])
-                       (mapv :id)
-                       (set))
-        dts (db/query db ["SELECT t.name, t.id, dt.document
+  (let [dts (db/query db ["SELECT t.name, t.id, dt.document
                             FROM tags as t
                             LEFT JOIN document_tags as dt
                               ON t.id = dt.tag
@@ -510,8 +512,7 @@
         tags (set (map :name dts))]
     {:documents documents
      ;; Special case: Send tags as map, mapping from tag-name -> document-count
-     :tags (-> (tag-document-counts db)
-               (select-keys tags))}))
+     :tags tags}))
 
 (defmethod changed-entities* :pages [db _ seq-num]
   (let [pages (mapv :id (db/query db ["SELECT id FROM pages WHERE state_seq > ?" seq-num]))]

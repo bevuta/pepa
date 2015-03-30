@@ -277,14 +277,11 @@
                    "text/html" (html/tags (map :name tags))
                    tags))))
 
-(defn handle-get-objects-for-tag [req tag]
-  (db/with-transaction [conn (:pepa/db req)]
-    (let [[{tag-id :id}] (db/query conn ["SELECT id FROM tags WHERE name = ?" tag])
-          files (db/query conn ["SELECT f.id, f.origin, f.name FROM files AS f JOIN file_tags AS ft ON f.id = ft.file WHERE ft.tag = ?" tag-id])
-          pages (db/query conn ["SELECT p.id, dp.page FROM pages AS p JOIN document_pages AS dp ON p.id = dp.document JOIN page_tags AS pt ON p.id = pt.page WHERE pt.tag = ?" tag-id])
-          documents (db/query conn ["SELECT d.id, d.title FROM documents AS d JOIN document_tags AS dt ON d.id = dt.document WHERE dt.tag = ?" tag-id])]
-      {:status 200
-       :body (html/objects-for-tag tag files pages documents)})))
+(defresource tag [t]
+  :available-media-types +default-media-types+
+  :allowed-methods #{:get}
+  :handle-ok (fn [ctx]
+               {:documents (m/tag-documents (get-in ctx [:request :pepa/db]) (str t))}))
 
 (defresource documents-bulk 
   :allowed-methods #{:post}
@@ -332,8 +329,7 @@
                (document-download id))
 
           (ANY "/tags" [] tags)
-          (GET "/tags/:tag" [tag :as req]
-               (handle-get-objects-for-tag req tag))
+          (ANY "/tags/:t" [t] (tag t))
 
           (ANY "/poll" [] poll-handler)
 

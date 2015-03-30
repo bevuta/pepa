@@ -231,6 +231,17 @@
   (go
     (store-tags! state (<! (fetch-tags true)))))
 
+(defn refresh-tag! [state tag]
+  (go
+    (println "refreshing tag" (pr-str tag))
+    (let [response (<! (xhr-request!
+                        (str "/tags/" (-> tag name gstring/urlEncode))
+                        :get))]
+      (when (= 200 (:status response))
+        (let [response (:response/transit response)]
+          (om/update! state [:tags tag]
+                      (-> response :documents count)))))))
+
 ;;; Page Rotation
 
 (defn fetch-page [id]
@@ -272,7 +283,9 @@
 
 (defmethod entities-changed* :tags [state _ changes]
   (when-let [tags (:tags changes)]
-    (store-tags! state tags)))
+    ;; TODO: Batch this in one request when we have the endpoint
+    (doseq [tag tags]
+      (refresh-tag! state tag))))
 
 ;;; HACK
 (defmethod entities-changed* :deletions [state _ changes]
