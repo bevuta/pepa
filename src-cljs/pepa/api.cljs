@@ -289,7 +289,10 @@
 
 ;;; HACK
 (defmethod entities-changed* :deletions [state _ changes]
-  (js/console.warn "NOT applying deletions: Not implemented"))
+  (js/console.warn "NOT applying (most) deletions: Not implemented")
+  (when-let [changed-tags (get-in changes [:deletions :tags])]
+    (doseq [tag changed-tags]
+      (refresh-tag! state tag))))
 
 (defn entities-changed! [state changes]
   (doseq [entity (keys changes)]
