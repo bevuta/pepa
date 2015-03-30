@@ -511,7 +511,6 @@
         documents (set (map :document dts))
         tags (set (map :name dts))]
     {:documents documents
-     ;; Special case: Send tags as map, mapping from tag-name -> document-count
      :tags tags}))
 
 (defmethod changed-entities* :pages [db _ seq-num]
@@ -556,9 +555,17 @@
                (mapv :page)
                (set))})
 
+(defn ^:private tag-name [db tag-id]
+  (prn tag-id)
+  (-> (db/query db ["SELECT name FROM tags WHERE id = ?" tag-id]) first :name))
+
 (defmethod changed-entities* :deletions [db _ seq-num]
   {:deletions (reduce (fn [deletions {:keys [id entity]}]
-                        (update-in deletions [(-> entity name keyword)] (comp set conj) id))
+                        ;; Special handling for tags
+                        (let [id (if (= entity :entity/tags)
+                                   (tag-name db id)
+                                   id)]
+                         (update-in deletions [(-> entity name keyword)] (comp set conj) id)))
                       {}
                       (db/query db ["SELECT id, entity FROM deletions WHERE state_seq > ?" seq-num]))})
 
@@ -574,5 +581,4 @@
         ;; Remove "empty" keys from map
         (when-let [kvs (seq (for [[k v] m :when (seq v)] [k v]))]
           (into {:seqs (sequence-numbers db)} kvs))))
-    (throw (ex-info "Didn't get a valid (and complete) seqs-map!" {:seqs seqs})))
-)
+    (throw (ex-info "Didn't get a valid (and complete) seqs-map!" {:seqs seqs}))))
