@@ -556,7 +556,6 @@
                (set))})
 
 (defn ^:private tag-name [db tag-id]
-  (prn tag-id)
   (-> (db/query db ["SELECT name FROM tags WHERE id = ?" tag-id]) first :name))
 
 (defmethod changed-entities* :deletions [db _ seq-num]
