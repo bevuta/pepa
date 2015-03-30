@@ -127,16 +127,19 @@
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
                 (try
-                  (let [req (:request ctx)
-                        params (:body req)
-                        attrs (select-keys params [:title])
-                        attrs (into {} (remove (comp nil? val) attrs))]
-                    (if (and (every? string? (get-in params [:tags :added]))
-                             (every? string? (get-in params [:tags :removed])))
-                      [false {::id (Integer/parseInt id)
-                              ::attrs attrs
-                              ::tags (:tags params)}]
-                      true))
+                  (case (get-in ctx [:request :request-method])
+                    :get [false {::id (Integer/parseInt id)}]
+                    :post
+                    (let [req (:request ctx)
+                          params (:body req)
+                          attrs (select-keys params [:title])
+                          attrs (into {} (remove (comp nil? val) attrs))]
+                      (if (and (every? string? (get-in params [:tags :added]))
+                               (every? string? (get-in params [:tags :removed])))
+                        [false {::id (Integer/parseInt id)
+                                ::attrs attrs
+                                ::tags (:tags params)}]
+                        true)))
                   (catch NumberFormatException e
                     true)))
   ;; TODO(mu): Need to check for POST too
