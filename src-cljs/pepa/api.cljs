@@ -216,22 +216,20 @@
 
 ;;; Tag Handling
 
-(defn fetch-tags []
+(defn fetch-tags [& [detailed?]]
   (go
-    (let [response (<! (xhr-request! "/tags" :get))]
+    (let [response (<! (xhr-request!
+                        (str "/tags" (when detailed? "?detailed=true"))
+                        :get))]
       (when (= 200 (:status response))
         (:response/transit response)))))
 
 (defn ^:private store-tags! [state tags]
-  (om/transact! state :tags
-                (fn [old-tags]
-                  (merge old-tags
-                         (into {}
-                               (map (juxt :name :count) tags))))))
+  (om/transact! state :tags #(merge % tags)))
 
 (defn fetch-tags! [state]
   (go
-    (store-tags! state (<! (fetch-tags)))))
+    (store-tags! state (<! (fetch-tags true)))))
 
 ;;; Page Rotation
 

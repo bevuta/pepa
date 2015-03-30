@@ -73,8 +73,7 @@
                (contains? (om/get-state owner :selected) tag))
       (.focus (om/get-node owner))))
   (render-state [_ {:keys [selected]}]
-    (let [[tag document-count] (if (string? tag) [tag nil]
-                                   tag)]
+    (let [[tag document-count] (if (string? tag) [tag nil] tag)]
       [:li.tag {:tab-index 0
                 :class [(when (contains? selected tag) "selected")]
                 :on-click (fn [e]

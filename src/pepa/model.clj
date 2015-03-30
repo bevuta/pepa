@@ -283,12 +283,15 @@
   [db]
   (mapv :name (db/query db ["SELECT name FROM tags ORDER BY name"])))
 
-(defn tag-document-counts [db]
-  (mapv #(set/rename-keys % {:name :tag, :count :documents})
-        (db/query db ["SELECT t.name, COUNT(dt.document)
+(defn tag-document-counts
+  "Returns a map from tag-name -> document-count."
+  [db]
+  (->> (db/query db ["SELECT t.name, COUNT(dt.document)
                  FROM tags AS t
                  JOIN document_tags AS dt ON dt.tag = t.id
-                 GROUP BY t.name"])))
+                 GROUP BY t.name"])
+       (map (juxt :name :count))
+       (into {})))
 
 (defn document-tags [db document-id]
   (map :tag (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])))
@@ -490,20 +493,25 @@
                    (mapv :id))})
 
 (defmethod changed-entities* :document_tags [db _ seq-num]
-  {:documents (->> (db/query db ["SELECT DISTINCT d.id
+  (let [documents (->> (db/query db ["SELECT DISTINCT d.id
                                   FROM document_tags AS dt
                                   LEFT JOIN documents as d
                                     ON d.id = dt.document
                                   WHERE dt.state_seq > ?" seq-num])
-                   (mapv :id))
-   ;; Special case: Also send down used tags
-   ;; TODO: We return a wrong count of tags here.
-   :tags (->> (db/query db ["SELECT t.name, COUNT(dt.document)
-                             FROM tags AS t
-                             JOIN document_tags AS dt ON t.id = dt.tag
-                             WHERE dt.state_seq > ?
-                             GROUP BY t.name" seq-num])
-              (set))})
+                       (mapv :id)
+                       (set))
+        dts (db/query db ["SELECT t.name, t.id, dt.document
+                            FROM tags as t
+                            LEFT JOIN document_tags as dt
+                              ON t.id = dt.tag
+                            WHERE dt.state_seq > ?"
+                          seq-num])
+        documents (set (map :document dts))
+        tags (set (map :name dts))]
+    {:documents documents
+     ;; Special case: Send tags as map, mapping from tag-name -> document-count
+     :tags (-> (tag-document-counts db)
+               (select-keys tags))}))
 
 (defmethod changed-entities* :pages [db _ seq-num]
   (let [pages (mapv :id (db/query db ["SELECT id FROM pages WHERE state_seq > ?" seq-num]))]
@@ -565,4 +573,5 @@
         ;; Remove "empty" keys from map
         (when-let [kvs (seq (for [[k v] m :when (seq v)] [k v]))]
           (into {:seqs (sequence-numbers db)} kvs))))
-    (throw (ex-info "Didn't get a valid (and complete) seqs-map!" {:seqs seqs}))))
+    (throw (ex-info "Didn't get a valid (and complete) seqs-map!" {:seqs seqs})))
+)
