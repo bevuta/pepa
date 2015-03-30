@@ -1,5 +1,6 @@
 (ns pepa.authorization
-  (:require [pepa.log :as log])
+  (:require [pepa.log :as log]
+            pepa.db)
   (:import pepa.db.Database))
 
 (defprotocol AccessFilter

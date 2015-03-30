@@ -1,6 +1,7 @@
 (ns pepa.core
   (:require [com.stuartsierra.component :as component]
             [pepa.config :as config]
+            pepa.authorization
             [pepa.db :as db]
             [pepa.bus :as bus]
             [pepa.web :as web]
