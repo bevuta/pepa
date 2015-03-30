@@ -278,11 +278,17 @@
   (when-not (s/blank? origin)
     (str "origin/" origin)))
 
-(defn all-tags [db]
-  (db/query db ["SELECT t.name, COUNT(dt.document)
+(defn all-tags
+  "Fetches a list of all known tags."
+  [db]
+  (mapv :name (db/query db ["SELECT name FROM tags ORDER BY name"])))
+
+(defn tag-document-counts [db]
+  (mapv #(set/rename-keys % {:name :tag, :count :documents})
+        (db/query db ["SELECT t.name, COUNT(dt.document)
                  FROM tags AS t
                  JOIN document_tags AS dt ON dt.tag = t.id
-                 GROUP BY t.name"]))
+                 GROUP BY t.name"])))
 
 (defn document-tags [db document-id]
   (map :tag (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])))

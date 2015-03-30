@@ -268,7 +268,11 @@
   :available-media-types +default-media-types+
   :allowed-methods #{:get}
   :handle-ok (fn [ctx]
-               (let [tags (m/all-tags (get-in ctx [:request :pepa/db]))]
+               (let [db (get-in ctx [:request :pepa/db])
+                     detailed? (= "true" (get-in ctx [:request :params "detailed"]))
+                     tags (if detailed?
+                            (m/tag-document-counts db)
+                            (m/all-tags db))]
                  (condp = (get-in ctx [:representation :media-type])
                    "text/html" (html/tags (map :name tags))
                    tags))))
