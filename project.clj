@@ -14,7 +14,7 @@
 
                  ;; Web
                  [org.immutant/web "2.0.0-beta2"]
-                 [compojure "1.3.2"]
+                 [compojure "1.3.3"]
                  [ring/ring-devel "1.3.2"
                   :exclusions [ring/ring-core]]
                  [com.cognitect/transit-clj "0.8.269"]
@@ -31,7 +31,7 @@
 
                  ;; Logging
                  [org.clojure/tools.logging "0.3.1"]
-                 [ch.qos.logback/logback-classic "1.1.2"]
+                 [ch.qos.logback/logback-classic "1.1.3"]
 
                  ;; E-Mail
                  [javax.mail/mail "1.4.7"
@@ -46,12 +46,11 @@
              "-XX:MaxPermSize=128M"]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
-  :profiles {:repl {:plugins [[cider/cider-nrepl "0.8.2"
-                               :exclusions [org.clojure/java.classpath]]]
+  :profiles {:repl {:plugins [[cider/cider-nrepl "0.8.2"]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-3126"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-3169"]
                                        [com.cemerick/piggieback "0.1.6-SNAPSHOT"]
                                        [com.cognitect/transit-cljs "0.8.205"]
                                        [org.omcljs/om "0.8.8" :exclusions [cljsjs/react]]
@@ -59,7 +58,7 @@
                                        [org.clojars.the-kenny/nom "0.1.1"]
                                        [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"]
                                        [sablono "0.3.4" :exclusions [cljsjs/react]]
-                                       [secretary "1.2.2"]
+                                       [secretary "1.2.3"]
                                        [the/parsatron "0.0.7"]
 
                                        [org.clojars.the-kenny/weasel "0.6.1-SNAPSHOT"]]}}
