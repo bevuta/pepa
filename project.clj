@@ -17,7 +17,7 @@
                  [compojure "1.3.3"]
                  [ring/ring-devel "1.3.2"
                   :exclusions [ring/ring-core]]
-                 [com.cognitect/transit-clj "0.8.269"]
+                 [com.cognitect/transit-clj "0.8.271"]
                  [ring-transit "0.1.3"]
                  [ring/ring-json "0.3.1"]
                  [hiccup "1.0.5"]
@@ -46,22 +46,24 @@
              "-XX:MaxPermSize=128M"]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
-  :profiles {:repl {:plugins [[cider/cider-nrepl "0.8.2"]]
+  :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.0-SNAPSHOT"]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
+             :dev {:dependencies [[com.cemerick/piggieback "0.2.0"]
+                                  [org.clojure/tools.nrepl"0.2.10"]]
+                  
+                   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-3169"]
-                                       [com.cemerick/piggieback "0.1.6-SNAPSHOT"]
-                                       [com.cognitect/transit-cljs "0.8.205"]
-                                       [org.omcljs/om "0.8.8" :exclusions [cljsjs/react]]
-                                       [cljsjs/react-with-addons "0.13.0-0"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-3196"]
+                                       [com.cognitect/transit-cljs "0.8.207"]
+                                       [org.omcljs/om "0.8.8"]
                                        [org.clojars.the-kenny/nom "0.1.1"]
                                        [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"]
                                        [sablono "0.3.4" :exclusions [cljsjs/react]]
                                        [secretary "1.2.3"]
                                        [the/parsatron "0.0.7"]
 
-                                       [org.clojars.the-kenny/weasel "0.6.1-SNAPSHOT"]]}}
+                                       [org.clojars.the-kenny/jweasel "0.7.0-SNAPSHOT"]]}}
   ;; Cljsbuild configuration. Also see profiles.clj
   :cljsbuild {:builds {:pepa {:source-paths ["src-cljs/"]
                               :compiler {:output-to "resources/public/pepa.js"

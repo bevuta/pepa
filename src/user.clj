@@ -35,8 +35,7 @@
            'weasel.repl.websocket)
   (let [cljs-repl (ns-resolve 'cemerick.piggieback 'cljs-repl)
         repl-env (ns-resolve 'weasel.repl.websocket 'repl-env)]
-    (cljs-repl
-     :repl-env (repl-env
+    (cljs-repl (repl-env
                 :ip "0.0.0.0"
                 :port 9009
                 :working-dir "resources/public/out"))))
