@@ -27,7 +27,7 @@
   (render [_]
     [:.page-count (count pages)]))
 
-(ui/defcomponent document-preview [document]
+(ui/defcomponent ^:private document-preview [document]
   (render [_]
     (let [href (nav/document-route document)]
       ;; NOTE: We can't wrap the <a> around all those divs. It's
@@ -52,7 +52,7 @@
        (om/build tags/tags-list (:tags document)
                  {:react-key "tags-list"})])))
 
-(ui/defcomponent filter-sidebar [state owner _]
+(ui/defcomponent ^:private filter-sidebar [state owner _]
   (render [_]
     [:.sidebar
      [:header "Sorting & Filtering"]
@@ -127,7 +127,7 @@
 ;;; Should be twice the document-height or so.
 (def +scroll-margin+ 500)
 
-(defn on-documents-scroll [state owner e]
+(defn ^:private on-documents-scroll [state owner e]
   (let [container e.currentTarget
         scroll-top (.-scrollTop container)
         scroll-height (.-scrollHeight container)
@@ -149,7 +149,7 @@
           (nav/navigate! :ignore-history :no-dispatch))
       (om/update! state [:navigation :query-params :count] num))))
 
-(defn scroll-to-offset! [state owner]
+(defn ^:private scroll-to-offset! [state owner]
   (let [el (om/get-node owner "documents")
         scroll-height (.-scrollHeight el)
         [num scroll] (parse-count-scroll state)
