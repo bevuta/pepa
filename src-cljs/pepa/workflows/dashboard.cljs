@@ -59,7 +59,7 @@
      (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})]))
 
 (defn ^:private document-ids [state]
-  (:search/results state))
+  (:results (search/current-search state)))
 
 (def +initial-elements+ 50)
 (def +to-load+ 50)
@@ -94,35 +94,31 @@
         (println "fetching missing documents:" missing)
         (<! (api/fetch-documents! missing))))))
 
-(defn ^:private fetch-document-ids!
-  "Fetches document-ids. Either for the current search results, or,
-  if there is no valid query, for all documents."
-  [state]
-  (if-let [query (search/search-query state)]
-    (search/search! state query)
-    (search/all-documents! state)))
-
-(ui/defcomponent ^:private document-count [state]
+(ui/defcomponent ^:private document-count [document-ids]
   (render [_]
     [:span.document-count
-     (when-let [ids (seq (document-ids state))]
-       (str "(" (count ids) ")"))]))
+     (str "(" (count document-ids) ")")]))
 
-(ui/defcomponent ^:private dashboard-title [state owner opts]
+(ui/defcomponent ^:private dashboard-title [search owner opts]
   (render [_]
-    (let [documents (document-ids state)]
+    (let [documents (:results search)
+          active-search? (search/search-active? search)]
       [:span
        (cond
-         (search/search-active? state)
+         active-search?
          "Loading..."
-      
-         (search/search-query state)
+
+         (search/all-documents? search)
+         "All Documents"
+         
+         (:query search)
          "Search Results"
-    
+         
          true
          "Dashboard")
-       (om/build document-count state
-                 {:react-key "document-count"})])))
+       (when-not active-search?
+        (om/build document-count documents
+                  {:react-key "document-count"}))])))
 
 ;;; Should be twice the document-height or so.
 (def +scroll-margin+ 500)
@@ -171,27 +167,23 @@
   (will-mount [_]
     (go
       (ui/with-working owner
-        (<! (fetch-document-ids! state))
-        (<! (fetch-missing-documents! state owner)))
-      (scroll-to-offset! state owner)))
+        (<! (fetch-missing-documents! state owner)))))
   (will-receive-props [_ new-state]
     (go
       (ui/with-working owner
-        (when-not (= (search/search-query state)
-                     (search/search-query new-state))
-          (<! (fetch-document-ids! new-state)))
-        (<! (fetch-missing-documents! new-state owner)))
-      (scroll-to-offset! state owner)))
+        (<! (fetch-missing-documents! new-state owner)))))
+  (did-update [_ _ _]
+    (scroll-to-offset! state owner))
   (render-state [_ {:keys [working?]}]
-    ;; Show all documents with ids found in :dashboard/document-ids
     (let [document-ids (page-ids state)
-          working? (or working? (search/search-active? state))
+          search (search/current-search state)
+          working? (or working? (search/search-active? search))
           sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
                              css/default-sidebar-width)]
       [:.workflow.dashboard
        [:.pane {:key "documents-pane"}
         [:header {:key "header"}
-         (om/build dashboard-title state {:react-key "title"})]
+         (om/build dashboard-title search {:react-key "title"})]
         [:.documents {:ref "documents"
                       :key "documents"
                       :on-scroll (partial on-documents-scroll state owner)
