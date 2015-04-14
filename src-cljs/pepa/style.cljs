@@ -350,6 +350,7 @@
       [:.documents {:overflow-y :auto
                     :display :flex
                     :flex-flow [[:row :wrap]]}
+       [:&.working {:opacity "0.2"}]
        [:.document {:height (px document-height)
                     :width (px document-width)
                     :padding (px document-padding)

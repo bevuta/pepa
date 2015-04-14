@@ -13,7 +13,7 @@
             [pepa.components.draggable :refer [resize-draggable]]
             [pepa.style :as css]
 
-            [pepa.search :refer [search-query]]
+            [pepa.search :refer [query-string]]
             [pepa.search.parser :as parser])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -111,7 +111,7 @@
        (om/build logo/xeyes nil {:react-key "xeyes"})
 
        (om/build search-field nil
-                 {:state {:query (search-query state)}
+                 {:state {:query (query-string state)}
                   :react-key "search-field"})
        [:nav.workflows {:key "workflows"}
         [:ul

@@ -13,10 +13,22 @@
   (when-not (s/blank? s)
     (parser/parse-string s)))
 
-(defn search-query [state]
-  (match [(-> (om/value state) :navigation :route)]
-    [[:search [:query q]]] q
+(defn search-query
+  "If current :route is a search query, return the query as data
+  structure. Nil otherwise."
+  [state]
+  (match [(-> state om/value :navigation :route)]
+    [[:search [:tag tag]]]     (list 'tag tag)
+    [[:search [:query query]]] query
+    :else nil))
+
+(defn query-string
+  "If current :route is a search query, return it as a string, nil
+  otherwise."
+  [state]
+  (match [(-> state om/value :navigation :route)]
     [[:search [:tag tag]]] (str "tag:" (pr-str tag))
+    [[:search [:query query]]] query
     :else nil))
 
 (defn search-results [state]
@@ -28,8 +40,7 @@
 (defn ^:private cancel-search! [state]
   (when-let [ch (:search/channel state)]
     (async/close! ch)
-    (println "Canceled previous search"
-             (str "(for " (pr-str (:search/query state)) ")"))
+    (println "Canceling previous search")
     (om/update! state :search/channel nil)))
 
 (defn clear-results!
@@ -38,25 +49,20 @@
   (cancel-search! state)
   (om/transact! state (fn [state]
                         (assoc state
-                               :search/query nil
                                :search/results nil
                                :search/channel nil))))
 
 (defn all-documents!
   "Fetches all document-ids and stores them in :search/results."
-  [state & [force?]]
+  [state]
   (go
-    (when (or (not= ::all (:search/query state))
-              force?)
-      (cancel-search! state)
-      (let [ch (api/fetch-document-ids)]
+    (cancel-search! state)
+    (let [ch (api/fetch-document-ids)]
+      (om/update! state :search/channel ch)
+      (when-let [results (<! ch)]
         (om/transact! state #(assoc %
-                                    :search/query ::all
-                                    :search/channel ch))
-        (when-let [results (<! ch)]
-          (om/transact! state #(assoc %
-                                      :search/results results
-                                      :search/channel nil)))))))
+                                    :search/results results
+                                    :search/channel nil))))))
 
 (defn search! [state query]
   (go
@@ -67,17 +73,14 @@
                     (string? query)
                     (parse-query query))
                   (catch js/Error e nil))]
-      (when (not= query (:search/query state))
-        (println "got new query")
-        ;; Cancel old search & clear results
-        (clear-results! state)
-        ;; Start new search, store result channel in app-state
-        (let [chan (api/search-documents query)]
-          (om/transact! state (fn [state]
-                                (assoc state
-                                       :search/query query
-                                       :search/channel chan)))
-          (when-let [results (<! chan)]
-            (doto state
-              (om/update! :search/channel nil)
-              (om/update! :search/results results))))))))
+      (println "Running search:" query)
+      ;; Cancel old search
+      (cancel-search! state)
+      ;; Start new search, store result channel in app-state
+      (let [chan (api/search-documents query)]
+        (om/update! state :search/channel chan)
+        (when-let [results (<! chan)]
+          (clear-results! state)
+          (doto state
+            (om/update! :search/channel nil)
+            (om/update! :search/results results)))))))

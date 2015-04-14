@@ -91,16 +91,16 @@
     (let [ids (page-ids state)
           missing (remove (set (keys (:documents state))) ids)]
       (when (seq missing)
+        (println "fetching missing documents:" missing)
         (<! (api/fetch-documents! missing))))))
 
-(defn ^:private search-maybe! [state owner & [force-update?]]
-  (match [(-> @state :navigation :route)]
-    [[:search [:tag tag]]]
-    (search/search! state (list 'tag tag))
-    [[:search [:query query]]]
-    (search/search! state query) 
-    :else
-    (go (search/all-documents! state force-update?))))
+(defn ^:private fetch-document-ids!
+  "Fetches document-ids. Either for the current search results, or,
+  if there is no valid query, for all documents."
+  [state]
+  (if-let [query (search/search-query state)]
+    (search/search! state query)
+    (search/all-documents! state)))
 
 (ui/defcomponent ^:private document-count [state]
   (render [_]
@@ -170,17 +170,22 @@
   om/ICheckState
   (will-mount [_]
     (go
-      (<! (search-maybe! state owner :force-update))
-      (<! (fetch-missing-documents! state owner))
+      (ui/with-working owner
+        (<! (fetch-document-ids! state))
+        (<! (fetch-missing-documents! state owner)))
       (scroll-to-offset! state owner)))
-  (did-update [_ _ _]
+  (will-receive-props [_ new-state]
     (go
-      (<! (search-maybe! state owner))
-      (<! (fetch-missing-documents! state owner))
+      (ui/with-working owner
+        (when-not (= (search/search-query state)
+                     (search/search-query new-state))
+          (<! (fetch-document-ids! new-state)))
+        (<! (fetch-missing-documents! new-state owner)))
       (scroll-to-offset! state owner)))
-  (render-state [_ local-state]
+  (render-state [_ {:keys [working?]}]
     ;; Show all documents with ids found in :dashboard/document-ids
     (let [document-ids (page-ids state)
+          working? (or working? (search/search-active? state))
           sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
                              css/default-sidebar-width)]
       [:.workflow.dashboard
@@ -189,7 +194,8 @@
          (om/build dashboard-title state {:react-key "title"})]
         [:.documents {:ref "documents"
                       :key "documents"
-                      :on-scroll (partial on-documents-scroll state owner)}
+                      :on-scroll (partial on-documents-scroll state owner)
+                      :class [(when working? "working")]}
          (let [documents (->> document-ids
                               (map (partial get (:documents state)))
                               (remove nil?))]
