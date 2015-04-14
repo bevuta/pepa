@@ -3,7 +3,7 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.6.0"]
+  :dependencies [[org.clojure/clojure "1.7.0-beta1"]
                  [com.stuartsierra/component "0.2.3"]
                  [org.clojure/tools.namespace "0.2.10"]
 
@@ -63,9 +63,9 @@
                                        [secretary "1.2.3"]
                                        [the/parsatron "0.0.7"]
 
-                                       [org.clojars.the-kenny/jweasel "0.7.0-SNAPSHOT"]]}}
+                                       [org.clojars.the-kenny/weasel "0.7.0-SNAPSHOT"]]}}
   ;; Cljsbuild configuration. Also see profiles.clj
-  :cljsbuild {:builds {:pepa {:source-paths ["src-cljs/"]
+  :cljsbuild {:builds {:pepa {:source-paths ["src/" "src-cljs/"]
                               :compiler {:output-to "resources/public/pepa.js"
                                          :output-dir "resources/public/out/"
                                          :source-map "resources/public/pepa.js.map"
@@ -75,8 +75,5 @@
                                          :optimizations :none
                                          :pretty-print true}}}}
   :clean-targets ^{:protect false} [[:cljsbuild :builds :pepa :compiler :output-to]
-                                    [:cljsbuild :builds :pepa :compiler :source-map]
                                     [:cljsbuild :builds :pepa :compiler :output-dir]
-                                    :target-path :compile-path]
-  :repositories [["Immutant incremental builds"
-                  "http://downloads.immutant.org/incremental/"]])
+                                    :target-path :compile-path])
