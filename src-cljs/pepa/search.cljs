@@ -60,7 +60,7 @@
                   (cond
                     (list? query)
                     query
-                  
+
                     (string? query)
                     (parse-query-string query)))
           ch (if (= query ::all)
