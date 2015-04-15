@@ -103,8 +103,7 @@
     (let [route (om/value (get-in state [:navigation :route]))
           width (get (om/observe owner (data/ui-sidebars)) ::sidebar
                      css/default-sidebar-width)]
-      [:#sidebar {:style (when width {:min-width width
-                                      :max-width width})}
+      [:#sidebar {:style {:min-width width :max-width width}}
        (om/build resize-draggable nil
                  {:opts {:sidebar ::sidebar}
                   :react-key "draggable"})

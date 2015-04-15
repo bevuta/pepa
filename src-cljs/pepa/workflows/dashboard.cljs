@@ -52,11 +52,15 @@
        (om/build tags/tags-list (:tags document)
                  {:react-key "tags-list"})])))
 
-(ui/defcomponent ^:private filter-sidebar [state owner _]
+(ui/defcomponent ^:private sidebar-pane [state owner _]
   (render [_]
-    [:.sidebar
-     [:header "Sorting & Filtering"]
-     (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})]))
+    (let [sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
+                             css/default-sidebar-width)]
+      [:.pane {:key "sidebar-pane"
+               :style {:min-width sidebar-width :max-width sidebar-width}}
+       [:.sidebar
+        [:header "Sorting & Filtering"]
+        (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})]])))
 
 (defn ^:private document-ids [state]
   (:results (search/current-search state)))
@@ -177,9 +181,7 @@
   (render-state [_ {:keys [working?]}]
     (let [document-ids (page-ids state)
           search (search/current-search state)
-          working? (or working? (search/search-active? search))
-          sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
-                             css/default-sidebar-width)]
+          working? (or working? (search/search-active? search))]
       [:.workflow.dashboard
        [:.pane {:key "documents-pane"}
         [:header {:key "header"}
@@ -193,10 +195,7 @@
                               (remove nil?))]
            (om/build-all document-preview documents
                          {:key :id}))]]
-       [:.pane {:key "sidebar-pane"
-                :style {:min-width sidebar-width
-                        :max-width sidebar-width}}
-        (om/build filter-sidebar state)]])))
+       (om/build sidebar-pane state)])))
 
 (defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]
   (draggable/limit
