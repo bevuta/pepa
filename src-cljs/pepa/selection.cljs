@@ -51,7 +51,9 @@
       
       (empty? modifiers)
       (assoc selection
-             :selected #{element}
+             :selected (if (= (:selected selection) #{element})
+                         #{}
+                         #{element})
              :last-clicked element)
 
       (control modifiers)
@@ -76,6 +78,12 @@
             (click (make-click 5 [])))]
   (assert (= #{5} (:selected s)))
   (assert (= 5 (:last-clicked s))))
+
+(let [s (-> (->Selection (range 10) nil nil)
+            (click (make-click 3 []))
+            (click (make-click 3 [])))]
+  (assert (= #{} (:selected s)))
+  (assert (= 3 (:last-clicked s))))
 
 ;;; Control Selection
 
