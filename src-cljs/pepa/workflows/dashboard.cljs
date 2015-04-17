@@ -174,10 +174,10 @@
 (defn ^:private click-loop! [state owner]
   (go-loop []
     (when-let [click (<! (om/get-state owner :clicks))]
-      (println "got click:" (pr-str click))
-      ;; TODO: handle double-click
-      (om/update-state! owner :selection (fn [selection]
-                                           (selection/click selection click)))
+      (if (= :double (::type click))
+        (nav/navigate! (nav/document-route {:id (:element click)}))
+        (om/update-state! owner :selection (fn [selection]
+                                             (selection/click selection click))))
       (recur))))
 
 ;; (defn on-document-click [state owner document])
