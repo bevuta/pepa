@@ -185,7 +185,6 @@
 (ui/defcomponent dashboard [state owner]
   om/ICheckState
   (init-state [_]
-    ;; NOTE: We might want to move that to the app-state
     {:selection (selection/make-selection (document-ids state))
      :clicks (async/chan)})
   (will-mount [_]
@@ -231,3 +230,4 @@
 (defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]
   (draggable/limit
    (- (draggable/viewport-width) x)))
+
