@@ -1,15 +1,17 @@
 (ns pepa.workflows.dashboard
   (:require [om.core :as om :include-macros true]
+            [nom.ui :as ui]
+
             [cljs.reader :as reader]
             [cljs.core.async :as async]
             [clojure.string :as s]
-            
+
             [pepa.api :as api]
             [pepa.data :as data]
             [pepa.search :as search]
             [pepa.navigation :as nav]
             [pepa.style :as css]
-            [nom.ui :as ui]
+            [pepa.selection :as selection]
 
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
@@ -27,7 +29,14 @@
   (render [_]
     [:.page-count (count pages)]))
 
-(ui/defcomponent ^:private document-preview [document]
+(defn ^:private document-click [click-type document owner e]
+  {:pre [(contains? #{:single :double} click-type)]}
+  (when-let [clicks (om/get-state owner :clicks)]
+    (async/put! clicks (assoc (selection/event->click (:id document) e)
+                              ::type click-type)))
+  (ui/cancel-event e))
+
+(ui/defcomponent ^:private document-preview [document owner]
   (render [_]
     (let [href (nav/document-route document)]
       ;; NOTE: We can't wrap the <a> around all those divs. It's
@@ -37,11 +46,9 @@
       ;; horribly.
       [:.document {:on-drag-over tags/accept-tags-drop
                    :on-drop (partial handle-tags-drop document)
-                   :on-click (fn [e]
-                               (nav/navigate! (nav/document-route document))
-                               (doto e
-                                 (.stopPropagation)
-                                 (.preventDefault)))}
+                   :on-click (partial document-click :single document owner)
+                   :on-double-click (partial document-click :double document owner)
+                   :class [(when (::selected document) "selected")]}
        [:.preview {:key "preview"}
         [:a {:href href}
          (om/build page/thumbnail (-> document :pages first) {:key :id})
@@ -114,10 +121,10 @@
 
          (search/all-documents? search)
          "All Documents"
-         
+
          (:query search)
          "Search Results"
-         
+
          true
          "Dashboard")
        (when-not active-search?
@@ -154,31 +161,50 @@
         scroll-height (.-scrollHeight el)
         [num scroll] (parse-count-scroll state)
         elements (page-ids state)]
-    
     (cond
       (= 0 (.-scrollTop el))
       (set! (.-scrollTop el) (* scroll-height
                                 (/ scroll (count elements))))
-
       ;; TODO: :count isn't always nil (the query-params won't get
       ;; updated). Need another way to change the url without changing
       ;; history
       (every? nil? ((juxt :count :scroll) (get-in state [:navigation :query-params])))
       (set! (.-scrollTop el) 0))))
 
+(defn ^:private click-loop! [state owner]
+  (go-loop []
+    (when-let [click (<! (om/get-state owner :clicks))]
+      (println "got click:" (pr-str click))
+      ;; TODO: handle double-click
+      (om/update-state! owner :selection (fn [selection]
+                                           (selection/click selection click)))
+      (recur))))
+
+;; (defn on-document-click [state owner document])
+
 (ui/defcomponent dashboard [state owner]
   om/ICheckState
+  (init-state [_]
+    ;; NOTE: We might want to move that to the app-state
+    {:selection (selection/make-selection (document-ids state))
+     :clicks (async/chan)})
   (will-mount [_]
+    (click-loop! state owner)
     (go
       (ui/with-working owner
         (<! (fetch-missing-documents! state owner)))))
   (will-receive-props [_ new-state]
+    (when (not= (document-ids (om/get-props owner))
+                (document-ids new-state))
+      (om/set-state! owner :selection
+                     (selection/make-selection (document-ids new-state))))
+
     (go
       (ui/with-working owner
         (<! (fetch-missing-documents! new-state owner)))))
   (did-update [_ _ _]
     (scroll-to-offset! state owner))
-  (render-state [_ {:keys [working?]}]
+  (render-state [_ {:keys [working? selection clicks]}]
     (let [document-ids (page-ids state)
           search (search/current-search state)
           working? (or working? (search/search-active? search))]
@@ -194,7 +220,12 @@
                               (map (partial get (:documents state)))
                               (remove nil?))]
            (om/build-all document-preview documents
-                         {:key :id}))]]
+                         {:key :id
+                          ;; This is way more performant than passing
+                          ;; :selection via :state
+                          :fn #(assoc % ::selected
+                                      (contains? (:selected selection) (:id %)))
+                          :state {:clicks clicks}}))]]
        (om/build sidebar-pane state)])))
 
 (defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]

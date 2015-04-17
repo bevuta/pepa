@@ -37,6 +37,7 @@
 (def border-buttons "#a2a2a2")
 
 (def dashboard-page-count-color "#aaaaaa")
+(def dashboard-selection-color "#bedbff")
 
 ;;; Font
 
@@ -309,6 +310,7 @@
      [:li.page {:width "100%"
                 :list-style-type :none
                 :user-select :none}
+      ;; TODO: Move this into a generic css rule
       [:&.selected
        [:.thumbnail {:position :relative}
         [:&:before {:content (pr-str " ")
@@ -356,6 +358,7 @@
                     :padding (px document-padding)
                     :cursor :pointer}
         [:&:hover {:background-color dark-background}]
+        [:&.selected {:background-color dashboard-selection-color}]
 
         page-css
         
