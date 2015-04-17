@@ -128,8 +128,8 @@
          true
          "Dashboard")
        (when-not active-search?
-        (om/build document-count documents
-                  {:react-key "document-count"}))])))
+         (om/build document-count documents
+                   {:react-key "document-count"}))])))
 
 ;;; Should be twice the document-height or so.
 (def +scroll-margin+ 500)
