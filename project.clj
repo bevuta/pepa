@@ -3,7 +3,7 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.7.0-beta1"]
+  :dependencies [[org.clojure/clojure "1.7.0-beta2"]
                  [com.stuartsierra/component "0.2.3"]
                  [org.clojure/tools.namespace "0.2.10"]
 
@@ -13,8 +13,8 @@
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
 
                  ;; Web
-                 [org.immutant/web "2.0.0-beta2"]
-                 [compojure "1.3.3"]
+                 [org.immutant/web "2.0.0"]
+                 [compojure "1.3.4"]
                  [ring/ring-devel "1.3.2"
                   :exclusions [ring/ring-core]]
                  [com.cognitect/transit-clj "0.8.271"]
@@ -49,12 +49,12 @@
   :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.0-SNAPSHOT"]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
-             :dev {:dependencies [[com.cemerick/piggieback "0.2.0"]
+             :dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
                                   [org.clojure/tools.nrepl"0.2.10"]]
                   
                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-3196"]
+             :provided {:dependencies [[org.clojure/clojurescript "0.0-3269"]
                                        [com.cognitect/transit-cljs "0.8.207"]
                                        [org.omcljs/om "0.8.8"]
                                        [org.clojars.the-kenny/nom "0.1.1"]
