@@ -1,8 +1,10 @@
 (ns pepa.printing
   (:require [com.stuartsierra.component :as component]
             [lpd.server :as lpd]
-            [lpd.protocol :as lpd-protocol])
-  (:import [javax.jmdns JmDNS ServiceInfo]))
+            [lpd.protocol :as lpd-protocol]
+            [pepa.log :as log])
+  (:import [javax.jmdns JmDNS ServiceInfo]
+           [java.net InetAddress]))
 
 (defn ^:private job-handler [config]
   (reify
@@ -16,33 +18,44 @@
                           :handler (job-handler config))))
 
 (defn ^:private service-info [config]
-  (ServiceInfo/create "_printer._tcp.local."
-                      "LPD Server"
-                      (:port config)
-                      10
-                      10
-                      {"pdl" "application/pdf,application/postscript"
-                       "rq" "some-queue"}))
+  (let [name "Pepa DMS Printer"]
+    (ServiceInfo/create "_printer._tcp.local."
+                        name
+                        (:port config)
+                        10
+                        10
+                        true
+                        {"pdl" "application/pdf,application/postscript"
+                         "rp" "documents"
+                         "txtvers" "1"
+                         "qtotal" "1"
+                         "ty" name})))
 
 (defrecord LPDPrinter [config mdns server]
   component/Lifecycle
-  (start [component]
+  (start [lpd]
     (let [lpd-config (get-in config [:printing :lpd])]
       (if (:enable lpd-config)
         (do
-          (println ";; Starting LPD Server")
+          (assert (< 0 (:port lpd-config) 65535))
+          (log/info lpd "Starting LPD Server")
           (let [server (-> (lpd-server lpd-config)
                            (lpd/start-server))
-                jmdns (JmDNS/create)]
+                ;; TODO: Use IP from config?
+                ip (InetAddress/getByName "moritz-x230")
+                jmdns (JmDNS/create ip nil)]
             (.registerService jmdns (service-info lpd-config))
-            (assoc component
+            (assoc lpd
                    :mdns jmdns
                    :server server)))
-        component)))
-  (stop [component]
-    (lpd/stop-server (:server component))
-    (.close (:mdns component))
-    (assoc component
+        lpd)))
+  (stop [lpd]
+    (log/info lpd "Stopping LPD Server")
+    (when-let [server (:server lpd)]
+      (lpd/stop-server server))
+    (when-let [mdns (:mdns lpd)]
+      (.close mdns))
+    (assoc lpd
            :mdns nil
            :server nil)))
 
