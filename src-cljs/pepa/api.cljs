@@ -34,7 +34,7 @@
      :successful? (.isSuccess xhr)})))
 
 
-;;; HACK: Because the current release of Google Closure doens't
+;;; HACK: Because the current release of Google Closure doesn't
 ;;; include support for the 'progress' event of Xhr, we have to attach
 ;;; events to the underlying native object. But we have to do this
 ;;; *before* Closure calls .open() on the object or else we won't
@@ -81,7 +81,8 @@
                   (transit/write writer data)
                   data)
                 (clj->js
-                 (merge {"Accept" "application/transit+json"}
+                 (merge {"Accept" "application/transit+json"
+                         "Accept-Charset" "utf-8"}
                         (when data {"Content-Type" (when data content-type)}))) )))
      ch))
   ([uri method content-type data]
