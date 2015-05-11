@@ -17,7 +17,7 @@
                   :host "0.0.0.0"
                   :port 6332
                   ;; List of queues announced via zeroconf
-                  :queues ["documents" "inbox"]}}
+                  :queues ["documents"]}}
  ;; Those origins' pages will appear in the Inbox
  :inbox {:origins #{"scanner"}}
  :ocr {:enable true
