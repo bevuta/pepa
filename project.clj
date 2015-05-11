@@ -40,7 +40,7 @@
                   :exclusions [org.slf4j/slf4j-api]]
 
                  ;; Printing
-                 [com.bevuta/lpd "0.1.0"]
+                 [com.bevuta/lpd "0.1.0-SNAPSHOT"]
                  [javax.jmdns/jmdns "3.4.1"]]
   :exclusions [org.clojure/data.json
                log4j/log4j]
