@@ -31,7 +31,7 @@
                            "rp" queue
                            "txtvers" "1"
                            "qtotal" (str (count queues))
-                           "ty" name}))))
+                           "ty" (str name " (Queue: " queue ")")}))))
 
 (defrecord LPDPrinter [config mdns server]
   component/Lifecycle
