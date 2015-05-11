@@ -7,15 +7,17 @@
   (:require-macros
    [cljs.core.async.macros :refer [go-loop]]))
 
-(defrecord Page [id rotation render-status])
-(defrecord Document [id title pages tags created modified notes])
+(defrecord Page [id rotation render-status dpi])
+(defrecord Document [id title pages created modified notes])
 
-(defrecord State [documents navigation upload])
+(defrecord State [documents navigation tags upload seqs])
 
 (defonce state (atom (map->State {:documents {}
                                   :navigation {:route :dashboard}
+                                  :tags {}
                                   :upload {}
-                                  :ui/sidebars {}})))
+                                  :ui/sidebars {}
+                                  :seqs {}})))
 
 ;;; Document Staleness
 
@@ -70,16 +72,19 @@
        (remove (set removed-tags))
        (into (empty tags))))
 
-(defn tag-document-count [state tag]
-  (get-in state [:tags tag] 0))
-
 (defn all-tags [state]
   (-> state :tags keys set))
 
 (defn sorted-tags [state]
-  (->> (all-tags state)
-       ;; Sort by document-count (desc) & name (asc)
-       (sort-by (juxt #(- (tag-document-count state %)) identity))))
+  (->> (:tags state)
+       (om/value)
+       (remove (comp zero? val))
+       (sort-by val >)
+       (mapv key)))
+
+(defn tag-count-map [state]
+  (-> (:tags state)
+      (om/value)))
 
 ;;; Page Movement
 

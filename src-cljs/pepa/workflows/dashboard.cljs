@@ -1,16 +1,15 @@
 (ns pepa.workflows.dashboard
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
             [cljs.reader :as reader]
             [cljs.core.async :as async]
-
+            [clojure.string :as s]
+            
             [pepa.api :as api]
             [pepa.data :as data]
             [pepa.search :as search]
             [pepa.navigation :as nav]
-            [clojure.string :as s]
-
             [pepa.style :as css]
+            [nom.ui :as ui]
 
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
@@ -24,38 +23,43 @@
                                      #(data/add-tags % tags)))
     (.preventDefault e)))
 
-(defn ^:private page-count [pages]
-  (om/component
-   (html
-    [:.page-count (count pages)])))
+(ui/defcomponent ^:private page-count [pages]
+  (render [_]
+    [:.page-count (count pages)]))
 
-(defn document-preview [document]
-  (reify
-    om/IRender
-    (render [_]
-      (let [href (nav/document-route document)]
-        (html
-         [:.document {:on-drag-over tags/accept-tags-drop
-                      :on-drop (partial handle-tags-drop document)}
-          [:.preview
-           [:a {:href href}
-            (om/build page/thumbnail (-> document :pages first))
-            (om/build page-count (:pages document))]]
-          [:a.title {:href href}
-           (:title document)]
-          (om/build tags/tags-list (:tags document))])))))
+(ui/defcomponent document-preview [document]
+  (render [_]
+    (let [href (nav/document-route document)]
+      ;; NOTE: We can't wrap the <a> around all those divs. It's
+      ;; forbidden to put a <div> inside <a> if there are other
+      ;; <a>s and other stuff inside it. If we try it nonetheless,
+      ;; the browser will reorder or DOM and React will fail
+      ;; horribly.
+      [:.document {:on-drag-over tags/accept-tags-drop
+                   :on-drop (partial handle-tags-drop document)
+                   :on-click (fn [e]
+                               (nav/navigate! (nav/document-route document))
+                               (doto e
+                                 (.stopPropagation)
+                                 (.preventDefault)))}
+       [:.preview {:key "preview"}
+        [:a {:href href}
+         (om/build page/thumbnail (-> document :pages first) {:key :id})
+         (om/build page-count (:pages document)
+                   {:react-key "page-count"})]]
+       [:a.title {:href href, :key "a.title"}
+        (:title document)]
+       (om/build tags/tags-list (:tags document)
+                 {:react-key "tags-list"})])))
 
-(defn filter-sidebar [state owner _]
-  (om/component
-   (html
+(ui/defcomponent filter-sidebar [state owner _]
+  (render [_]
     [:.sidebar
      [:header "Sorting & Filtering"]
-     (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})])))
+     (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})]))
 
 (defn ^:private document-ids [state]
-  (or (:search/results state)
-      ;; Default to all documents
-      (keys (:documents state))))
+  (:search/results state))
 
 (def +initial-elements+ 50)
 (def +to-load+ 50)
@@ -98,19 +102,27 @@
     :else
     (go (search/all-documents! state force-update?))))
 
-(defn ^:private dashboard-title [state]
-  (let [documents (document-ids state)]
-    (cond
-     (search/search-query state)
-     "Search Results"
-    
-     true
-     "Dashboard")))
+(ui/defcomponent ^:private document-count [state]
+  (render [_]
+    [:span.document-count
+     (when-let [ids (seq (document-ids state))]
+       (str "(" (count ids) ")"))]))
 
-(defn ^:private document-count [state]
-  (om/component
-   (html
-    [:span.document-count (str "(" (count (document-ids state)) ")")])))
+(ui/defcomponent ^:private dashboard-title [state owner opts]
+  (render [_]
+    (let [documents (document-ids state)]
+      [:span
+       (cond
+         (search/search-active? state)
+         "Loading..."
+      
+         (search/search-query state)
+         "Search Results"
+    
+         true
+         "Dashboard")
+       (om/build document-count state
+                 {:react-key "document-count"})])))
 
 ;;; Should be twice the document-height or so.
 (def +scroll-margin+ 500)
@@ -154,42 +166,39 @@
       (every? nil? ((juxt :count :scroll) (get-in state [:navigation :query-params])))
       (set! (.-scrollTop el) 0))))
 
-(defn dashboard [state owner]
-  (reify
-    om/ICheckState
-    om/IWillMount
-    (will-mount [_]
-      (go
-        (<! (search-maybe! state owner :force-update))
-        (<! (fetch-missing-documents! state owner))
-        (scroll-to-offset! state owner)))
-    om/IDidUpdate
-    (did-update [_ _ _]
-      (go
-        (<! (search-maybe! state owner))
-        (<! (fetch-missing-documents! state owner))
-        (scroll-to-offset! state owner)))
-    om/IRenderState
-    (render-state [_ local-state]
-      ;; Show all documents with ids found in :dashboard/document-ids
-      (let [document-ids (page-ids state)
-            sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
-                               css/default-sidebar-width)]
-        (html
-         [:.workflow.dashboard
-          [:.pane {:style {:width (str "calc(100% - " sidebar-width "px - 2px)")}}
-           [:header
-            (dashboard-title state)
-            (om/build document-count state)]
-           [:.documents {:ref "documents"
-                         :on-scroll (partial on-documents-scroll state owner)}
-            (let [documents (->> document-ids
-                                 (map (partial get (:documents state)))
-                                 (remove nil?))]
-              (om/build-all document-preview documents
-                            {:key :id}))]]
-          [:.pane {:style {:width sidebar-width}}
-           (om/build filter-sidebar state)]])))))
+(ui/defcomponent dashboard [state owner]
+  om/ICheckState
+  (will-mount [_]
+    (go
+      (<! (search-maybe! state owner :force-update))
+      (<! (fetch-missing-documents! state owner))
+      (scroll-to-offset! state owner)))
+  (did-update [_ _ _]
+    (go
+      (<! (search-maybe! state owner))
+      (<! (fetch-missing-documents! state owner))
+      (scroll-to-offset! state owner)))
+  (render-state [_ local-state]
+    ;; Show all documents with ids found in :dashboard/document-ids
+    (let [document-ids (page-ids state)
+          sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
+                             css/default-sidebar-width)]
+      [:.workflow.dashboard
+       [:.pane {:key "documents-pane"}
+        [:header {:key "header"}
+         (om/build dashboard-title state {:react-key "title"})]
+        [:.documents {:ref "documents"
+                      :key "documents"
+                      :on-scroll (partial on-documents-scroll state owner)}
+         (let [documents (->> document-ids
+                              (map (partial get (:documents state)))
+                              (remove nil?))]
+           (om/build-all document-preview documents
+                         {:key :id}))]]
+       [:.pane {:key "sidebar-pane"
+                :style {:min-width sidebar-width
+                        :max-width sidebar-width}}
+        (om/build filter-sidebar state)]])))
 
 (defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]
   (draggable/limit

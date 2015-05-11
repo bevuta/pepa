@@ -30,18 +30,18 @@
         (.readAsArrayBuffer file-reader file)))
     ch))
 
-(defn upload-to-inbox! [blob]
+(defn upload-to-inbox! [blob & [progress]]
   "Uploads blob from drop EVENT to server's inbox."
   (go
     (let [response (<! (xhr-request! "/files/scanner" :post
                                      "application/transit+json" blob
                                      nil ; no timeout
-                                     ))]
+                                     progress))]
       (if (= 201 (:status response))
         :success
         (println "Upload error: " response)))))
 
-(defn upload-document! [document {:keys [blob content-type filename]}]
+(defn upload-document! [document {:keys [blob content-type filename]} & [progress]]
   "Uploads blob from drop EVENT to server's inbox."
   (go
     (let [response (<! (xhr-request! "/documents" :post "application/transit+json"
@@ -50,7 +50,7 @@
                                                               :content-type content-type
                                                               :name filename}))
                                      nil ; no timeout
-                                     ))]
+                                     progress))]
       (if (= 201 (:status response))
         (-> response :response/transit :id)
         (println "Upload error: " response)))))

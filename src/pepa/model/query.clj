@@ -39,7 +39,8 @@
 
 (defn ->comparator-sql [operator exprs]
   (case (count exprs)
-    (0 1) (syntax-error (str "The " operator " operator needs at least two arguments"))
+    (0 1) (syntax-error (str "The " operator " operator needs at least two arguments")
+                        (first exprs))
     2 (->infix-sql (str " " operator " ") exprs)
     (->> (partition 2 1 exprs)
          (map (partial cons operator))

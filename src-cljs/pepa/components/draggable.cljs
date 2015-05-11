@@ -1,8 +1,8 @@
 (ns pepa.components.draggable
   (:require [om.core :as om :include-macros true]
-            [sablono.core :refer-macros [html]]
             [cljs.core.async :as async]
 
+            [nom.ui :as ui]
             [pepa.data :as data]
             [pepa.style :as css]
 
@@ -40,14 +40,11 @@
       (.preventDefault)
       (.stopPropagation))))
 
-(defn resize-draggable [_ owner {:keys [sidebar]}]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [dragging?]}]
-      (html
-       [:.draggable {:class [(when dragging?
-                               "active")]
-                     :on-mouse-down (partial resize-mouse-down owner sidebar)}]))))
+(ui/defcomponent resize-draggable [_ owner {:keys [sidebar]}]
+  (render-state [_ {:keys [dragging?]}]
+    [:.draggable {:class [(when dragging?
+                            "active")]
+                  :on-mouse-down (partial resize-mouse-down owner sidebar)}]))
 
 (defn limit
   ([width min max]
@@ -80,11 +77,15 @@
 
   (defn ^:private read-sidebar-state []
     (println "saving sidebar state")
-    (read-string (.get storage (str ::sidebars)))))
+    (try
+      (-> (.get storage (str ::sidebars))
+          (read-string))
+      (catch js/Error e
+        (println "Couldn't read sidebar state from local storage.")))))
 
 (defn resize-handle-loop [root-owner]
   ;; Read sizes from local storage
-  (om/update! (data/ui-sidebars) (read-sidebar-state))
+  (om/update! (data/ui-sidebars) (or (read-sidebar-state) {}))
   (go-loop [changed? false]
     (let [resizes (om/get-shared root-owner ::events)
           timeout (async/timeout +save-timeout+)

@@ -77,14 +77,7 @@
   (html5
    [:html
     [:head
-     [:style#style {:style "text/css"}]]
+     [:style#style {:type "text/css"}]]
     [:body
-     [:noscript
-      [:ul
-       [:li
-        [:a {:href "/inbox"}
-         "Inbox"]]]]
-     (include-js "react.js")
-     (include-js "out/goog/base.js")
-     (include-js "pepa.js")
-     [:script {:type "text/javascript"} "goog.require(\"pepa.core\");"]]]))
+     [:div#app]
+     (include-js "pepa.js")]]))

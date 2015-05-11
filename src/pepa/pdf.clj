@@ -2,7 +2,8 @@
   (:require [clojure.string :as s]
             [clojure.java.io :as io]
             [pepa.util :refer [slurp-bytes run-process with-temp-file]])
-  (:import java.lang.ProcessBuilder))
+  (:import java.lang.ProcessBuilder
+           java.io.File))
 
 (declare make-reader)
 
@@ -52,7 +53,7 @@
           file-type (case file-type
                       ;; NOTE: Always use "." here. See note below.
                       :png "png")
-          tmp-file (java.io.File/createTempFile "pdftocairo" (str "." file-type))]
+          tmp-file (File/createTempFile "pdftocairo" (str "." file-type))]
       (try
         (let [args [(str file)
                     (str "-" file-type) ;-png flag
@@ -87,7 +88,7 @@
   "Extracts PAGE (a number) from PDF (input-stream). Returns a file.
   Caller must delete this file when it's no longer needed."
   [file page]
-  (let [tmp-file (java.io.File/createTempFile "pdfseparate-" ".pdf")
+  (let [tmp-file (File/createTempFile "pdfseparate-" ".pdf")
         page (inc page)
         args ["-f" page
               "-l" page
@@ -105,6 +106,41 @@
                        :args args
                        :page page})))
     tmp-file))
+
+(defn rotate-pdf-file
+  "Sets rotation of all pages in F to DEG degrees. DEG must be a
+  multiple of 90. Overwrites f."
+  [f deg]
+  (let [deg (mod deg 360)]
+    (when-not (zero? (mod deg 90))
+      (throw (ex-info "PDF only supports rotation by multiples of 90."
+                      {:file f, :deg deg})))
+    (if (zero? deg)
+      f
+      ;; pdftk in.pdf cat 1-endsouth output out.pdf
+      (let [tmp-file (File/createTempFile "pdftk-" ".pdf")]
+        (try
+          (let [rot (case deg
+                      90 :right
+                      180 :down
+                      270 :left)
+            
+                args ["pdftk" f "cat" (str "1-end" (name rot)) "output" tmp-file]
+                proc (-> (into-array (map str args))
+                         (ProcessBuilder.)
+                         (.redirectError java.lang.ProcessBuilder$Redirect/INHERIT)
+                         (.start))
+                exit-code (.waitFor proc)]
+            (when-not (zero? exit-code)
+              (throw (ex-info "pdftk didn't terminate correctly"
+                              {:exit-code exit-code, :args args})))
+            (when-not (.renameTo tmp-file f)
+              (throw (ex-info "Couldn't overwrite input file"
+                              {:input f, :tmp-file tmp-file})))
+            f)
+          (finally
+            (when (.exists tmp-file)
+              (.delete tmp-file))))))))
 
 (defn split-pdf
   "Extract all pages with numbers in PAGES from PDF. Returns a map
@@ -126,7 +162,7 @@
   "Merges PAGES into a pdf. PAGES must be a sequence of pdf files. Returns a file."
   [pages]
   (assert (seq pages))
-  (let [file (java.io.File/createTempFile "pdfunite-" ".pdf")
+  (let [file (File/createTempFile "pdfunite-" ".pdf")
         args (concat (map #(.getAbsolutePath %) pages)
                      [(.getAbsolutePath file)])
         process (-> (into-array (map str (cons "pdfunite" args)))

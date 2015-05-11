@@ -4,11 +4,11 @@
 (defrecord Config []
   component/Lifecycle
   (start [component]
-    (println ";; Loading config")
-    (into component (load-file "config.clj")))
+    (into component (let [file (or (System/getenv "PEPA_CONFIG")
+                                   "config.clj")]
+                      (load-file file))))
 
   (stop [component]
-    (println ";; Clearing config")
     (->Config)))
 
 (defn make-component []

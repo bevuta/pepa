@@ -1,40 +1,65 @@
 (ns pepa.bus
   (:require [com.stuartsierra.component :as component]
-            [clojure.core.async :as async :refer [>!!]]))
+            [clojure.core.async :as async :refer [>!!]]
+
+            [pepa.log :as log]))
 
 ;;; pepa.bus is a simple application-wide notification bus. Clients
 ;;; can subscribe for any topic they want and will receive a value for
-;;; any cann of `notify!' for that topic.
+;;; any call of `notify!' for that topic.
 
 (defn subscribe
   "Returns a channel with that will receive a value when `notify!' is
-  called for that topic."
-  [bus topic]
-  (let [chan (async/chan (async/sliding-buffer 1))]
-    (async/sub (:output bus) topic chan)
-    chan))
+  called for that topic." 
+  ([bus topic buf]
+   (log/debug bus "subscribe" {:topic topic :buf buf})
+   (let [chan (async/chan buf)]
+     (async/sub (:output bus) topic chan)
+     chan))
+  ([bus topic]
+   (subscribe bus topic nil)))
 
-;;; TODO: Add optional extra data. Replace `identity' in `async/pub'
-;;; below with ::topic or similar and make `notify!' put maps into the
-;;; channel.
-(defn notify! [bus topic]
-  (>!! (:input bus) topic ))
+(defn notify!
+  ([bus topic data]
+   (log/debug bus "notify!" {:topic topic :data data})
+   (>!! (:input bus) (assoc data ::topic topic)))
+  ([bus topic]
+   (notify! bus topic {})))
 
-(defrecord Bus [input output]
+(defn subscribe-all
+  "Returns a channel receiving all messages sent over the bus."
+  ([bus buf]
+   (log/debug bus "subscribe-all" {:buf buf})
+   (let [ch (async/chan buf)]
+     (async/tap (:mult bus) ch)))
+  ([bus]
+   (subscribe-all bus nil)))
+
+(defn topic [message]
+  (::topic message))
+
+(defrecord Bus [input mult output]
   component/Lifecycle
   (start [component]
-    (println ";; Starting bus")
+    (log/info component "Starting Bus")
     (let [input (async/chan)
-          output (async/pub input identity)]
+          mult (async/mult input)
+          output-tap (async/chan)
+          output (async/pub output-tap ::topic)]
+      (async/tap mult output-tap)
       (assoc component
-        :input input
-        :output output)))
+             :input input
+             :mult mult
+             :output output)))
 
   (stop [component]
-    (println ";; Stopping bus")
+    (log/info component "Stopping Bus")
+    (when-let [input (:input component)]
+      (async/close! input))
     (assoc component
-      :input nil
-      :output nil)))
+           :input nil
+           :mult nil
+           :output nil)))
 
 (defn make-component []
   (map->Bus {}))

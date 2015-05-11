@@ -1,13 +1,15 @@
 (ns pepa.web
-  (:require [com.stuartsierra.component :as component]
-            [pepa.web.handlers :refer [make-handlers]]
+  (:require [pepa.web.handlers :refer [make-handlers]]
+            [pepa.log :as log]
+
+            [com.stuartsierra.component :as component]
             [immutant.web :as http-server]
             [ring.middleware.stacktrace :refer [wrap-stacktrace]]))
 
 (defrecord Web [config db processor server]
   component/Lifecycle
   (start [component]
-    (println ";; Starting web server")
+    (log/info component "Starting HTTP Server")
     (let [config (:web config)
           {:keys [host port]} config
           handlers (if (:static-handlers config)
@@ -16,14 +18,14 @@
           handlers (if (:show-traces config)
                      (wrap-stacktrace handlers)
                      handlers)]
-      (println (str ";; Started web server on http://" host ":" port "/"))
+      (log/info component (str "Started web server on http://" host ":" port "/"))
       (assoc component
         :server (http-server/run handlers
                   :host host
                   :port port))))
 
   (stop [component]
-    (println ";; Stopping web server")
+    (log/info component "Stopping HTTP Server")
     (http-server/stop server)
     (assoc component :server nil)))
 

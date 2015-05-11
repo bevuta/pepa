@@ -1,7 +1,8 @@
 (ns pepa.smtp
   (:require [com.stuartsierra.component :as component]
             [pepa.model :as m]
-            [pepa.db :as db])
+            [pepa.db :as db]
+            [pepa.log :as log])
   (:import org.subethamail.smtp.helper.SimpleMessageListener
            org.subethamail.smtp.helper.SimpleMessageListenerAdapter
            org.subethamail.smtp.server.SMTPServer
@@ -12,45 +13,52 @@
 (defrecord SMTP [config db server]
   component/Lifecycle
   (start [component]
-    (if (get-in component [:config :smtp :enable])
-      (do
-        (println ";; Starting SMTP server")
-        (let [config (:smtp config)
-              host (:host config)
-              port (:port config)
-              address (and host (InetAddress/getByName host))
-              server (->
-                      (proxy [SimpleMessageListener] []
-                        (accept [from to] true)
-                        (deliver [from to data]
-                          (db/with-transaction [db (:db component)]
-                            ;; TODO: Use proper mail address parser
-                            (let [origin (if (.startsWith to "scanner@") "scanner" "email")
-                                  files (m/store-files! db
-                                                        (m/mime-message->files data)
-                                                        {:origin origin})]
+    (when (get-in component [:config :smtp :enable])
+      (log/info component "Starting SMTP Server")
+      (let [smtp-config (:smtp config)
+            host (:host smtp-config)
+            port (:port smtp-config)
+            address (and host (InetAddress/getByName host))
+            server (->
+                    (proxy [SimpleMessageListener] []
+                      (accept [from to]
+                        (log/info component "Accepting mail" (str "(from: " from ", to: " to ")"))
+                        true)
+                      (deliver [from to data]
+                        (db/with-transaction [db (:db component)]
+                          ;; TODO: Use proper mail address parser
+                          (if-let [files (seq (m/mime-message->files data))]
+                            (let [[_ origin] (re-find #"(.+)@" to)
+                                  origin (or (and (m/inbox-origin? config origin) origin)
+                                             "email")
+                                  files (m/store-files! db files {:origin origin})]
                               (when (= origin "email")
                                 (doseq [file files]
                                   (let [id (m/create-document! db {:file (:id file)
                                                                    :title (:name file)})
                                         tagging (get-in component [:config :tagging])]
-                                    (m/auto-tag! db id tagging
-                                                 {:origin origin
-                                                  :mail/from from
-                                                  :mail/to to}))))))))
-                      (SimpleMessageListenerAdapter.)
-                      (SMTPServer.))]
-          (doto server
-            (.setPort port)
-            (.setHostName host)
-            (.setBindAddress address)
-            (.start))
-          (assoc component
-                 :server server)))
-      component))
+                                    ;; NOTE: auto-tag*! so we don't
+                                    ;; trigger an update on the
+                                    ;; notification bus
+                                    (log/info component "adding tags to created document")
+                                    (m/auto-tag*! db id tagging
+                                                  {:origin origin
+                                                   :mail/from from
+                                                   :mail/to to})))))
+                            (log/warn component "Got mail from" from "without attachments")))))
+                    (SimpleMessageListenerAdapter.)
+                    (SMTPServer.))]
+        (doto server
+          (.setPort port)
+          (.setHostName host)
+          (.setBindAddress address)
+          (.start))
+        (assoc component
+               :server server))))
+
   (stop [component]
     (when-let [server (:server component)]
-      (println ";; Stopping SMTP server")
+      (log/info component "Stopping SMTP Server")
       (.stop server))
     (assoc component :server nil)))
 

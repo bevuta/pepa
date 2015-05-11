@@ -2,6 +2,8 @@
   (:require [pepa.db :as db]
             [pepa.model :as m]
             [pepa.web.html :as html]
+            [pepa.web.poll :refer [poll-handler]]
+            
             [pepa.util :refer [slurp-bytes]]
             [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
@@ -14,10 +16,14 @@
             [ring.util.response :refer [redirect-after-post]]
             [ring.middleware.transit :refer [wrap-transit-response
                                              wrap-transit-body]]
+            [ring.middleware.json :refer [wrap-json-body]]
             
             [liberator.core :refer [defresource]]
             [liberator.representation :refer [as-response]]
-            [io.clojure.liberator-transit])
+            io.clojure.liberator-transit
+
+            [immutant.web.async :as async-web]
+            [clojure.core.async :as async :refer [go <!]])
   (:import java.io.ByteArrayOutputStream
            java.io.ByteArrayInputStream
            java.io.FileInputStream
@@ -45,43 +51,73 @@
   :handle-ok (fn [ctx]
                "Created")
   :post! (fn [ctx]
-           (m/store-files! (get-in ctx [:request ::db])
+           (m/store-files! (get-in ctx [:request :pepa/db])
                            (::files ctx)
                            {:origin "scanner"})))
+
+(defresource page [id]
+  :allowed-methods #{:get}
+  :available-media-types ["application/transit+json"]
+  :malformed? (fn [ctx]
+                (try [false {::id (Integer/parseInt id)}]
+                     (catch NumberFormatException e
+                       true)))
+  :exists? (fn [ctx]
+             (let [[page] (m/get-pages (get-in ctx [:request :pepa/db])
+                                       [(::id ctx)])]
+               (when page
+                 {::page (select-keys page [:id :render-status :rotation])})))
+  :handle-ok ::page)
 
 (defresource page-image [id size]
   :allowed-methods #{:get}
   :available-media-types ["image/png"]
+  :malformed? (fn [ctx]
+                (try [false {::id (Integer/parseInt id)
+                             ::size (if (= ::max size)
+                                      size
+                                      (Integer/parseInt size))}]
+                     (catch NumberFormatException e
+                       true)))
   :exists? (fn [ctx]
-             (let [db (get-in ctx [:request ::db])
-                   config (get-in ctx [:request ::config])
-                   dpi (or
-                        (get-in config [:rendering :png :dpi size])
-                        (get-in config [:web :default-page-dpi]))
-                   [{:keys [image hash]}] (db/query db ["SELECT image, hash FROM page_images WHERE page = ? AND dpi = ?"
-                                                        (Integer/parseInt id) dpi])]
-               (when image
-                 {::page (ByteArrayInputStream. image)
-                  ::hash hash})))
+             (try
+               (let [db (get-in ctx [:request :pepa/db])
+                     config (get-in ctx [:request :pepa/config])
+                     [{:keys [image hash]}] (if (= size ::max)
+                                              (db/query db ["SELECT image, hash FROM page_images WHERE page = ? ORDER BY dpi DESC LIMIT 1"
+                                                            (::id ctx)])
+                                              (db/query db ["SELECT image, hash FROM page_images WHERE page = ? AND dpi = ?"
+                                                            (::id ctx) (::size ctx)]))]
+                 (when image
+                   {::page (ByteArrayInputStream. image)
+                    ::hash hash}))
+               (catch NumberFormatException e
+                 nil)))
   :etag ::hash
   :handle-ok ::page)
 
 (defresource page-rotation [id]
   :allowed-methods #{:post}
   :available-media-types +default-media-types+
+  :malformed? (fn [ctx]
+                (try
+                  (let [id (Integer/parseInt id)
+                        rotation (get-in ctx [:request :body :rotation])]
+                    (if (and (integer? rotation)
+                             (zero? (mod rotation 90)))
+                      [false {::rotation (mod rotation 360)
+                              ::id id}]
+                      [true "Invalid rotation"]))
+                  (catch NumberFormatException e
+                    [true "Malformed ID"])))
   :exists? (fn [ctx]
-             (let [db (get-in ctx [:request ::db])
-                   [{:keys [id]}] (db/query db ["SELECT id FROM pages WHERE id = ?" (Integer/parseInt id)])]
+             (let [db (get-in ctx [:request :pepa/db])
+                   [{:keys [id]}] (db/query db ["SELECT id FROM pages WHERE id = ?" (::id ctx)])]
                (when id {::page-id id})))
   :can-post-to-missing? false
-  :malformed? (fn [ctx]
-                (let [rotation (get-in ctx [:request :body :rotation])]
-                  (if (and (integer? rotation)
-                           (zero? (mod rotation 90)))
-                    [false {::rotation (mod rotation 360)}]
-                    [true "Invalid rotation"])))
+
   :post! (fn [ctx]
-           (let [db (get-in ctx [:request ::db])
+           (let [db (get-in ctx [:request :pepa/db])
                  id (::page-id ctx)
                  rotation (::rotation ctx)]
              (m/rotate-page db id rotation))))
@@ -89,11 +125,13 @@
 (defresource document [id]
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
+  :malformed? (fn [ctx]
+                (try [false {::id (Integer/parseInt id)}]
+                     (catch NumberFormatException e
+                       true)))
   :exists? (fn [ctx]
-             (let [id (Integer/parseInt id)]
-               (when-let [d (m/get-document (get-in ctx [:request ::db]) id)]
-                 {::document d
-                  ::id id})))
+             (when-let [d (m/get-document (get-in ctx [:request :pepa/db]) (::id ctx))]
+               {::document d}))
   :post-redirect? true
   :location (fn [ctx] (str "/documents/" id))
   :post! (fn [ctx]
@@ -105,7 +143,7 @@
                  {added-tags :added, removed-tags :removed} (:tags params)]
              (assert (every? string? added-tags))
              (assert (every? string? removed-tags))
-             (db/with-transaction [db (::db req)]
+             (db/with-transaction [db (:pepa/db req)]
                (m/update-document! db id attrs added-tags removed-tags)
                {::document (m/get-document db id)})))
   :handle-created ::document
@@ -136,8 +174,12 @@
 (defresource document-download [id]
   :allowed-methods #{:get}
   :available-media-types ["application/pdf"]
+  :malformed? (fn [ctx]
+                (try [false {::id (Integer/parseInt id)}]
+                     (catch NumberFormatException e
+                       true)))
   :exists? (fn [ctx]
-             (let [db (get-in ctx [:request ::db])
+             (let [db (get-in ctx [:request :pepa/db])
                    id (Integer/parseInt id)
                    [{:keys [title]}]
                    (db/query db ["SELECT title FROM documents WHERE id = ?" id])]
@@ -156,11 +198,11 @@
   :allowed-methods #{:get :delete}
   :available-media-types +default-media-types+
   :delete! (fn [ctx]
-             (let [db (get-in ctx [:request ::db])]
+             (let [db (get-in ctx [:request :pepa/db])]
                (when-let [pages (seq (get-in ctx [:request :body]))]
                  (m/remove-from-inbox! db pages))))
   :handle-ok (fn [ctx]
-               (let [pages (m/inbox (get-in ctx [:request ::db]))]
+               (let [pages (m/inbox (get-in ctx [:request :pepa/db]))]
                  (condp = (get-in ctx [:representation :media-type])
                    "text/html" (html/inbox pages)
                    pages))))
@@ -170,7 +212,7 @@
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
                 (try
-                  (let [db (get-in ctx [:request ::db])]
+                  (let [db (get-in ctx [:request :pepa/db])]
                     (if-let [query (some-> ctx
                                            (get-in [:request :query-params "q"])
                                            (edn/read-string))]
@@ -182,7 +224,7 @@
                   (catch SQLException e
                     [true {::error "Query string generated invalid SQL"}])))
   :post! (fn [{:keys [request, representation] :as ctx}]
-           (db/with-transaction [conn (::db request)]
+           (db/with-transaction [conn (:pepa/db request)]
              (let [params (:body request)
                    file (:upload/file params)
                    pages (seq (:pages params))
@@ -205,9 +247,10 @@
                              pages
                              (assoc attrs :page-ids pages))
                      id (m/create-document! conn (assoc attrs :origin origin))
-                     tagging (get-in request [::config :tagging])]
-                 (m/auto-tag! conn id tagging
-                              {:origin origin})
+                     tagging (get-in request [:pepa/config :tagging])]
+                 ;; NOTE: auto-tag*! so we don't trigger updates on the notification bus
+                 (m/auto-tag*! conn id tagging
+                               {:origin origin})
                  {::document (m/get-document conn id)}))))
   :handle-created ::document
   :handle-ok (fn [ctx]
@@ -225,20 +268,20 @@
   :available-media-types +default-media-types+
   :allowed-methods #{:get}
   :handle-ok (fn [ctx]
-               (let [tags (db/query (get-in ctx [:request ::db])
-                                    "SELECT t.name, COUNT(dt.document) FROM tags AS t JOIN document_tags AS dt ON dt.tag = t.id GROUP BY t.name")]
+               (let [db (get-in ctx [:request :pepa/db])
+                     detailed? (= "true" (get-in ctx [:request :params "detailed"]))
+                     tags (if detailed?
+                            (m/tag-document-counts db)
+                            (m/all-tags db))]
                  (condp = (get-in ctx [:representation :media-type])
                    "text/html" (html/tags (map :name tags))
                    tags))))
 
-(defn handle-get-objects-for-tag [req tag]
-  (db/with-transaction [conn (::db req)]
-    (let [[{tag-id :id}] (db/query conn ["SELECT id FROM tags WHERE name = ?" tag])
-          files (db/query conn ["SELECT f.id, f.origin, f.name FROM files AS f JOIN file_tags AS ft ON f.id = ft.file WHERE ft.tag = ?" tag-id])
-          pages (db/query conn ["SELECT p.id, dp.page FROM pages AS p JOIN document_pages AS dp ON p.id = dp.document JOIN page_tags AS pt ON p.id = pt.page WHERE pt.tag = ?" tag-id])
-          documents (db/query conn ["SELECT d.id, d.title FROM documents AS d JOIN document_tags AS dt ON d.id = dt.document WHERE dt.tag = ?" tag-id])]
-      {:status 200
-       :body (html/objects-for-tag tag files pages documents)})))
+(defresource tag [t]
+  :available-media-types +default-media-types+
+  :allowed-methods #{:get}
+  :handle-ok (fn [ctx]
+               {:documents (m/tag-documents (get-in ctx [:request :pepa/db]) (str t))}))
 
 (defresource documents-bulk 
   :allowed-methods #{:post}
@@ -247,7 +290,7 @@
   :exists? (fn [ctx]
              (when-let [ids (get-in ctx [:request :body])]
                {::ids ids
-                ::documents (m/get-documents (get-in ctx [:request ::db]) ids)}))
+                ::documents (m/get-documents (get-in ctx [:request :pepa/db]) ids)}))
   ;; Change the status code to 200
   :as-response (fn [d ctx]
                  (-> (as-response d ctx)
@@ -256,12 +299,13 @@
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
 
-
-(defn wrap-component [handler {:keys [config db]}]
+(defn wrap-component [handler {:keys [config db bus] :as web}]
   (fn [req]
     (handler (assoc req
-               ::config config
-               ::db db))))
+                    :pepa/web web
+                    :pepa/config config
+                    :pepa/db db
+                    :pepa/bus bus))))
 
 (def handlers
   (routes (GET "/" [] (html/root))
@@ -271,9 +315,11 @@
           (ANY "/pages/:id/image/:size" [id size]
                (page-image id size))
           (ANY "/pages/:id/image" [id]
-               (page-image id "full"))
+               (page-image id ::max))
           (ANY "/pages/:id/rotation" [id]
                (page-rotation id))
+          (ANY "/pages/:id" [id]
+               (page id))
 
           (ANY "/documents" [] documents)
           (ANY "/documents/bulk" [] documents-bulk)
@@ -283,20 +329,22 @@
                (document-download id))
 
           (ANY "/tags" [] tags)
-          (GET "/tags/:tag" [tag :as req]
-               (handle-get-objects-for-tag req tag))
+          (ANY "/tags/:t" [t] (tag t))
+
+          (ANY "/poll" [] poll-handler)
 
           (route/resources "/")
           (route/not-found "Nothing here")))
 
 (defn wrap-logging [handler]
   (fn [req]
-    (when (get-in req [::config :web :log-requests?])
+    (when (get-in req [:pepa/config :web :log-requests?])
       (pprint req))
     (handler req)))
 
 (defn make-handlers [web-component]
   (-> #'handlers
+      ;; NOTE: *first* transit, then JSON
       (wrap-transit-body)
       (wrap-params)
       (wrap-logging)

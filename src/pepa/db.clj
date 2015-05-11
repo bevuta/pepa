@@ -2,14 +2,15 @@
   (:require [com.stuartsierra.component :as component]
             [clojure.java.jdbc :as jdbc]
             [clojure.string :as s]
-            [pepa.bus :as bus])
+            [pepa.bus :as bus]
+            [pepa.log :as log])
   (:import com.mchange.v2.c3p0.ComboPooledDataSource
            org.postgresql.util.PGobject))
 
 (defrecord Database [config datasource]
   component/Lifecycle
   (start [component]
-    (println ";; Starting database")
+    (log/info component "Starting database")
     (let [spec (:db config)
           cpds (doto (ComboPooledDataSource.)
                  (.setDriverClass "org.postgresql.Driver")
@@ -24,9 +25,9 @@
       (assoc component :datasource cpds)))
 
   (stop [component]
-    (println ";; Stopping database")
+    (log/info component "Stopping database")
     (when datasource
-      (println ";; Closing DB connection")
+      (log/info component "Closing DB connection")
       (.close datasource))
     (assoc component :datasource nil)))
 
@@ -54,20 +55,31 @@
   (apply str (interpose ", " (map (constantly "?") coll))))
 
 (defn sql+placeholders [sql-format-str coll]
+  (assert (seq coll))
   (vec (cons (format sql-format-str (placeholders coll)) coll)))
 
 (def advisory-lock-prefix 1952539)
 
 (def advisory-locks
   [:files/new
-   :pages/new])
+   :pages/new
+   :documents/new
+   
+   :files/updated
+   :pages/updated
+   :documents/updated
+   
+   :inbox/added
+   :inbox/removed])
 
 (defn make-advisory-lock-query-fn [lock-fn]
   (let [statement (format "SELECT %s(?::int, ?::int)" lock-fn)]
     (fn [db lock-name]
-      (query db [statement
-                 advisory-lock-prefix
-                 (.indexOf advisory-locks lock-name)]))))
+      (let [idx (.indexOf advisory-locks lock-name)]
+        (assert (not= -1 idx) (str "Need to have an advisory-lock for topicN " lock-name))
+        (query db [statement
+                   advisory-lock-prefix
+                   idx])))))
 
 (def advisory-xact-lock!
   (make-advisory-lock-query-fn "pg_advisory_xact_lock"))
@@ -75,9 +87,12 @@
 (def advisory-xact-lock-shared!
   (make-advisory-lock-query-fn "pg_advisory_xact_lock_shared"))
 
-(defn notify! [db topic]
-  (advisory-xact-lock-shared! db topic)
-  (bus/notify! (:bus db) topic))
+(defn notify!
+  ([db topic data]
+   (advisory-xact-lock! db topic)
+   (bus/notify! (:bus db) topic data))
+  ([db topic]
+   (notify! db topic nil)))
 
 ;;; Extend namespaced keywords to map to PostgreSQL enums
 
@@ -94,7 +109,7 @@
 (def +schema-enums+
   "A set of all PostgreSQL enums in schema.sql. Used to convert
   enum-values back into Clojure keywords."
-  #{"processing_status"})
+  #{"processing_status" "entity"})
 
 (extend-type String
   jdbc/IResultSetReadColumn

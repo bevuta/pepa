@@ -1,34 +1,55 @@
 (ns pepa.mime
   (:require [pepa.util :refer [slurp-bytes]])
-  (:import javax.mail.internet.MimeMessage
-           javax.mail.internet.MimeMultipart
-           javax.mail.Session
-           java.util.Properties))
+  (:import 
+   [javax.mail.internet MimeMessage MimeMultipart MimeBodyPart]
+   javax.mail.Session
+   java.util.Properties))
 
-(defn parse-message [input]
+(defn ^:private parse-message [input]
   (let [session (Session/getDefaultInstance (Properties.))]
     (MimeMessage. session input)))
 
-(defn message-part->map [part]
+(defn ^:private message-part->map [part]
   {:content-type (.getContentType part)
    :filename (.getFileName part)
    :content (delay (.getContent part))})
 
-(def multipart?
+(def ^:private multipart?
   (partial instance? MimeMultipart))
 
-(defn content->parts [content]
-  (let [cnt (.getCount content)]
-    (letfn [(next-part [i]
-              (when (< i cnt)
-                (lazy-seq
-                 (let [part (.getBodyPart content i)
-                       part-content (.getContent part)
-                       next (next-part (inc i))]
-                   (if (multipart? part-content)
-                     (concat (content->parts part-content) next)
-                     (cons (message-part->map part) next))))))]
-      (next-part 0))))
+(def ^:private body-part?
+  (partial instance? MimeBodyPart))
+
+(defn ^:private message-part? [part]
+  (= "message/rfc822" (.getContentType part)))
+
+(def ^:private message? (partial instance? MimeMessage))
+
+(defn ^:private children? [part]
+  (or (multipart? part)
+      (message-part? part)
+      (message? part)
+      (and (body-part? part) (multipart? (.getContent part)))))
+
+(defn ^:private children [part]
+  (cond
+    (message? part)
+    (recur (.getContent part))
+
+    (message-part? part)
+    (recur (.getContent part))
+
+    (and (body-part? part) (multipart? (.getContent part)))
+    (recur (.getContent part))
+    
+    (multipart? part)
+    (map #(.getBodyPart part %) (range (.getCount part)))))
+
+(defn ^:private content->parts [content]
+  (->>
+   (tree-seq children? children content)
+   (remove multipart?)
+   (map message-part->map)))
 
 (defn message-parts [input]
   (let [msg (parse-message input)
@@ -36,7 +57,6 @@
     (if (multipart? content)
       (content->parts content)
       [(message-part->map msg)])))
-
 
 (defn pdf-part? [part]
   (or (.startsWith (.toLowerCase (str (:content-type part))) "application/pdf")
