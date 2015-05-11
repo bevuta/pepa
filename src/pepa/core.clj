@@ -40,7 +40,7 @@
               [:config :db])
        :lpd (component/using
              (printing/make-lpd-component)
-             [:config]))
+             [:config :db]))
       (wrap-logging)))
 
 (defn -main [& args]

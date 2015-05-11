@@ -6,16 +6,16 @@
   (:import [javax.jmdns JmDNS ServiceInfo]
            [java.net InetAddress]))
 
-(defn ^:private job-handler [config]
+(defn ^:private job-handler [lpd]
   (reify
     lpd-protocol/IPrintJobHandler
     (accept-job [_ queue job]
-      (println "got job on queue" queue)
-      (prn job))))
+      (log/info lpd "got job on queue" queue
+                job))))
 
-(defn ^:private lpd-server [config]
+(defn ^:private lpd-server [lpd config]
   (lpd/make-server (assoc (select-keys config [:host :port])
-                          :handler (job-handler config))))
+                          :handler (job-handler lpd))))
 
 (defn ^:private service-infos [config]
   (let [name "Pepa DMS Printer"
@@ -33,7 +33,7 @@
                            "qtotal" (str (count queues))
                            "ty" (str name " (Queue: " queue ")")}))))
 
-(defrecord LPDPrinter [config mdns server]
+(defrecord LPDPrinter [config db mdns server]
   component/Lifecycle
   (start [lpd]
     (let [lpd-config (get-in config [:printing :lpd])]
@@ -41,7 +41,7 @@
         (do
           (assert (< 0 (:port lpd-config) 65535))
           (log/info lpd "Starting LPD Server")
-          (let [server (-> (lpd-server lpd-config)
+          (let [server (-> (lpd-server lpd lpd-config)
                            (lpd/start-server))
                 ;; TODO: Use IP from config?
                 ip (InetAddress/getByName "moritz-x230")
