@@ -45,7 +45,9 @@
   (lpd/make-server (assoc (select-keys config [:host :port])
                           :handler (job-handler lpd))))
 
+;;; TODO: Move service announcement to its own component
 (defn ^:private service-infos [config]
+  ;; TODO: Think about a better way to configure the announced name
   (let [name "Pepa DMS Printer"
         queues (or (:queues config) ["auto"])]
     (for [queue queues]
