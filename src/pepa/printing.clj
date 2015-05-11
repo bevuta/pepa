@@ -72,7 +72,7 @@
           (let [server (-> (lpd-server lpd lpd-config)
                            (lpd/start-server))
                 ;; TODO: Use IP from config?
-                ip (InetAddress/getByName "moritz-x230")
+                ip (InetAddress/getLocalHost)
                 jmdns (JmDNS/create ip nil)]
             (doseq [service (service-infos lpd-config)]
               (log/info lpd "Registering service:" (str service))
