@@ -1,8 +1,15 @@
 (ns pepa.printing
   (:require [com.stuartsierra.component :as component]
+            [clojure.java.io :as io]
+            
             [lpd.server :as lpd]
             [lpd.protocol :as lpd-protocol]
-            [pepa.log :as log])
+
+            [pepa.db :as db]
+            [pepa.model :as model]
+            [pepa.log :as log]
+            [pepa.ghostscript :as gs]
+            [pepa.util :as util])
   (:import [javax.jmdns JmDNS ServiceInfo]
            [java.net InetAddress]))
 
@@ -11,7 +18,26 @@
     lpd-protocol/IPrintJobHandler
     (accept-job [_ queue job]
       (log/info lpd "got job on queue" queue
-                job))))
+                job)
+      (db/with-transaction [db (:db lpd)]
+        (let [name (or (:source-filename job)
+                       (:banner-name job)
+                       "Printed File")
+              pdf (gs/ps->pdf (:data job))
+              file-props {:content-type "application/pdf"
+                          :name name
+                          :origin (str "printer/" queue)
+                          :data (util/slurp-bytes pdf)}
+              file (model/store-file! db file-props)
+              origin "printer"]
+          (when-not false ; (model/inbox-origin? (:config lpd) origin)
+            (log/info lpd "Creating Document for file" (:id file))
+            (let [document (model/create-document! db {:title (:name file-props)
+                                                       :file (:id file)})
+                  tagging-config (get-in lpd [:config :tagging])]
+              (log/info lpd "Auto-tagging document" document)
+              (model/auto-tag! db document tagging-config
+                               {:origin origin}))))))))
 
 (defn ^:private lpd-server [lpd config]
   (lpd/make-server (assoc (select-keys config [:host :port])
