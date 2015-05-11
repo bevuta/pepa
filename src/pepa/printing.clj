@@ -30,6 +30,7 @@
                           :data (util/slurp-bytes pdf)}
               file (model/store-file! db file-props)
               origin "printer"]
+          ;; TODO: Allow printing to inbox
           (when-not false ; (model/inbox-origin? (:config lpd) origin)
             (log/info lpd "Creating Document for file" (:id file))
             (let [document (model/create-document! db {:title (:name file-props)
