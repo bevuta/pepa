@@ -4,12 +4,12 @@
 
             [clojure.string :as s]
             [goog.string :as gstring]
-            
+
             [om.core :as om]
             [pepa.data :as data]
 
             [clojure.browser.event :as event])
-  (:import [goog.net XhrIo XmlHttp XmlHttpFactory])
+  (:import [goog.net XhrIo XmlHttp XmlHttpFactory EventType])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def +xhr-timeout+ (* 5 1000))
@@ -59,31 +59,34 @@
 
   Returns a channel containing something."
   ([uri method content-type data timeout & [progress]]
-   (let [ch (async/chan)]
-     (assert uri)
-     (let [factory (xhr-factory-dummy)
-           xhr (XhrIo. factory)] 
-       (let [put! (fn [d] (when progress (async/put! progress d)))]
-         (doto (.-upload (.createInstance factory))
-           (.addEventListener "progress" #(put! (/ (.-loaded %) (.-total %))))
-           (.addEventListener "load "    #(put! :loaded))
-           (.addEventListener "error"    #(put! :error))
-           (.addEventListener "abort"    #(put! :abort))))
-       (doto xhr
-         (.setTimeoutInterval timeout)
-         (event/listen "complete" (fn [e]
-                                    (when progress
-                                      (async/close! progress))
-                                    (async/put! ch (parse-xhr-response e.target))))
-         (.send uri
-                (s/upper-case (name method))
-                (if (= "application/transit+json" content-type)
-                  (transit/write writer data)
-                  data)
-                (clj->js
-                 (merge {"Accept" "application/transit+json"
-                         "Accept-Charset" "utf-8"}
-                        (when data {"Content-Type" (when data content-type)}))) )))
+   {:pre [(string? uri)
+          (keyword? method)
+          (string? content-type)]}
+   (let [ch (async/chan)
+         factory (xhr-factory-dummy)
+         xhr (XhrIo. factory)]
+     ;; Request load/error/abort requests
+     (let [upload (.-upload (.createInstance factory))
+           put! (fn [d] (when progress (async/put! progress d)))]
+       (doseq [[type f] [[EventType.PROGRESS #(put! (/ (.-loaded %) (.-total %)))]
+                         [EventType.LOAD     #(put! :loaded)]
+                         [EventType.ERROR    #(put! :error)]
+                         [EventType.ABORT    #(put! :abort)]]]
+         (.addEventListener upload type f)))
+     (doto xhr
+       (.setTimeoutInterval timeout)
+       (event/listen EventType.COMPLETE
+                     (fn [e]
+                       (when progress (async/close! progress))
+                       (async/put! ch (parse-xhr-response e.target))))
+       (.send uri
+              (s/upper-case (name method))
+              (if (= "application/transit+json" content-type)
+                (transit/write writer data)
+                data)
+              (clj->js
+               (merge {"Accept" "application/transit+json"}
+                      (when data {"Content-Type" (when data content-type)}))) ))
      ch))
   ([uri method content-type data]
    (xhr-request! uri method content-type data +xhr-timeout+))
@@ -203,7 +206,7 @@
                                          :post
                                          {:title title, :tags tags}))]
           (if (= 200 (:status response))
-            (let [new-document (-> response  
+            (let [new-document (-> response
                                    :response/transit
                                    (db-document->Document))]
               (data/store-document! new-document)
