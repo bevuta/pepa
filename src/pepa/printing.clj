@@ -17,19 +17,21 @@
   (lpd/make-server (assoc (select-keys config [:host :port])
                           :handler (job-handler config))))
 
-(defn ^:private service-info [config]
-  (let [name "Pepa DMS Printer"]
-    (ServiceInfo/create "_printer._tcp.local."
-                        name
-                        (:port config)
-                        10
-                        10
-                        true
-                        {"pdl" "application/pdf,application/postscript"
-                         "rp" "documents"
-                         "txtvers" "1"
-                         "qtotal" "1"
-                         "ty" name})))
+(defn ^:private service-infos [config]
+  (let [name "Pepa DMS Printer"
+        queues (or (:queues config) ["auto"])]
+    (for [queue queues]
+      (ServiceInfo/create "_printer._tcp.local."
+                          name
+                          (:port config)
+                          10
+                          10
+                          true
+                          {"pdl" "application/pdf,application/postscript"
+                           "rp" queue
+                           "txtvers" "1"
+                           "qtotal" (str (count queues))
+                           "ty" name}))))
 
 (defrecord LPDPrinter [config mdns server]
   component/Lifecycle
@@ -44,7 +46,9 @@
                 ;; TODO: Use IP from config?
                 ip (InetAddress/getByName "moritz-x230")
                 jmdns (JmDNS/create ip nil)]
-            (.registerService jmdns (service-info lpd-config))
+            (doseq [service (service-infos lpd-config)]
+              (log/info lpd "Registering service:" (str service))
+              (.registerService jmdns service))
             (assoc lpd
                    :mdns jmdns
                    :server server)))
