@@ -37,7 +37,8 @@
                   tagging-config (get-in lpd [:config :tagging])]
               (log/info lpd "Auto-tagging document" document)
               (model/auto-tag! db document tagging-config
-                               {:origin origin}))))))))
+                               {:origin origin
+                                :printing/queue (str "printer/" queue)}))))))))
 
 (defn ^:private lpd-server [lpd config]
   (lpd/make-server (assoc (select-keys config [:host :port])

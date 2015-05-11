@@ -28,12 +28,14 @@
                    :timeout (* 40 1000)
                    :languages #{"eng"}}}
  :tagging {
-           ;; If true, add origin (web, email, etc.) as tagq
-           :add-origin? true
+           ;; If true, add origin (web, email, etc.) as tag
+           :origin true
            ;; If enabled, add the 'from' and/or 'to' address as tag on
            ;; mailed documents
            :mail/to true
            :mail/from false
+           ;; Whether to add the printer queue name as a tag
+           :printing/queue false
            ;; List of tags to add to new documents. Useful to mark
            ;; uploaded/emailed documents for further review
            :new-document ["new"]}}

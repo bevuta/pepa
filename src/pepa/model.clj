@@ -356,17 +356,18 @@
     (remove-tags*! db document-id tags)
     (db/notify! db :documents/updated {:id document-id, :tags/removed tags})))
 
-(defn auto-tag*! [db document-id tagging-config
-                  {:keys [origin] :as data}]
+(defn auto-tag*! [db document-id tagging-config data]
   (let [tags (concat
               ;; Add origin-tag if enabled
-              (when (:add-origin? tagging-config)
-                [(origin-tag origin)])
+              (when (:origin tagging-config)
+                [(origin-tag (:origin data))])
               ;; Add sender-address as tag if configured
               (when (:mail/to tagging-config)
                 [(:mail/to data)])
               (when (:mail/from tagging-config)
                 [(:mail/from data)])
+              (when (:printing/queue tagging-config)
+                [(:printing/queue data)])
               ;; Add 'automatic' initial tags
               (when-let [tags (-> tagging-config :new-document seq)]
                 (set tags)))]
