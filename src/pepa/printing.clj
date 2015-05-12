@@ -13,6 +13,12 @@
   (:import [javax.jmdns JmDNS ServiceInfo]
            [java.net InetAddress]))
 
+(defn ^:private pdf? [bytes]
+  (= "%PDF" (String. bytes 0 4)))
+
+(defn ^:private ghostscript? [bytes]
+  (= "%!" (String. bytes 0 2)))
+
 (defn ^:private job-handler [lpd]
   (reify
     lpd-protocol/IPrintJobHandler
@@ -23,7 +29,14 @@
         (let [name (or (:source-filename job)
                        (:banner-name job)
                        "Printed File")
-              pdf (gs/ps->pdf (:data job))
+              pdf (let [data (:data job)]
+                    ;; Check magic bytes in the job data. 
+                    (cond
+                      (pdf? data) data
+                      (ghostscript? data) (gs/ps->pdf data)
+                      true (do
+                             (log/warn lpd "Couldn't determine file type of print job. Interpreting it as Postscript")
+                             (gs/ps->pdf data))))
               file-props {:content-type "application/pdf"
                           :name name
                           :origin (str "printer/" queue)
