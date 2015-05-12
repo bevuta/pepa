@@ -14,13 +14,12 @@
             [hiccup.page :refer [html5]]
             [ring.middleware.params :refer [wrap-params]]
             [ring.util.response :refer [redirect-after-post]]
-            [ring.middleware.transit :refer [wrap-transit-response
-                                             wrap-transit-body]]
             [ring.middleware.json :refer [wrap-json-body]]
             
             [liberator.core :refer [defresource]]
             [liberator.representation :refer [as-response]]
             io.clojure.liberator-transit
+            [cognitect.transit :as transit]
 
             [immutant.web.async :as async-web]
             [clojure.core.async :as async :refer [go <!]])
@@ -335,6 +334,28 @@
 
           (route/resources "/")
           (route/not-found "Nothing here")))
+
+(defn ^:private transit-request? [req]
+  (let [type (:content-type req)
+        [_ flavor] (when type (re-find #"^application/transit\+(json|msgpack)" type))]
+    (and flavor (keyword flavor))))
+
+(defn ^:private wrap-transit-body
+  "Ring middleware that parses application/transit bodies. Returns a
+  400-response if parsing fails."
+  [handler]
+  (fn [req]
+    (if-let [type (transit-request? req)]
+      (let [body (:body req)
+            reader (transit/reader body type)]
+        (try
+          (handler (assoc req :body (transit/read reader)))
+          (catch Exception ex
+            ;; TODO: We might want to log such errors.
+            {:status 400
+             :headers {:content-type "text/plain"}
+             :body "Malformed request."})))
+      (handler req))))
 
 (defn wrap-logging [handler]
   (fn [req]

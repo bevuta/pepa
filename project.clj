@@ -15,7 +15,6 @@
                  ;; Web
                  [ring/ring-core "1.3.2"]
                  [ring/ring-json "0.3.1"]
-                 [ring-transit "0.1.3"]
                  
                  [org.immutant/web "2.0.0"]
                  [liberator "0.12.2"]
@@ -30,7 +29,7 @@
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojure/core.match "0.2.2"]
 
-                 ;; Loggingy
+                 ;; Logging
                  [org.clojure/tools.logging "0.3.1"]
                  [ch.qos.logback/logback-classic "1.1.3"]
 
@@ -44,8 +43,7 @@
                  [com.bevuta/lpd "0.1.0-SNAPSHOT"]
                  [javax.jmdns/jmdns "3.4.1"]]
   :exclusions [org.clojure/data.json
-               log4j/log4j
-               ]
+               log4j/log4j]
   :plugins [[lein-cljsbuild "1.0.4"]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"
@@ -57,14 +55,15 @@
                                    :init-ns user}}
              :dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
                                   [org.clojure/tools.nrepl"0.2.10"]]
-                  
+                   
                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
              :provided {:dependencies [[org.clojure/clojurescript "0.0-3269"]
                                        [com.cognitect/transit-cljs "0.8.207"]
                                        [org.omcljs/om "0.8.8"]
                                        [org.clojars.the-kenny/nom "0.1.1"]
-                                       [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"]
+                                       [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"
+                                        :exclusions [org.clojure/tools.reader]]
                                        [sablono "0.3.4" :exclusions [cljsjs/react]]
                                        [secretary "1.2.3"]
                                        [the/parsatron "0.0.7"]
