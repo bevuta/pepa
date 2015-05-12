@@ -235,6 +235,9 @@
   (go
     (store-tags! state (<! (fetch-tags true)))))
 
+;;; TODO: We might want to store all document-ids for a tag. That
+;;; would allow us to skip querying the server when doing a tag
+;;; search. This should work as tags are always up-to-date (via push).
 (defn refresh-tag! [state tag]
   (go
     (println "refreshing tag" (pr-str tag))
