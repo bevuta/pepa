@@ -13,15 +13,16 @@
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
 
                  ;; Web
-                 [org.immutant/web "2.0.0"]
-                 [compojure "1.3.4"]
-                 [ring/ring-devel "1.3.2"
-                  :exclusions [ring/ring-core]]
-                 [com.cognitect/transit-clj "0.8.271"]
-                 [ring-transit "0.1.3"]
+                 [ring/ring-core "1.3.2"]
                  [ring/ring-json "0.3.1"]
-                 [hiccup "1.0.5"]
+                 [ring-transit "0.1.3"]
+                 
+                 [org.immutant/web "2.0.0"]
                  [liberator "0.12.2"]
+                 [compojure "1.3.4"]
+                 [hiccup "1.0.5"]
+                 
+                 [com.cognitect/transit-clj "0.8.271"]
                  [io.clojure/liberator-transit "0.3.0"]
                  [org.clojure/data.json "0.2.6"]
 
@@ -29,7 +30,7 @@
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojure/core.match "0.2.2"]
 
-                 ;; Logging
+                 ;; Loggingy
                  [org.clojure/tools.logging "0.3.1"]
                  [ch.qos.logback/logback-classic "1.1.3"]
 
@@ -43,7 +44,8 @@
                  [com.bevuta/lpd "0.1.0-SNAPSHOT"]
                  [javax.jmdns/jmdns "3.4.1"]]
   :exclusions [org.clojure/data.json
-               log4j/log4j]
+               log4j/log4j
+               ]
   :plugins [[lein-cljsbuild "1.0.4"]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"

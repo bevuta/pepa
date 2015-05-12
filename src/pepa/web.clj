@@ -3,27 +3,21 @@
             [pepa.log :as log]
 
             [com.stuartsierra.component :as component]
-            [immutant.web :as http-server]
-            [ring.middleware.stacktrace :refer [wrap-stacktrace]]))
+            [immutant.web :as http-server]))
 
 (defrecord Web [config db processor server]
   component/Lifecycle
   (start [component]
     (log/info component "Starting HTTP Server")
-    (let [config (:web config)
-          {:keys [host port]} config
-          handlers (if (:static-handlers config)
+    (let [{:keys [host port static-handlers]} (:web config)
+          handlers (if static-handlers
                      (make-handlers component)
-                     #((make-handlers component) %))
-          handlers (if (:show-traces config)
-                     (wrap-stacktrace handlers)
-                     handlers)]
+                     #((make-handlers component) %))]
       (log/info component (str "Started web server on http://" host ":" port "/"))
       (assoc component
-        :server (http-server/run handlers
-                  :host host
-                  :port port))))
-
+             :server (http-server/run handlers
+                       :host host
+                       :port port))))
   (stop [component]
     (log/info component "Stopping HTTP Server")
     (http-server/stop server)
