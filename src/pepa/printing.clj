@@ -8,16 +8,32 @@
             [pepa.db :as db]
             [pepa.model :as model]
             [pepa.log :as log]
-            [pepa.ghostscript :as gs]
             [pepa.util :as util])
   (:import [javax.jmdns JmDNS ServiceInfo]
-           [java.net InetAddress]))
+           [java.net InetAddress]
+           java.lang.ProcessBuilder
+           java.io.File))
 
 (defn ^:private pdf? [bytes]
   (= "%PDF" (String. bytes 0 4)))
 
 (defn ^:private ghostscript? [bytes]
   (= "%!" (String. bytes 0 2)))
+
+(defn ^:private ps->pdf [input]
+  (let [tmp-file (File/createTempFile "ps2pdf-output" ".pdf")
+        process (-> ["ps2pdf" "-" (str tmp-file)]
+                    (ProcessBuilder.)
+                    (.redirectError java.lang.ProcessBuilder$Redirect/INHERIT)
+                    (.start))
+        process-input (.getOutputStream process)]
+    (io/copy (io/input-stream input) process-input)
+    (.close process-input)
+    (let [exit-code (.waitFor process)]
+      (if (zero? exit-code)
+        tmp-file
+        (throw (ex-info "Failed to run subprocess to extract meta-data."
+                        {:exit-code exit-code}))))))
 
 (defn ^:private job-handler [lpd]
   (reify
@@ -33,10 +49,10 @@
                     ;; Check magic bytes in the job data. 
                     (cond
                       (pdf? data) data
-                      (ghostscript? data) (gs/ps->pdf data)
+                      (ghostscript? data) (ps->pdf data)
                       true (do
                              (log/warn lpd "Couldn't determine file type of print job. Interpreting it as Postscript")
-                             (gs/ps->pdf data))))
+                             (ps->pdf data))))
               file-props {:content-type "application/pdf"
                           :name name
                           :origin (str "printer/" queue)
