@@ -29,6 +29,11 @@
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojure/core.match "0.2.2"]
 
+                 ;; HACK: Include tools.reader as we're excluding it
+                 ;; globally to prevent libraries pulling in old
+                 ;; versions of it
+                 [org.clojure/tools.reader "0.9.2"]
+
                  ;; Logging
                  [org.clojure/tools.logging "0.3.1"]
                  [ch.qos.logback/logback-classic "1.1.3"]
@@ -43,7 +48,8 @@
                  [com.bevuta/lpd "0.1.0-SNAPSHOT"]
                  [javax.jmdns/jmdns "3.4.1"]]
   :exclusions [org.clojure/data.json
-               log4j/log4j]
+               log4j/log4j
+               org.clojure/tools.reader]
   :plugins [[lein-cljsbuild "1.0.4"]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"
