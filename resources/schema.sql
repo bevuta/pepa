@@ -81,6 +81,7 @@ CREATE TABLE documents (
        id SERIAL PRIMARY KEY CHECK(id > 0),
        title TEXT NOT NULL,
        modified TIMESTAMP,
+       document_date TIMESTAMP,
        created TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
        notes TEXT,
        -- If set, this document correspondents exactly to file
