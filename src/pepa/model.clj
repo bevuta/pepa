@@ -232,13 +232,13 @@
 
 (defn update-document!
   "Updates document with ID. PROPS is a map of changed
-  properties (currently only :title), ADDED-TAGS and REMOVED-TAGS are
+  properties (currently only :title, :document-date), ADDED-TAGS and REMOVED-TAGS are
   lists of added and removed tag-values (strings)."
   [db id props added-tags removed-tags]
 
   (assert (every? string? added-tags))
   (assert (every? string? removed-tags))
-  (assert (every? #{:title} (keys props)))
+  (assert (every? #{:title :document-date} (keys props)))
   (log/info db "Updating document" id {:props props
                                        :tags/added added-tags
                                        :tags/removed removed-tags})

@@ -138,7 +138,7 @@
            (let [id (::id ctx)
                  req (:request ctx)
                  params (:body req)
-                 attrs (select-keys params [:title])
+                 attrs (select-keys params [:title :document-date])
                  attrs (into {} (remove (comp nil? val) attrs))
                  {added-tags :added, removed-tags :removed} (:tags params)]
              (assert (every? string? added-tags))
