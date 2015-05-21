@@ -253,27 +253,25 @@
   (log/info db "Updating document" id {:props props
                                        :tags/added added-tags
                                        :tags/removed removed-tags})
-  (try
-    (db/with-transaction [conn db]
-      (if-let [document (get-document conn id)]
-        (let [added-tags (set added-tags)
-              removed-tags (set removed-tags)
-              props (assoc props :document_date (string->timestamp (:document_date props)))
-              ;; Subtract removed-tags from added-tags so we don't
-              ;; create tags which will be removed instantly
-              added-tags (set/difference added-tags removed-tags)]
-          (remove-tags*! conn id removed-tags)
-          (add-tags*! conn id added-tags)
-          ;; Update document title if necessary
-          (when (seq props)
-            (db/update! conn :documents
-                        props
-                        ["id = ?" id]))
-          (db/notify! conn :documents/updated {:id id}))
-        (throw (ex-info (str "Couldn't find document with id " id)
-                        {:document/id id
-                         :db db}))))
-    (catch SQLException e (throw (.getNextException e)))))
+  (db/with-transaction [conn db]
+    (if-let [document (get-document conn id)]
+      (let [added-tags (set added-tags)
+            removed-tags (set removed-tags)
+            props (assoc props :document_date (string->timestamp (:document_date props)))
+            ;; Subtract removed-tags from added-tags so we don't
+            ;; create tags which will be removed instantly
+            added-tags (set/difference added-tags removed-tags)]
+        (remove-tags*! conn id removed-tags)
+        (add-tags*! conn id added-tags)
+        ;; Update document title if necessary
+        (when (seq props)
+          (db/update! conn :documents
+                      props
+                      ["id = ?" id]))
+        (db/notify! conn :documents/updated {:id id}))
+      (throw (ex-info (str "Couldn't find document with id " id)
+                      {:document/id id
+                       :db db})))))
 
 ;;; Tag Functions
 
