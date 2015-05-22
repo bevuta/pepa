@@ -103,10 +103,11 @@
                                             (vals grouped)))))))
 
 (defn get-documents [db ids]
+  (prn "Get document ids" ids)
   (db/with-transaction [conn db]
     (if-not (seq ids)
       []
-      (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, notes FROM documents WHERE id IN (%s)" ids))
+      (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, document_date, notes FROM documents WHERE id IN (%s)" ids))
             pages (get-associated conn "SELECT dp.document, p.id, p.rotation, p.render_status AS \"render-status\",
                                           (SELECT array_agg(dpi) from page_images where page = id) AS dpi
                                         FROM pages AS p
