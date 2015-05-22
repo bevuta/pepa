@@ -9,7 +9,8 @@
             [pepa.data :as data]
 
             [clojure.browser.event :as event])
-  (:import [goog.net XhrIo XmlHttp XmlHttpFactory EventType])
+  (:import [goog.net XhrIo XmlHttp XmlHttpFactory EventType]
+           [goog.i18n DateTimeFormat])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def +xhr-timeout+ (* 5 1000))
@@ -185,7 +186,7 @@
 (defn update-document!
   "Diffs the document with the same id on the server with DOCUMENT and
   updates it to match DOCUMENT. Will also update the application
-  state (wether DOCUMENT is a cursor or not)."
+  state (whether DOCUMENT is a cursor or not)."
   [document]
   (go
     (println "saving document" (:id document))
@@ -194,6 +195,9 @@
           title (when-not (= (:title document)
                              (:title server))
                   (:title document))
+          date (when-not (= (:document_date document)
+                            (:document_date server))
+                 (.format (DateTimeFormat. "dd.MM.yyyy HH:mm") (:document_date document)))
           tags {:added (remove (set (:tags server)) (:tags document))
                 :removed (remove (set (:tags document)) (:tags server))}]
       (when-not server
@@ -201,10 +205,10 @@
                         {:document document
                          :document/id (:id document)
                          :response server})))
-      (if (or title (seq (:added tags)) (seq (:removed tags)))
+      (if (or title date (seq (:added tags)) (seq (:removed tags)))
         (let [response (<! (xhr-request! (str "/documents/" (:id document))
                                          :post
-                                         {:title title, :tags tags}))]
+                                         {:title title, :document_date date :tags tags}))]
           (if (= 200 (:status response))
             (let [new-document (-> response
                                    :response/transit
