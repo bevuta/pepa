@@ -16,7 +16,8 @@
             [pepa.components.draggable :as draggable]
             [goog.events.KeyCodes :as keycodes])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
-                   [cljs.core.match.macros :refer [match]]))
+                   [cljs.core.match.macros :refer [match]])
+  (:import [goog.i18n DateTimeFormat DateTimeParse]))
 
 ;;; Editable Title Header
 
@@ -133,7 +134,15 @@
      (om/build pages-list (:pages document)
                {:state state})]))
 
-(ui/defcomponent ^:private meta-pane [document owner]
+(ui/defcomponent ^:private date-picker [{:keys [document_date]} owner]
+  (render-state [_ {:keys [date value]}]
+    [:input {:type "date"
+             :value value
+             :on-change (fn [e] (do
+                                  (om/set-state! owner :value e.target.value)
+                                  (async/put! date e.target.value)))}]))
+
+(ui/defcomponent ^:private meta-pane [{:keys [document_date] :as document} owner]
   (render [_]
     [:.sidebar
      [:header "Meta"]
@@ -146,6 +155,12 @@
        (om/build tags/tags-input document
                  {:state (om/get-state owner)})]
 
+      (let [formatter (DateTimeFormat. "yyyy-MM-dd")]
+        (om/build date-picker document
+                  {:init-state {:value (when document_date
+                                         (.format formatter document_date))}
+                   :state (om/get-state owner)}))
+      
       ;; Buttons: Download, Delete, etc.
       [:.buttons
        [:button.download {:on-click #(js/window.open
@@ -181,12 +196,13 @@
   (init-state [_]
     {:page-number 1
      :pages (async/chan)
-     :tag-changes (async/chan)})
+     :tag-changes (async/chan)
+     :date-changes (async/chan)})
   (will-mount [_]
     ;; Start handling tag change events etc.
     (go-loop []
-      (let [{:keys [pages tag-changes]} (om/get-state owner)
-            [event port] (alts! [pages tag-changes])]
+      (let [{:keys [pages tag-changes date-changes]} (om/get-state owner)
+            [event port] (alts! [pages tag-changes date-changes])]
         (when (and event port)
           (condp = port
             pages
@@ -200,12 +216,20 @@
                                        :add data/add-tags
                                        :remove data/remove-tags)
                              [tag])
+                  (api/update-document!)))
+
+            date-changes
+            (let [date (js/Date.)]
+              (.parse (DateTimeParse. "yyyy-MM-dd") event date)
+              (-> @document
+                  (assoc :document_date date)
                   (api/update-document!))))
           (recur)))))
   (render-state [_ state] 
     (let [{:keys [page-number]} state
           page-events (:pages state)
           tag-changes (:tag-changes state)
+          date-changes (:date-changes state)
           sidebars (om/observe owner (data/ui-sidebars))
           current-page (nth (:pages (om/value document))
                             (dec (or page-number 1)))]
@@ -228,7 +252,8 @@
          [:.pane {:style {:min-width width :max-width width}
                   :key "meta-pane"}
           (om/build meta-pane document
-                    {:init-state {:tags tag-changes}})])])))
+                    {:init-state {:tags tag-changes
+                                  :date date-changes}})])])))
 
 (defmethod draggable/pos->width ::thumbnails [sidebars sidebar [x _]]
   (draggable/limit
