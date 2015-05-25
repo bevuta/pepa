@@ -135,12 +135,27 @@
                {:state state})]))
 
 (ui/defcomponent ^:private date-picker [{:keys [document_date]} owner]
-  (render-state [_ {:keys [date value]}]
+  (init-state [_]
+    {:on-change-ch (async/chan)})
+  (will-mount [_]
+    (go-loop [old-date nil new-date nil]
+      (let [{:keys [on-change-ch date]} (om/get-state owner)
+            timeout (async/timeout 200) ;;Throttle calls for 200ms
+            [val ch] (alts! [timeout on-change-ch])]
+        (condp = ch
+          on-change-ch ;;The current date has changed
+          (recur old-date val)
+          timeout ;;If we have a new date notify for an update
+          (do
+            (when (and (not= new-date old-date) (seq new-date))
+              (async/put! date new-date))
+            (recur new-date new-date))))))
+  (render-state [_ {:keys [on-change-ch value]}]
     [:input {:type "date"
              :value value
-             :on-change (fn [e] (do
-                                  (om/set-state! owner :value e.target.value)
-                                  (async/put! date e.target.value)))}]))
+             :on-change (fn [e] (let [val e.target.value]
+                                  (om/set-state! owner :value val)
+                                  (async/put! on-change-ch val)))}]))
 
 (ui/defcomponent ^:private meta-pane [{:keys [document_date] :as document} owner]
   (render [_]
