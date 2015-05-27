@@ -8,7 +8,7 @@
    [cljs.core.async.macros :refer [go-loop]]))
 
 (defrecord Page [id rotation render-status dpi])
-(defrecord Document [id title pages created modified document_date notes])
+(defrecord Document [id title pages created modified document-date notes])
 
 (defrecord State [documents navigation tags upload seqs])
 

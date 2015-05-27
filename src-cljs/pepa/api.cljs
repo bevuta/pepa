@@ -9,8 +9,7 @@
             [pepa.data :as data]
 
             [clojure.browser.event :as event])
-  (:import [goog.net XhrIo XmlHttp XmlHttpFactory EventType]
-           [goog.i18n DateTimeFormat])
+  (:import [goog.net XhrIo XmlHttp XmlHttpFactory EventType])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def +xhr-timeout+ (* 5 1000))
@@ -195,9 +194,9 @@
           title (when-not (= (:title document)
                              (:title server))
                   (:title document))
-          date (when-not (= (:document_date document)
-                            (:document_date server))
-                 (.format (DateTimeFormat. "dd.MM.yyyy HH:mm") (:document_date document)))
+          date (when-not (= (:document-date document)
+                            (:document-date server))
+                 (:document-date document))
           tags {:added (remove (set (:tags server)) (:tags document))
                 :removed (remove (set (:tags document)) (:tags server))}]
       (when-not server
@@ -208,7 +207,7 @@
       (if (or title date (seq (:added tags)) (seq (:removed tags)))
         (let [response (<! (xhr-request! (str "/documents/" (:id document))
                                          :post
-                                         {:title title, :document_date date :tags tags}))]
+                                         {:title title, :document-date date :tags tags}))]
           (if (= 200 (:status response))
             (let [new-document (-> response
                                    :response/transit
