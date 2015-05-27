@@ -6,10 +6,14 @@
 
             [clojure.data.json :as json]
             [cognitect.transit :as transit]
-            
+
+            [ring.util.response :as response]
             [immutant.web.async :as async-web]
-            [clojure.core.async :as async :refer [go go-loop <!]])
+            [clojure.core.async :as async :refer [go go-loop <!]]
+            [clojure.string :as s])
   (:import java.io.ByteArrayOutputStream))
+
+(def +encoding+ "utf-8")
 
 (defn ^:private data->response-fn [content-type]
   (case content-type
@@ -22,7 +26,7 @@
       (fn [data]
         (.reset out)
         (transit/write writer data)
-        (.toString out "UTF-8")))))
+        (.toString out (s/upper-case +encoding+))))))
 
 (defn ^:private send-fn [content-type]
   (let [data->response (data->response-fn content-type)]
@@ -74,7 +78,7 @@
                            [#"^application/transit\+json"
                             #"^application/json"])
         seqs (:body req)
-        
+
         poll-config (get-in req [:pepa/config :web :poll])
         db (:pepa/db req)
         bus (:pepa/bus req)
@@ -100,7 +104,8 @@
             :on-error (fn [ch throwable]
                         (log/error web "Caught exception:" throwable)
                         (async-web/close ch))})
-          (assoc-in [:headers "content-type"] content-type)))))
+          (response/content-type content-type)
+          (response/charset +encoding+)))))
 
 
 (def poll-handler #'poll-handler*)

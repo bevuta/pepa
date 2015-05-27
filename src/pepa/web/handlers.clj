@@ -1,6 +1,7 @@
 (ns pepa.web.handlers
   (:require [pepa.db :as db]
             [pepa.model :as m]
+            [pepa.log :as log]
             [pepa.web.html :as html]
             [pepa.web.poll :refer [poll-handler]]
             
@@ -14,13 +15,12 @@
             [hiccup.page :refer [html5]]
             [ring.middleware.params :refer [wrap-params]]
             [ring.util.response :refer [redirect-after-post]]
-            [ring.middleware.transit :refer [wrap-transit-response
-                                             wrap-transit-body]]
             [ring.middleware.json :refer [wrap-json-body]]
             
             [liberator.core :refer [defresource]]
             [liberator.representation :refer [as-response]]
             io.clojure.liberator-transit
+            [cognitect.transit :as transit]
 
             [immutant.web.async :as async-web]
             [clojure.core.async :as async :refer [go <!]])
@@ -211,18 +211,21 @@
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
-                (try
-                  (let [db (get-in ctx [:request :pepa/db])]
+                (let [web (get-in ctx [:request :pepa/web])
+                      db  (get-in ctx [:request :pepa/db])]
+                  (try
                     (if-let [query (some-> ctx
                                            (get-in [:request :query-params "q"])
                                            (edn/read-string))]
                       [false {::query query
                               ::results (m/query-documents db query)}]
-                      [false {::results (m/query-documents db)}]))
-                  (catch RuntimeException e
-                    [true {::error "Invalid query string"}])
-                  (catch SQLException e
-                    [true {::error "Query string generated invalid SQL"}])))
+                      [false {::results (m/query-documents db)}])
+                    (catch RuntimeException e
+                      (log/warn web "Failed to parse query string" e)
+                      [true {::error "Invalid query string"}])
+                    (catch SQLException e
+                      (log/warn web "Generated SQL query failed" e)
+                      [true {::error "Query string generated invalid SQL"}]))))
   :post! (fn [{:keys [request, representation] :as ctx}]
            (db/with-transaction [conn (:pepa/db request)]
              (let [params (:body request)
@@ -335,6 +338,28 @@
 
           (route/resources "/")
           (route/not-found "Nothing here")))
+
+(defn ^:private transit-request? [req]
+  (let [type (:content-type req)
+        [_ flavor] (when type (re-find #"^application/transit\+(json|msgpack)" type))]
+    (and flavor (keyword flavor))))
+
+(defn ^:private wrap-transit-body
+  "Ring middleware that parses application/transit bodies. Returns a
+  400-response if parsing fails."
+  [handler]
+  (fn [req]
+    (if-let [type (transit-request? req)]
+      (let [body (:body req)
+            reader (transit/reader body type)]
+        (try
+          (handler (assoc req :body (transit/read reader)))
+          (catch Exception ex
+            ;; TODO: We might want to log such errors.
+            {:status 400
+             :headers {:content-type "text/plain"}
+             :body "Malformed request."})))
+      (handler req))))
 
 (defn wrap-logging [handler]
   (fn [req]

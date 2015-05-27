@@ -7,7 +7,9 @@
 
             [om.core :as om]
             [pepa.data :as data]
-            [goog.string :as gstring])
+            [goog.string :as gstring]
+
+            cljs.core.match)
   (:require-macros [cljs.core.match.macros :refer [match]])
   (:import goog.History
            goog.history.EventType
