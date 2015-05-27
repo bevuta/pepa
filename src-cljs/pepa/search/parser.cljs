@@ -46,6 +46,10 @@
         (always s)
         (never)))))
 
+(defparser untagged []
+  (string "untagged")
+  (always (list 'untagged)))
+
 (def tag-prefix
   (either (string "tag")
           (string "is")))
@@ -99,7 +103,8 @@
 (declare expr-rec)
 
 (defparser atom []
-  (choice (attempt (tag)) 
+  (choice (either (attempt (untagged))
+                  (attempt (tag)))
           (let->> [s (either (attempt (simple-string))
                              (attempt (quoted-string)))]
             (always (list 'any s)))))

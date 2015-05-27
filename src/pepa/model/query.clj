@@ -77,6 +77,9 @@
            (s/join ", " (repeat (count tags) "?")))
    tags])
 
+(defmethod ->sql '(untagged) [[]]
+  ["array_agg(t.name) = array[NULL]" []])
+
 (defmethod ->sql '(like) [[_ attr pattern]]
   [(str (attribute->sql attr) " ILIKE ?" ) [pattern]])
 
