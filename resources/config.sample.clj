@@ -18,7 +18,7 @@
  ;; Zeroconf announces services offered by Pepa in the network
  :zeroconf {:enable false
             ;; Modules to announce via zeroconf
-            :modules #{:lpd}
+            :modules #{:lpd :web}
             ;; Optional, allows to set the announced IP Address
             :ip-address nil}
  ;; Those origins' pages will appear in the Inbox
