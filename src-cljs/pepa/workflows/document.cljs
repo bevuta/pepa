@@ -134,30 +134,7 @@
      (om/build pages-list (:pages document)
                {:state state})]))
 
-(ui/defcomponent ^:private date-picker [{:keys [document_date]} owner]
-  (init-state [_]
-    {:on-change-ch (async/chan)})
-  (will-mount [_]
-    (go-loop [old-date nil new-date nil]
-      (let [{:keys [on-change-ch date]} (om/get-state owner)
-            timeout (async/timeout 200) ;;Throttle calls for 200ms
-            [val ch] (alts! [timeout on-change-ch])]
-        (condp = ch
-          on-change-ch ;;The current date has changed
-          (recur old-date val)
-          timeout ;;If we have a new date notify for an update
-          (do
-            (when (and (not= new-date old-date) (seq new-date))
-              (async/put! date new-date))
-            (recur new-date new-date))))))
-  (render-state [_ {:keys [on-change-ch value]}]
-    [:input {:type "date"
-             :value value
-             :on-change (fn [e] (let [val e.target.value]
-                                  (om/set-state! owner :value val)
-                                  (async/put! on-change-ch val)))}]))
-
-(ui/defcomponent ^:private meta-pane [{:keys [document_date] :as document} owner]
+(ui/defcomponent ^:private meta-pane [{:keys [document-date] :as document} owner]
   (render [_]
     [:.sidebar
      [:header "Meta"]
@@ -169,12 +146,6 @@
       [:.fields
        (om/build tags/tags-input document
                  {:state (om/get-state owner)})]
-
-      (let [formatter (DateTimeFormat. "yyyy-MM-dd")]
-        (om/build date-picker document
-                  {:init-state {:value (when document_date
-                                         (.format formatter document_date))}
-                   :state (om/get-state owner)}))
       
       ;; Buttons: Download, Delete, etc.
       [:.buttons
@@ -237,7 +208,7 @@
             (let [date (js/Date.)]
               (.parse (DateTimeParse. "yyyy-MM-dd") event date)
               (-> @document
-                  (assoc :document_date date)
+                  (assoc :document-date date)
                   (api/update-document!))))
           (recur)))))
   (render-state [_ state] 

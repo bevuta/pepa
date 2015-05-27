@@ -234,14 +234,14 @@
       id)))
 
 (defn ^:private fix-props [props]
-  (let [timestamp (->
-                   props
-                   (:document-date)
-                   (.getTime)
-                   (Timestamp.))
-        remove-dash (clojure.set/rename-keys props {:document-date :document_date})
-        with-timestamp (assoc remove-dash :document_date timestamp)]
-    with-timestamp))
+  (if-let [date (:document-date props)]
+    (let [timestamp (->
+                     date
+                     (.getTime)
+                     (Timestamp.))
+          remove-dash (clojure.set/rename-keys props {:document-date :document_date})
+          with-timestamp (assoc remove-dash :document_date timestamp)]
+      with-timestamp)))
 
 (defn update-document!
   "Updates document with ID. PROPS is a map of changed
