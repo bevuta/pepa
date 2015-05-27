@@ -9,8 +9,7 @@
             [clojure.string :as s]
             [clojure.set :as set]
             [clojure.java.io :as io])
-  (:import [java.text SimpleDateFormat]
-           [java.sql Timestamp SQLException]))
+  (:import [java.sql Timestamp SQLException]))
 
 ;;; File Handling
 
@@ -103,7 +102,6 @@
                                             (vals grouped)))))))
 
 (defn get-documents [db ids]
-  (prn "Get document ids" ids)
   (db/with-transaction [conn db]
     (if-not (seq ids)
       []
@@ -127,7 +125,7 @@
                       :pages (->> (vec (get pages id))
                                   (mapv #(update-in % [:dpi] pg-array->set)))
                       :tags (mapv :name (get tags id))))
-             documents)))))
+             (map #(clojure.set/rename-keys %1 {:document_date :document-date}) documents))))))
 
 (defn get-document [db id]
   (first (get-documents db [id])))
@@ -146,11 +144,13 @@
 
 (defn query-documents
   ([db]
-   (db/query db documents-base-query))
+   (map #(clojure.set/rename-keys %1 {:document_date :document-date})
+        (db/query db documents-base-query)))
   ([db query]
    (if (nil? query)
      (query-documents db)
-     (db/query db (documents-query query)))))
+     (map #(clojure.set/rename-keys %1 {:document_date :document-date})
+          (db/query db (documents-query query))))))
 
 (defn document-file
   "Returns the id of the file associated to document with ID. Might be
@@ -233,14 +233,15 @@
       (db/notify! db :documents/new {:id id})
       id)))
 
-(let [formatter (SimpleDateFormat. "dd.MM.yyyy HH:mm")]
-  (defn string->timestamp [date]
-    (when date
-      (->>
-       date
-       (.parse formatter)
-       (.getTime)
-       (Timestamp.)))))
+(defn ^:private fix-props [props]
+  (let [timestamp (->
+                   props
+                   (:document-date)
+                   (.getTime)
+                   (Timestamp.))
+        remove-dash (clojure.set/rename-keys props {:document-date :document_date})
+        with-timestamp (assoc remove-dash :document_date timestamp)]
+    with-timestamp))
 
 (defn update-document!
   "Updates document with ID. PROPS is a map of changed
@@ -250,7 +251,7 @@
 
   (assert (every? string? added-tags))
   (assert (every? string? removed-tags))
-  (assert (every? #{:title :document_date} (keys props)))
+  (assert (every? #{:title :document-date} (keys props)))
   (log/info db "Updating document" id {:props props
                                        :tags/added added-tags
                                        :tags/removed removed-tags})
@@ -258,7 +259,7 @@
     (if-let [document (get-document conn id)]
       (let [added-tags (set added-tags)
             removed-tags (set removed-tags)
-            props (assoc props :document_date (string->timestamp (:document_date props)))
+            props (fix-props props)
             ;; Subtract removed-tags from added-tags so we don't
             ;; create tags which will be removed instantly
             added-tags (set/difference added-tags removed-tags)]
