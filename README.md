@@ -37,11 +37,12 @@ right document.
 
 ### Current features
 
-- Supported formats
+- Supported file formats
   - PDF
 - Import channels
   - SMTP / email (attachments are extracted)
   - HTTP (API and upload via web interface)
+  - Virtual Network Printer (LPD)
 - Manual tagging
 - Full-text search
 - OCR (via Tesseract and/or CuneiForm)
