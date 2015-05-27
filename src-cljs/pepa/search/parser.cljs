@@ -47,7 +47,7 @@
         (never)))))
 
 (defparser untagged []
-  (string "untagged")
+  (string "tag:none")
   (always (list 'untagged)))
 
 (def tag-prefix
