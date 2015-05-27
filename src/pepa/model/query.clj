@@ -105,7 +105,10 @@
         :else (syntax-error "Unknown expression" expr)))
 
 (comment
-  (and (tag "foo") (tag "bar"))
-  (tag "foo" "bar")
-  (and (> #inst "2014-12-10T15:46:14.635-00:00" date #inst "2014-12-10T15:46:14.635-00:00")
-       (not (tag "foo"))))
+  (->sql '(and (tag "foo") (tag "bar")))
+  (->sql '(tag "foo" "bar"))
+  ;; TODO: created/modified/document-date
+  (->sql '(and (> #inst "2014-12-10T15:46:14.635-00:00" date #inst "2014-12-10T15:46:14.635-00:00")
+               (tag "foo")))
+  ;; TODO: NOT
+  (->sql '(not (tag "foo"))))

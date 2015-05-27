@@ -1,6 +1,7 @@
 (ns pepa.web.handlers
   (:require [pepa.db :as db]
             [pepa.model :as m]
+            [pepa.log :as log]
             [pepa.web.html :as html]
             [pepa.web.poll :refer [poll-handler]]
             
@@ -210,18 +211,21 @@
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
-                (try
-                  (let [db (get-in ctx [:request :pepa/db])]
+                (let [web (get-in ctx [:request :pepa/web])
+                      db  (get-in ctx [:request :pepa/db])]
+                  (try
                     (if-let [query (some-> ctx
                                            (get-in [:request :query-params "q"])
                                            (edn/read-string))]
                       [false {::query query
                               ::results (m/query-documents db query)}]
-                      [false {::results (m/query-documents db)}]))
-                  (catch RuntimeException e
-                    [true {::error "Invalid query string"}])
-                  (catch SQLException e
-                    [true {::error "Query string generated invalid SQL"}])))
+                      [false {::results (m/query-documents db)}])
+                    (catch RuntimeException e
+                      (log/warn web "Failed to parse query string" e)
+                      [true {::error "Invalid query string"}])
+                    (catch SQLException e
+                      (log/warn web "Generated SQL query failed" e)
+                      [true {::error "Query string generated invalid SQL"}]))))
   :post! (fn [{:keys [request, representation] :as ctx}]
            (db/with-transaction [conn (:pepa/db request)]
              (let [params (:body request)
