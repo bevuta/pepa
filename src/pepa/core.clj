@@ -9,6 +9,7 @@
             [pepa.processor.page-ocr :as page-ocr]
             [pepa.processor.page-renderer :as page-renderer]
             [pepa.printing :as printing]
+            [pepa.zeroconf :as zeroconf]
             [pepa.init :as init]
 
             [pepa.log :refer [wrap-logging]]
@@ -40,7 +41,10 @@
               [:config :db])
        :lpd (component/using
              (printing/make-lpd-component)
-             [:config :db]))
+             [:config :db])
+       :zeroconf (component/using
+                  (zeroconf/make-zeroconf-component)
+                  [:config]))
       (wrap-logging)))
 
 (defn -main [& args]

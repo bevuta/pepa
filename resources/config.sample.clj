@@ -14,9 +14,13 @@
  ;; Virtual Network Printer
  :printing {:lpd {:enable true
                   :host "0.0.0.0"
-                  :port 6332
-                  ;; List of queues announced via zeroconf
-                  :queues ["documents"]}}
+                  :port 6332}}
+ ;; Zeroconf announces services offered by Pepa in the network
+ :zeroconf {:enable false
+            ;; Modules to announce via zeroconf
+            :modules #{:lpd}
+            ;; Optional, allows to set the announced IP Address
+            :ip-address nil}
  ;; Those origins' pages will appear in the Inbox
  :inbox {:origins #{"scanner"}}
  :ocr {:enable true

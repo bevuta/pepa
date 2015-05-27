@@ -8,10 +8,10 @@
             [pepa.db :as db]
             [pepa.model :as model]
             [pepa.log :as log]
-            [pepa.util :as util])
-  (:import [javax.jmdns JmDNS ServiceInfo]
-           [java.net InetAddress]
-           java.lang.ProcessBuilder
+            [pepa.util :as util]
+
+            [pepa.zeroconf :as zeroconf])
+  (:import java.lang.ProcessBuilder
            java.io.File))
 
 (defn ^:private pdf? [bytes]
@@ -74,25 +74,7 @@
   (lpd/make-server (assoc (select-keys config [:host :port])
                           :handler (job-handler lpd))))
 
-;;; TODO: Move service announcement to its own component
-(defn ^:private service-infos [config]
-  ;; TODO: Think about a better way to configure the announced name
-  (let [name "Pepa DMS Printer"
-        queues (or (:queues config) ["auto"])]
-    (for [queue queues]
-      (ServiceInfo/create "_printer._tcp.local."
-                          name
-                          (:port config)
-                          10
-                          10
-                          true
-                          {"pdl" "application/pdf,application/postscript"
-                           "rp" queue
-                           "txtvers" "1"
-                           "qtotal" (str (count queues))
-                           "ty" (str name " (Queue: " queue ")")}))))
-
-(defrecord LPDPrinter [config db mdns server]
+(defrecord LPDPrinter [config db server]
   component/Lifecycle
   (start [lpd]
     (let [lpd-config (get-in config [:printing :lpd])]
@@ -101,26 +83,33 @@
           (assert (< 0 (:port lpd-config) 65535))
           (log/info lpd "Starting LPD Server")
           (let [server (-> (lpd-server lpd lpd-config)
-                           (lpd/start-server))
-                ;; TODO: Use IP from config?
-                ip (InetAddress/getLocalHost)
-                jmdns (JmDNS/create ip nil)]
-            (doseq [service (service-infos lpd-config)]
-              (log/info lpd "Registering service:" (str service))
-              (.registerService jmdns service))
+                           (lpd/start-server))]
             (assoc lpd
-                   :mdns jmdns
                    :server server)))
         lpd)))
   (stop [lpd]
     (log/info lpd "Stopping LPD Server")
     (when-let [server (:server lpd)]
       (lpd/stop-server server))
-    (when-let [mdns (:mdns lpd)]
-      (.close mdns))
     (assoc lpd
            :mdns nil
            :server nil)))
 
 (defn make-lpd-component []
   (map->LPDPrinter {}))
+
+;;; Zeroconf Service Implementation
+
+(defmethod zeroconf/service-info :lpd [module config]
+  (let [name "Pepa DMS Printer"
+        port (get-in config [:printing :lpd :port])
+        queue "documents"]
+    (assert (< 0 port 65535))
+    (zeroconf/map->Service {:type "_printer._tcp.local."
+                            :name name
+                            :port port
+                            :props {"pdl" "application/pdf,application/postscript"
+                                    "rp" queue
+                                    "txtvers" "1"
+                                    "qtotal" "1" ;count of queues
+                                    "ty" (str name " (Queue: " queue ")")}})))
