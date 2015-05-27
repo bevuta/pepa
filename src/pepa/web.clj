@@ -1,6 +1,7 @@
 (ns pepa.web
   (:require [pepa.web.handlers :refer [make-handlers]]
             [pepa.log :as log]
+            [pepa.zeroconf :as zeroconf]
 
             [com.stuartsierra.component :as component]
             [immutant.web :as http-server]))
@@ -25,3 +26,14 @@
 
 (defn make-component []
   (map->Web {}))
+
+;;; Zeroconf Service Implementation
+
+(defmethod zeroconf/service-info :web [module config]
+  (let [name "Pepa DMS"
+        port (get-in config [:web :port])]
+    (assert (< 0 port 65535))
+    (zeroconf/map->Service {:type "_http._tcp.local."
+                            :name name
+                            :port port
+                            :props {}})))
