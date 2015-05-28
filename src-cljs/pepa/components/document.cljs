@@ -25,8 +25,12 @@
   [(s/capitalize (name kw)) (format-date val)])
 (defmethod meta-row :modified [kw val]
   [(s/capitalize (name kw)) (format-date val)])
-(defmethod meta-row :document-date [kw val]
-  [(s/capitalize (name kw)) (format-date val)])
+
+(let [formatter (DateTimeFormat. "dd.MM.yyyy")]
+  (defmethod meta-row :document-date [kw val]
+    [(s/replace (s/capitalize (name kw)) #"-" " ") (if val
+                                                     (.format formatter val)
+                                                     "Click here to set a date")]))
 
 (let [formatter (DateTimeFormat. "yyyy-MM-dd")]
   (defn ^:private format-datepicker [date]
@@ -63,17 +67,22 @@
      [:span.title {:key "title"} title]
      (if-not editing?
        [:span.value {:key "value", :title (str value)} value]
-       [:input {:type "date"
-                :key "value"
-                :value val
-                :on-key-down (fn [e]
-                               (when (= keycodes/ENTER e.keyCode)
-                                 (om/set-state! owner :editing? false)
-                                 (update-fn :document-date (string->date val))))
-                :on-change (fn [e] (om/set-state! owner :val e.target.value))
-                :on-blur (fn [e] (do
-                                   (om/set-state! owner :editing? false)
-                                   (update-fn :document-date (string->date val))))}])]))
+       [:form {:on-key-down (fn [e]
+                              (when (= keycodes/ENTER e.keyCode)
+                                (om/set-state! owner :editing? false)
+                                (update-fn :document-date (string->date val))))
+               :on-change (fn [e] (om/set-state! owner :val e.target.value))
+               :on-blur (fn [e] (do
+                                  (om/set-state! owner :editing? false)
+                                  (update-fn :document-date (string->date val))))}
+        [:input {:type "date"
+                 :key "value"
+                 :value val}]
+        [:input {:type "button"
+                 :value "Reset"
+                 :on-click #(do
+                              (om/set-state! owner :val nil)
+                              (update-fn :document-date nil))}]])]))
 
 (ui/defcomponent meta-table [document]
   (render [_]

@@ -194,9 +194,8 @@
           title (when-not (= (:title document)
                              (:title server))
                   (:title document))
-          date (when-not (= (:document-date document)
-                            (:document-date server))
-                 (:document-date document))
+          date (not= (:document-date document)
+                     (:document-date server))
           tags {:added (remove (set (:tags server)) (:tags document))
                 :removed (remove (set (:tags document)) (:tags server))}]
       (when-not server
@@ -207,7 +206,7 @@
       (if (or title date (seq (:added tags)) (seq (:removed tags)))
         (let [response (<! (xhr-request! (str "/documents/" (:id document))
                                          :post
-                                         {:title title, :document-date date :tags tags}))]
+                                         {:title title, :document-date (:document-date document) :tags tags}))]
           (if (= 200 (:status response))
             (let [new-document (-> response
                                    :response/transit
