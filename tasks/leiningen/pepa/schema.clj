@@ -28,7 +28,7 @@ CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox', 'tags');
        id SERIAL PRIMARY KEY CHECK(id > 0),
        title TEXT NOT NULL,
        modified TIMESTAMP,
-       document_date TIMESTAMP,
+       document_date DATE,
        created TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
        notes TEXT,
        -- If set, this document correspondents exactly to file
