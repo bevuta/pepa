@@ -62,23 +62,33 @@
       (callback :document-date date))
     (om/set-state! owner :editing? false)))
 
+(defn ^:private date-input-supported? []
+  (-> (doto (js/document.createElement "input")
+        (.setAttribute "type" "date"))
+      .-type
+      (= "date")))
+
 (ui/defcomponentmethod meta-value :document-date [[_ date] owner _]
   (init-state [_]
     {:editing? false
      :date (om/value date)})
   (render-state [_ {:keys [editing? date change-callback]}]
-    (if-not editing?
-      (let [value (when date (format-date date))]
+    (let [supported? (date-input-supported?)
+          value (when date (format-date date))]
+      (if-not editing?
         [:span.value {:key "value", :title (str value)
-                      :on-click (fn [e] (om/set-state! owner :editing? true))}
-         (or value "Click to set")])
-      (let [on-submit! (partial store-document-date! owner date)]
-        [:form {:on-submit on-submit! :on-blur on-submit!}
-         [:input {:type "date"
-                  :key "date-input"
-                  :on-change (partial document-date-changed owner)
-                  :value (when date
-                           (date->date-picker-value date))}]]))))
+                      :on-click (fn [e]
+                                  (when supported?
+                                    (om/set-state! owner :editing? true)))}
+         (or value
+             (when supported? "Click to set"))]
+        (let [on-submit! (partial store-document-date! owner date)]
+          [:form {:on-submit on-submit! :on-blur on-submit!}
+           [:input {:type "date"
+                    :key "date-input"
+                    :on-change (partial document-date-changed owner)
+                    :value (when date
+                             (date->date-picker-value date))}]])))))
 
 (ui/defcomponent meta-item [[prop value] owner _]
   (render-state [_ state]
