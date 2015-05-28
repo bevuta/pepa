@@ -3,7 +3,8 @@
             [pepa.model :as m]
             [pepa.web.html :as html]
             [pepa.web.poll :refer [poll-handler]]
-            
+
+            [pepa.log :as log]
             [pepa.util :refer [slurp-bytes]]
             [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
@@ -122,6 +123,13 @@
                  rotation (::rotation ctx)]
              (m/rotate-page db id rotation))))
 
+(let [required #{:title}]
+  (defn sanitize-attrs [comp attrs]
+    (into {} (remove (fn [[k v]] (when (and (nil? v) (contains? required k))
+                                   (do
+                                     (log/warn comp (str "Required attribute is null attr: " k))
+                                     true))) attrs))))
+
 (defresource document [id]
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
@@ -139,10 +147,12 @@
                  req (:request ctx)
                  params (:body req)
                  attrs (select-keys params [:title :document-date])
-                 attrs (into {} (remove (comp nil? val) attrs))
+                 attrs (sanitize-attrs (get-in ctx [:request :pepa/web]) attrs)
                  {added-tags :added, removed-tags :removed} (:tags params)]
              (assert (every? string? added-tags))
              (assert (every? string? removed-tags))
+             (prn "Attributes" (select-keys params [:title :document-date]))
+             (prn "Attributes" attrs)
              (db/with-transaction [db (:pepa/db req)]
                (m/update-document! db id attrs added-tags removed-tags)
                {::document (m/get-document db id)})))

@@ -9,7 +9,7 @@
             [clojure.string :as s]
             [clojure.set :as set]
             [clojure.java.io :as io])
-  (:import [java.sql Timestamp SQLException]))
+  (:import [java.sql Date SQLException]))
 
 ;;; File Handling
 
@@ -197,8 +197,7 @@
     (when (= :processing-status/processed (processing-status conn file))
       (add-pages*! conn document (page-ids conn file)))))
 
-(defn link-file! [db document file]
-  (log/info db "Linking document" document "to file" file)
+(defn link-file! [db document file]  (log/info db "Linking document" document "to file" file)
   (db/with-transaction [db db]
     (link-file*! db document file)
     (db/notify! db :documents/updated {:id document})))
@@ -233,16 +232,6 @@
       (db/notify! db :documents/new {:id id})
       id)))
 
-(defn ^:private fix-props [props]
-  (if-let [date (:document-date props)]
-    (let [timestamp (->
-                     date
-                     (.getTime)
-                     (Timestamp.))
-          remove-dash (clojure.set/rename-keys props {:document-date :document_date})
-          with-timestamp (assoc remove-dash :document_date timestamp)]
-      with-timestamp)))
-
 (defn update-document!
   "Updates document with ID. PROPS is a map of changed
   properties (currently only :title, :document-date), ADDED-TAGS and REMOVED-TAGS are
@@ -259,7 +248,14 @@
     (if-let [document (get-document conn id)]
       (let [added-tags (set added-tags)
             removed-tags (set removed-tags)
-            props (fix-props props)
+            props (->
+                   props
+                   (clojure.set/rename-keys {:document-date :document_date})
+                   (update-in [:document_date] (fn [date]
+                                                 (when date
+                                                   (->> date
+                                                        (.getTime)
+                                                        (Date.))))))
             ;; Subtract removed-tags from added-tags so we don't
             ;; create tags which will be removed instantly
             added-tags (set/difference added-tags removed-tags)]
