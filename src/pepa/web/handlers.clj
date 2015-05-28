@@ -151,8 +151,6 @@
                  {added-tags :added, removed-tags :removed} (:tags params)]
              (assert (every? string? added-tags))
              (assert (every? string? removed-tags))
-             (prn "Attributes" (select-keys params [:title :document-date]))
-             (prn "Attributes" attrs)
              (db/with-transaction [db (:pepa/db req)]
                (m/update-document! db id attrs added-tags removed-tags)
                {::document (m/get-document db id)})))
