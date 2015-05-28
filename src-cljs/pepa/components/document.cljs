@@ -11,31 +11,34 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:import [goog.i18n DateTimeFormat DateTimeParse]))
 
-(defmulti ^:private meta-row (fn [kw val] kw))
+(defmulti meta-value (fn [[kw val] owner opts] kw))
 
-(defmethod meta-row :default [kw val]
-  [(s/capitalize (name kw)) val])
+(ui/defcomponentmethod meta-value :default [[key value] _ _]
+  (render [_]
+    [:span.value {:key "value", :title (str value)}
+     value]))
 
 (let [formatter (DateTimeFormat. "dd.MM.yyyy HH:mm")]
-  (defn format-date [^Date date]
+  (defn format-datetime [^Date date]
     (when date
       (.format formatter date))))
-
-(defmethod meta-row :created [kw val]
-  [(s/capitalize (name kw)) (format-date val)])
-(defmethod meta-row :modified [kw val]
-  [(s/capitalize (name kw)) (format-date val)])
 
 (let [formatter (DateTimeFormat. "dd.MM.yyyy")]
-  (defmethod meta-row :document-date [kw val]
-    [(s/replace (s/capitalize (name kw)) #"-" " ") (if val
-                                                     (.format formatter val)
-                                                     "Click here to set a date")]))
-
-(let [formatter (DateTimeFormat. "yyyy-MM-dd")]
-  (defn ^:private format-datepicker [date]
+  (defn ^:private format-date [^Date date]
     (when date
       (.format formatter date))))
+
+(ui/defcomponentmethod meta-value :created [[key date] _ _]
+  (render [_]
+    (let [value (format-datetime date)]
+      [:span.value {:key "value", :title value}
+       value])))
+
+(ui/defcomponentmethod meta-value :modified [[key date] _ _]
+  (render [_]
+    (let [value (format-datetime date)]
+      [:span.value {:key "value", :title value}
+       value])))
 
 (let [parser (DateTimeParse. "yyyy-MM-dd")]
   (defn string->date [date-string]
@@ -44,61 +47,57 @@
         (.parse parser date-string date)
         date))))
 
-(defn ^:private property-changed [document prop value]
-  (go
-    (<! (api/update-document! (assoc @document prop value)))))
+(let [formatter (DateTimeFormat. "yyyy-MM-dd")]
+  (defn ^:private date->date-picker-value [^Date date]
+    (.format formatter date)))
 
-(ui/defcomponent meta-item [{:keys [name title value]} _]
-  (render [_]
-    [:li {:class name, :key name}
-     [:span.title {:key "title"} title]
-     [:span.value {:key "value", :title (str value)}
-      value]]))
+(defn ^:private document-date-changed [owner e]
+  (let [value e.currentTarget.value
+        date (when-not (s/blank? value) (string->date value))]
+    (om/set-state! owner :date date)))
 
-(ui/defcomponent ^:private date-picker [{:keys [name title value]}
-                                        owner
-                                        {:keys [update-fn]}]
+(defn ^:private store-document-date! [owner date e]
+  (let [callback (om/get-state owner :change-callback)]
+    (when (fn? callback)
+      (callback :document-date date))
+    (om/set-state! owner :editing? false)))
+
+(ui/defcomponentmethod meta-value :document-date [[_ date] owner _]
   (init-state [_]
-    {:editing? false})
-  (render-state [_ {:keys [editing? val]}]
-    [:li {:class name
-          :key name
-          :on-click #(om/set-state! owner :editing? true)}
-     [:span.title {:key "title"} title]
-     (if-not editing?
-       [:span.value {:key "value", :title (str value)} value]
-       [:form {:on-key-down (fn [e]
-                              (when (= keycodes/ENTER e.keyCode)
-                                (om/set-state! owner :editing? false)
-                                (update-fn :document-date (string->date val))))
-               :on-change (fn [e] (om/set-state! owner :val e.target.value))
-               :on-blur (fn [e] (do
-                                  (om/set-state! owner :editing? false)
-                                  (update-fn :document-date (string->date val))))}
-        [:input {:type "date"
-                 :key "value"
-                 :value val}]
-        [:input {:type "button"
-                 :value "Reset"
-                 :on-click #(do
-                              (om/set-state! owner :val nil)
-                              (update-fn :document-date nil))}]])]))
+    {:editing? false
+     :date (om/value date)})
+  (render-state [_ {:keys [editing? date change-callback]}]
+    (if-not editing?
+      (let [value (when date (format-date date))]
+        [:span.value {:key "value", :title (str value)
+                      :on-click (fn [e] (om/set-state! owner :editing? true))}
+         (or value "Click to set")])
+      (let [on-submit! (partial store-document-date! owner date)]
+        [:form {:on-submit on-submit! :on-blur on-submit!}
+         [:input {:type "date"
+                  :key "date-input"
+                  :on-change (partial document-date-changed owner)
+                  :value (when date
+                           (date->date-picker-value date))}]]))))
+
+(ui/defcomponent meta-item [[prop value] owner _]
+  (render-state [_ state]
+    (let [name (name prop)
+          title (s/capitalize name)]
+      [:li {:class name, :key name}
+       [:span.title {:key "title"} title]
+       (om/build meta-value [prop value]
+                 {:state state})])))
+
+(defn ^:private property-changed! [document property value]
+  (assert (contains? #{:title :document-date} property))
+  (println "Updating property" property "on document" (:id @document))
+  (api/update-document! (assoc @document property value)))
 
 (ui/defcomponent meta-table [document]
   (render [_]
     [:ul.meta
      (for [prop [:title :created :modified :document-date :creator :size]]
-       (let [name (name prop)
-             [title value] (meta-row prop (get document prop))
-             data {:name name
-                   :title title
-                   :value value}]
-         (if-not (= name "document-date")
-           (om/build meta-item data)
-           (om/build date-picker
-                     data
-                     {:state
-                      {:val (format-datepicker (prop document))}
-                      :opts
-                      {:update-fn (partial property-changed document)}}))))]))
+       (om/build meta-item [prop (get document prop)]
+                 {:state {:change-callback (partial property-changed! document)}}))]))
 
