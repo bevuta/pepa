@@ -72,6 +72,9 @@
   (init-state [_]
     {:editing? false
      :date (om/value date)})
+  (will-receive-props [_ [_ next-date]]
+    (when (not= date next-date)
+      (om/set-state! owner :date next-date)))
   (render-state [_ {:keys [editing? date change-callback]}]
     (let [supported? (date-input-supported?)
           value (when date (format-date date))]
