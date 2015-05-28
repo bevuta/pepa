@@ -121,11 +121,13 @@
                                        ORDER BY dt.seq"
                                  ids :document)]
         (map (fn [{:keys [id] :as document}]
-               (assoc document
-                      :pages (->> (vec (get pages id))
-                                  (mapv #(update-in % [:dpi] pg-array->set)))
-                      :tags (mapv :name (get tags id))))
-             (map #(clojure.set/rename-keys %1 {:document_date :document-date}) documents))))))
+               (-> document
+                   (assoc :pages (->> (vec (get pages id))
+                                      (mapv #(update-in % [:dpi] pg-array->set)))
+                          :tags (mapv :name (get tags id))
+                          :document-date (:document_date document))
+                   (dissoc :document_date)))
+             documents)))))
 
 (defn get-document [db id]
   (first (get-documents db [id])))
@@ -142,15 +144,11 @@
                condition)
           params)))
 
-(defn query-documents
-  ([db]
-   (map #(clojure.set/rename-keys %1 {:document_date :document-date})
-        (db/query db documents-base-query)))
-  ([db query]
-   (if (nil? query)
-     (query-documents db)
-     (map #(clojure.set/rename-keys %1 {:document_date :document-date})
-          (db/query db (documents-query query))))))
+(defn query-documents [db & [query]]
+  (map #(set/rename-keys %1 {:document_date :document-date})
+       (if (nil? query)
+         (db/query db documents-base-query)
+         (db/query db (documents-query query)))))
 
 (defn document-file
   "Returns the id of the file associated to document with ID. Might be
@@ -250,12 +248,10 @@
             removed-tags (set removed-tags)
             props (->
                    props
-                   (clojure.set/rename-keys {:document-date :document_date})
-                   (update-in [:document_date] (fn [date]
-                                                 (when date
-                                                   (->> date
-                                                        (.getTime)
-                                                        (Date.))))))
+                   (update :document-date
+                           (fn [date]
+                             (some-> date (.getTime) (Date.))))
+                   (set/rename-keys {:document-date :document_date}))
             ;; Subtract removed-tags from added-tags so we don't
             ;; create tags which will be removed instantly
             added-tags (set/difference added-tags removed-tags)]
