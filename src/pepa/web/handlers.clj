@@ -143,9 +143,19 @@
                  {added-tags :added, removed-tags :removed} (:tags params)]
              (assert (every? string? added-tags))
              (assert (every? string? removed-tags))
-             (db/with-transaction [db (:pepa/db req)]
-               (m/update-document! db id attrs added-tags removed-tags)
-               {::document (m/get-document db id)})))
+             ;; Implement transaction-retries
+             (loop [retries 5]
+               (or (try
+                     (db/with-transaction [db (:pepa/db req)]
+                       (m/update-document! db id attrs added-tags removed-tags)
+                       (log/debug db "Getting document:" (m/get-document db id))
+                       {::document (m/get-document db id)})
+                     (catch SQLException e
+                       (log/warn (:pepa/web req) "SQL Transaction to update document " id " failed."
+                                 " Retrying... (" retries "left)")
+                       nil))
+                   (when (pos? retries)
+                     (recur (dec retries)))))))
   :handle-created ::document
   :handle-ok (fn [ctx]
                (let [document (::document ctx)]

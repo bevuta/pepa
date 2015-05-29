@@ -13,6 +13,8 @@
             [pepa.style :as css]
             [pepa.selection :as selection]
 
+
+            [pepa.components.document :as document]
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
             [pepa.components.draggable :as draggable])
@@ -59,7 +61,7 @@
        (om/build tags/tags-list (:tags document)
                  {:react-key "tags-list"})])))
 
-(ui/defcomponent ^:private sidebar-pane [state owner _]
+(ui/defcomponent ^:private sidebar-pane [[state selected-documents] owner _]
   (render [_]
     (let [sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
                              css/default-sidebar-width)]
@@ -67,7 +69,12 @@
                :style {:min-width sidebar-width :max-width sidebar-width}}
        [:.sidebar
         [:header "Sorting & Filtering"]
-        (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})]])))
+        (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})
+
+        (om/build document/document-sidebar selected-documents
+                  ;; Get the real documents from IDs
+                  {:fn (fn [ids]
+                         (map #(get-in state [:documents %]) ids))})]])))
 
 (defn ^:private document-ids [state]
   (:results (search/current-search state)))
@@ -225,7 +232,7 @@
                           :fn #(assoc % ::selected
                                       (contains? (:selected selection) (:id %)))
                           :state {:clicks clicks}}))]]
-       (om/build sidebar-pane state)])))
+       (om/build sidebar-pane [state (:selected selection)])])))
 
 (defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]
   (draggable/limit

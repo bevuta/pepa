@@ -139,20 +139,9 @@
      [:header "Meta"]
      (om/build draggable/resize-draggable nil
                {:opts {:sidebar ::meta}})
-     [:aside
-      (om/build document/meta-table document)
-      ;; Input Fields: Tags, Sharing, Notes, etc.
-      [:.fields
-       (om/build tags/tags-input document
-                 {:state (om/get-state owner)})]
 
-      ;; Buttons: Download, Delete, etc.
-      [:.buttons
-       [:button.download {:on-click #(js/window.open
-                                      (str "/documents/" (:id document) "/download"))}
-        "Download"]
-       [:button.delete {:disabled true}
-        "Nukular vernichten"]]]]))
+     ;; TODO: handle channels to set document tags
+     (om/build document/document-sidebar [document])]))
 
 (defn ^:private next-page [pages page]
   (->> pages 

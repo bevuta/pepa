@@ -462,27 +462,29 @@
                 :position :relative}
      [:header {:text-align :center
                :font-style :italic}]
-     (draggable-css :left)
-     ;; Meta Data Table
-     [:aside {:padding {:left (px 25)
-                        :right (px 25)}}]
-     [:ul.meta {:font-size (pt 10)
-                :line-height (pt 15)
-                :padding 0
-                :list-style "none"}
-      [:span {:display :inline-block}
-       [:&.title {:font-weight 500
-                  :height "1em"
-                  :width "30%"}
-        [:&:after {:content (pr-str ": ")}]]
-       (let [left-padding 8]
-         [:&.value (list
-                    {:padding-left (px left-padding)
-                     :white-space :nowrap
-                     :overflow :hidden
-                     :vertical-align :top
-                     :text-overflow :ellipsis}
-                    (calc-property :width ["70%" - left-padding]))])]]]]])
+     (draggable-css :left)]]])
+
+(def generic-sidebar-css
+  [:.sidebar
+   [:aside {:padding {:left (px 25)
+                      :right (px 25)}}
+    [:ul.meta {:font-size (pt 10)
+               :line-height (pt 15)
+               :padding 0
+               :list-style "none"}
+     [:span {:display :inline-block}
+      [:&.title {:font-weight 500
+                 :height "1em"
+                 :width "30%"}
+       [:&:after {:content (pr-str ": ")}]]
+      (let [left-padding 8]
+        [:&.value (list
+                   {:padding-left (px left-padding)
+                    :white-space :nowrap
+                    :overflow :hidden
+                    :vertical-align :top
+                    :text-overflow :ellipsis}
+                   (calc-property :width ["70%" - left-padding]))])]]]])
 
 (def workflow-css
   [:.workflow {:height "100%" :width "100%"
@@ -495,6 +497,7 @@
             :min-width 0    
             :height "100%"}]
    generic-header-css
+   generic-sidebar-css
 
    dashboard-css
    document-css

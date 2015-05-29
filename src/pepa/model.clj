@@ -239,9 +239,10 @@
   (assert (every? string? added-tags))
   (assert (every? string? removed-tags))
   (assert (every? #{:title} (keys props)))
-  (log/info db "Updating document" id {:props props
-                                       :tags/added added-tags
-                                       :tags/removed removed-tags})
+  (log/info db "Updating document" id (pr-str
+                                       {:props props
+                                        :tags/added added-tags
+                                        :tags/removed removed-tags}))
   (db/with-transaction [conn db]
     (if-let [document (get-document conn id)]
       (let [added-tags (set added-tags)
@@ -264,7 +265,7 @@
 ;;; Tag Functions
 
 (defn normalize-tags [tags]
-  (assert (every? string? tags))
+  {:pre [(every? string? tags)]}
   (->> tags
        (map s/lower-case)
        (map s/trim)
@@ -284,7 +285,7 @@
   (mapv :name (db/query db ["SELECT name FROM tags ORDER BY name"])))
 
 (defn document-tags [db document-id]
-  (map :tag (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])))
+  (mapv :tag (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])))
 
 (defn tag-document-counts
   "Returns a map from tag-name -> document-count."
@@ -305,7 +306,7 @@
                      tag])
        (mapv :document)))
 
-(defn get-or-create-tags!
+(defn ^:private get-or-create-tags!
   "Gets tags for TAG-VALUES from DB. Creates them if necessary."
   [db tag-values]
   ;; Nothing to do if TAG-VALUES is empty
@@ -316,21 +317,22 @@
             ;; NOTE: It's important that tag-values is not empty
             existing (db/query conn (db/sql+placeholders "SELECT id, name FROM tags WHERE name IN (%s)" tag-values))
             new (set/difference tag-values (set (map :name existing)))
-            new (map tag->db-tag new)
+            new (mapv tag->db-tag new)
+            _ (log/debug db "Transparently creating new tags:" (pr-str new))
             new (db/insert-coll! conn :tags new)]
         (concat existing new)))))
 
 (defn ^:private add-tags*! [db document-id tags]
-  (assert (number? document-id))
-  (assert (every? string? tags))
+  {:pre [(every? string? tags)
+         (number? document-id)]}
   (db/with-transaction [db db]
     (let [db-tags (get-or-create-tags! db tags)
-          old-tags (document-tags db document-id)
-          new-tags (set/difference (set (map :id db-tags))
-                                   (set old-tags))]
-      (when (seq new-tags)
+          old-tag-ids (document-tags db document-id)
+          new-tag-ids (set/difference (set (map :id db-tags))
+                                      (set old-tag-ids))]
+      (when (seq new-tag-ids)
         (db/insert-coll! db :document_tags
-                         (for [tag new-tags]
+                         (for [tag new-tag-ids]
                            {:document document-id :tag tag}))))))
 
 (defn add-tags! [db document-id tags]
