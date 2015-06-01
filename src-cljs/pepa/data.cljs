@@ -82,9 +82,17 @@
        (sort-by val >)
        (mapv key)))
 
-(defn tag-count-map [state]
-  (-> (:tags state)
-      (om/value)))
+(defn tag-count-map
+  ([state]
+   (-> (:tags state)
+       (om/value)))
+  ([state only-positive?]
+   (if only-positive?
+     (->> (:tags state)
+          (om/value)
+          (filterv (comp pos? val))
+          (into {}))
+     (tag-count-map state))))
 
 ;;; Page Movement
 

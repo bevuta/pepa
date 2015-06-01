@@ -87,8 +87,8 @@
             :class [(when open? "open")]}
       title]
      (when open?
-       (let [tags (sort-by val > (data/tag-count-map state))]
-        (om/build tags/tags-list tags)))]))
+       (let [tags (sort-by val > (data/tag-count-map state true))]
+         (om/build tags/tags-list tags)))]))
 
 (defn ^:private route-matches? [route workflows]
   (let [route (if (seqable? route)
