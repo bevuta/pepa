@@ -190,11 +190,11 @@
             (let [selector (keyword (str "&." row))]
               [selector
                [:.menu-link
-                [:div
+                [:.title
                  [:&:before {:background-image (image-url (str "menu-icons/" row ".svg"))}]]]
                [:&.active
                 [:.menu-link
-                 [:div
+                 [:.title
                   [:&:before :&:after {:background-color blue-background}]
                   [:&:before {:background-image (image-url (str "menu-icons/" row "-active.svg"))}]]]]]))
           [:&.inbox {:position :relative}
@@ -203,13 +203,13 @@
                      :right (px 26)
                      :font-size (pt 11)
                      :color blue-text}]]
-          [:&.tags {:cursor :pointer}
+          [:&.tags
            ;; Use different icon when open?
-           [:div.open
-            [:&:before {:background-image (image-url "menu-icons/tags-open.svg")}]]
+           ;; [:div.open
+           ;;  [:&:before {:background-image (image-url "menu-icons/tags-open.svg")}]]
+           [:ul :.show-more {:padding-left (px (+ (* 2 padding-left)
+                                                  icon-size))}]
            [:ul {:list-style-type :none
-                 :padding-left (px (+ (* 2 padding-left)
-                                      icon-size))
                  :overflow-y :auto}
             (let [color-size 12]
               [:li.tag {:display :list-item
@@ -228,10 +228,13 @@
                          :padding {:left (px 4), :right (px 4)}}]
                [:.color {:width (px color-size)
                          :height (px color-size)
-                         :float :right}]])]]
+                         :float :right}]])]
+           [:.show-more {:font-weight :bold
+                         :font-size (px 10)
+                         :cursor :pointer}]]
           
           [:.menu-link
-           [:div {:height (px line-height)}
+           [:.title {:height (px line-height)}
             [:&:before :&:after {:content (pr-str " ")
                                  :display :block
                                  :height (px line-height)}]

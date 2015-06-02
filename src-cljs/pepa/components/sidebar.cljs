@@ -42,7 +42,7 @@
 (ui/defcomponentmethod navigation-element :default [state _ [title id _ href]]
   (render [_]
     [:a.menu-link {:href href}
-     [:div title]]))
+     [:.title title]]))
 
 (defn ^:private inbox-drop! [state owner e]
   ;; NOTE: We need to handle all event-object interop BEFORE entering
@@ -66,29 +66,33 @@
 (ui/defcomponentmethod navigation-element :inbox [state owner [title id _ href]]
   (render-state [_ {:keys [drop? working?]}]
     [:a.menu-link {:href href}
-     [:div {:class [(when working? "working")
-                    (when drop? "drop-target")]
-            :on-drag-over upload/accept-file-drag
-            :on-drag-enter #(om/set-state! owner :drop? true)
-            :on-drag-leave #(om/set-state! owner :drop? false)
-            :on-drop (partial inbox-drop! state owner)} 
+     [:.title {:class [(when working? "working")
+                       (when drop? "drop-target")]
+               :on-drag-over upload/accept-file-drag
+               :on-drag-enter #(om/set-state! owner :drop? true)
+               :on-drag-leave #(om/set-state! owner :drop? false)
+               :on-drop (partial inbox-drop! state owner)}
       title
       (when-let [pages (-> state :workflows :inbox :documents :inbox :pages seq)]
         [:span.count (count pages)])]]))
 
+(def +tag-limit+ 5)
+
 (ui/defcomponentmethod navigation-element :tags [state owner [title id _ href]]
   (init-state [_]
-    {:open? true})
-  (render-state [_ {:keys [open?]}]
-    [:div.menu-link
-     [:div {:on-click (fn [e]
-                        (om/update-state! owner :open? not)
-                        (.preventDefault e))
-            :class [(when open? "open")]}
-      title]
-     (when open?
-       (let [tags (sort-by val > (data/tag-count-map state true))]
-         (om/build tags/tags-list tags)))]))
+    {:show-all? false})
+  (render-state [_ {:keys [show-all?]}]
+    [:.menu-link
+     [:.title title]
+     (let [tags (sort-by val > (data/tag-count-map state true))
+           tags (if-not show-all? (take +tag-limit+ tags) tags)]
+       (om/build tags/tags-list tags))
+     [:.show-more {:on-click (fn [e]
+                               (om/update-state! owner :show-all? not)
+                               (.preventDefault e))}
+      (if show-all?
+        "Less ▲"
+        "More ▼")]]))
 
 (defn ^:private route-matches? [route workflows]
   (let [route (if (seqable? route)
