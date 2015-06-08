@@ -374,8 +374,8 @@
 
             (ANY "/tags" []
                  (tags web))
-            (GET "/tags/:tag" [tag]
-                 (tag web tag))
+            (GET "/tags/:t" [t]
+                 (tag web t))
             
             (ANY "/poll" []
                  (partial poll-handler web))
