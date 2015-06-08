@@ -15,7 +15,13 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:import [goog.i18n DateTimeFormat DateTimeParse]))
 
-(defmulti meta-value (fn [[kw val] owner opts] kw))
+(defmulti meta-title (fn [[prop val] owner opts] prop))
+(defmulti meta-value (fn [[prop val] owner opts] prop))
+
+(ui/defcomponentmethod meta-title :default [[prop _] _ _]
+  (render [_]
+    [:span.title {:key "title"}
+     (s/capitalize (name prop))]))
 
 (ui/defcomponentmethod meta-value :default [[key value] _ _]
   (render [_]
@@ -74,6 +80,10 @@
     (when date
       (.format formatter date))))
 
+(ui/defcomponentmethod meta-title :document-date [_ _ _]
+  (render [_]
+    [:span.title {:key "title"} "Date"]))
+
 (ui/defcomponentmethod meta-value :document-date [[_ date] owner _]
   (init-state [_]
     {:editing? false
@@ -103,25 +113,23 @@
 
 (ui/defcomponent multi-meta-item [prop owner _]
   (render [_]
-    (let [name (name prop)
-          title (s/capitalize name)]
+    (let [name (name prop)]
       [:li {:class name, :key name}
-       [:span.title {:key "title"} title]
+       (om/build meta-title [prop "Multiple"])
        (om/build meta-value [:default "Multiple"])])))
 
 (ui/defcomponent meta-item [[prop value] owner _]
   (render-state [_ state]
-    (let [name (name prop)
-          title (s/capitalize name)]
+    (let [name (name prop)]
       [:li {:class name, :key name}
-       [:span.title {:key "title"} title]
+       (om/build meta-title [prop value])
        (om/build meta-value [prop value]
                  {:state state})])))
 
 ;;; TODO: Support mass-edit here
 (defn ^:private property-changed! [document property value]
   (assert (contains? #{:title :document-date} property))
-  (println "Updating property" property "on document" (:id @document))
+  (println "Updating property" property "on document" (:id @document) (str "[" (pr-str value) "]"))
   (api/update-document! (assoc @document property value)))
 
 (ui/defcomponent meta-table [documents]
