@@ -1,9 +1,11 @@
 (ns pepa.web.handlers
   (:require [pepa.db :as db]
             [pepa.model :as m]
+            [pepa.log :as log]
             [pepa.web.html :as html]
             [pepa.web.poll :refer [poll-handler]]
             [pepa.authorization :as auth]
+
             [pepa.log :as log]
             [pepa.util :refer [slurp-bytes]]
             
@@ -14,13 +16,13 @@
             [compojure.core :refer :all]
             [compojure.route :as route]
             [ring.middleware.params :refer [wrap-params]]
-            [ring.middleware.transit :refer [wrap-transit-response
-                                             wrap-transit-body]]
+            [ring.util.response :refer [redirect-after-post]]
             [ring.middleware.json :refer [wrap-json-body]]
             
             [liberator.core :refer [defresource]]
             [liberator.representation :refer [as-response]]
             io.clojure.liberator-transit
+            [cognitect.transit :as transit]
 
             [immutant.web.async :as async-web])
   (:import java.io.FileInputStream
@@ -122,6 +124,13 @@
                           (::page-id ctx)
                           (::rotation ctx))))
 
+(let [required #{:title}]
+  (defn sanitize-attrs [comp attrs]
+    (into {} (remove (fn [[k v]] (when (and (nil? v) (contains? required k))
+                                   (do
+                                     (log/warn comp (str "Required attribute is null attr: " k))
+                                     true))) attrs))))
+
 (defresource document [web id]
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
@@ -132,8 +141,8 @@
                     :post
                     (let [req (:request ctx)
                           params (:body req)
-                          attrs (select-keys params [:title])
-                          attrs (into {} (remove (comp nil? val) attrs))]
+                          attrs (->> (select-keys params [:title :document-date])
+                                     (sanitize-attrs web))]
                       (if (and (every? string? (get-in params [:tags :added]))
                                (every? string? (get-in params [:tags :removed])))
                         [false {::id (Integer/parseInt id)
@@ -151,11 +160,26 @@
   :location (fn [ctx] (str "/documents/" id))
   :post! (fn [ctx]
            (let [id (::id ctx)
+                 req (:request ctx)
+                 params (:body req)
                  attrs (::attrs ctx)
                  {added-tags :added, removed-tags :removed} (::tags ctx)]
-             (db/with-transaction [db (:db web)]
-               (m/update-document! db id attrs added-tags removed-tags)
-               {::document (m/get-document db id)})))
+             (assert (every? string? added-tags))
+             (assert (every? string? removed-tags))
+             ;; Implement transaction-retries
+             (loop [retries 5]
+               (or (try
+                     (db/with-transaction [db (:db web)]
+                       (m/update-document! db id attrs added-tags removed-tags)
+                       (log/debug db "Getting document:" (m/get-document db id))
+                       {::document (m/get-document db id)})
+                     (catch SQLException e
+                       (log/warn web
+                                 "SQL Transaction to update document " id " failed."
+                                 (str " Retrying... (" retries " left)"))
+                       nil))
+                   (when (pos? retries)
+                     (recur (dec retries)))))))
   :handle-created ::document
   :handle-ok (fn [ctx]
                (let [document (::document ctx)]
@@ -231,8 +255,10 @@
                               ::results (m/query-documents db query)}]
                       [false {::results (m/query-documents db)}]))
                   (catch RuntimeException e
+                    (log/warn web "Failed to parse query string" e)
                     [true {::error "Invalid query string"}])
                   (catch SQLException e
+                    (log/warn web "Generated SQL query failed" e)
                     [true {::error "Query string generated invalid SQL"}])))
   ;; TODO(mu): Validate POST
   :authorized? (auth/authorization-fn web :documents ::results)
@@ -282,19 +308,20 @@
   :allowed-methods #{:get}
   ;; TODO(mu): :authorized?
   :handle-ok (fn [ctx]
-               (let [tags (m/all-tags (:db web))]
+               (let [db (:db web)
+                     detailed? (= "true" (get-in ctx [:request :params "detailed"]))
+                     tags (if detailed?
+                            (m/tag-document-counts db)
+                            (m/all-tags db))]
                  (condp = (get-in ctx [:representation :media-type])
                    "text/html" (html/tags (map :name tags))
                    tags))))
 
-(defn handle-get-objects-for-tag [web req tag]
-  (db/with-transaction [conn (:db web)]
-    (let [[{tag-id :id}] (db/query conn ["SELECT id FROM tags WHERE name = ?" tag])
-          files (db/query conn ["SELECT f.id, f.origin, f.name FROM files AS f JOIN file_tags AS ft ON f.id = ft.file WHERE ft.tag = ?" tag-id])
-          pages (db/query conn ["SELECT p.id, dp.page FROM pages AS p JOIN document_pages AS dp ON p.id = dp.document JOIN page_tags AS pt ON p.id = pt.page WHERE pt.tag = ?" tag-id])
-          documents (db/query conn ["SELECT d.id, d.title FROM documents AS d JOIN document_tags AS dt ON d.id = dt.document WHERE dt.tag = ?" tag-id])]
-      {:status 200
-       :body (html/objects-for-tag tag files pages documents)})))
+(defresource tag [web t]
+  :available-media-types +default-media-types+
+  :allowed-methods #{:get}
+  :handle-ok (fn [ctx]
+               {:documents (m/tag-documents (:db web) (str t))}))
 
 (defresource documents-bulk [web]
   :allowed-methods #{:post}
@@ -347,9 +374,9 @@
 
             (ANY "/tags" []
                  (tags web))
-            (GET "/tags/:tag" [tag :as req]
-                 (handle-get-objects-for-tag web req tag))
-
+            (GET "/tags/:tag" [tag]
+                 (tag web tag))
+            
             (ANY "/poll" []
                  (partial poll-handler web))
 
@@ -371,6 +398,35 @@
       (catch Throwable t
         (log/error web t "Caught exception in Ring")
         {:status 500}))))
+
+(defn ^:private transit-request? [req]
+  (let [type (:content-type req)
+        [_ flavor] (when type (re-find #"^application/transit\+(json|msgpack)" type))]
+    (and flavor (keyword flavor))))
+
+(defn ^:private wrap-transit-body
+  "Ring middleware that parses application/transit bodies. Returns a
+  400-response if parsing fails."
+  [handler]
+  (fn [req]
+    (if-let [type (transit-request? req)]
+      (let [body (:body req)
+            reader (transit/reader body type)]
+        (try
+          (handler (assoc req :body (transit/read reader)))
+          (catch Exception ex
+            ;; TODO: We might want to log such errors.
+            {:status 400
+             :headers {:content-type "text/plain"}
+             :body "Malformed request."})))
+      (handler req))))
+
+(defn wrap-logging [handler web]
+  (fn [req]
+    (when (get-in web [:config :web :log-requests?])
+      (pprint req))
+    (handler req)))
+
 
 (defn make-handlers [web-component]
   (-> (#'handlers web-component)

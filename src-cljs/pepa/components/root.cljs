@@ -5,6 +5,7 @@
             [pepa.api :as api]
             [pepa.api.upload :as upload]
             [pepa.data :as data]
+            [pepa.search :as search]
             [pepa.components.sidebar :refer [sidebar-component]]
             [pepa.components.draggable :as draggable]
             [pepa.workflows.inbox :as inbox]
@@ -27,11 +28,15 @@
     (om/update! state :workflow/inbox inbox/initial-data)
     (<! (api/fetch-tags! state))))
 
-(defn transition-to! [state route query-params]
+(defn ^:private transition-to! [state route query-params]
   (println "route" (pr-str route)
            "query-params" (pr-str query-params))
   (match [route]
     [[:document id]] (api/fetch-documents! #{id})
+    [[:search search]] (->> search
+                            (search/route->query)
+                            (search/search! state))
+    [:dashboard] (search/all-documents! state)
     :else nil))
 
 ;;; Drag/Drop Handling
@@ -57,10 +62,9 @@
 (ui/defcomponent root-component [state owner]
   om/ICheckState
   (will-mount [_]
-    (let [{:keys [route query-params]} (:navigation state)]
+    (let [{:keys [route query-params]} (-> state :navigation om/value)]
       (fetch-initial-data! state route)
-      (let [route (om/value route)]
-        (transition-to! state route query-params))
+      (transition-to! state route query-params)
 
       ;; Handle all (global) resize events for sidebars
       (draggable/resize-handle-loop owner)
@@ -70,7 +74,7 @@
   (will-update [_ next-props next-state]
     (when-not (= (get-in (om/get-props owner) [:navigation :route])
                  (get-in next-props [:navigation :route]))
-      (let [{:keys [route query-params]} (om/value (:navigation next-props))]
+      (let [{:keys [route query-params]} (-> next-props :navigation om/value)]
         (transition-to! state route query-params))))
   (render-state [_ {:keys [file-drop?]}]
     (let [{:keys [route query-params]} (:navigation state)]

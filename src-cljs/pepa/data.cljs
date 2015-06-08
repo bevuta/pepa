@@ -8,7 +8,7 @@
    [cljs.core.async.macros :refer [go-loop]]))
 
 (defrecord Page [id rotation render-status dpi])
-(defrecord Document [id title pages created modified notes])
+(defrecord Document [id title pages created modified document-date notes])
 
 (defrecord State [documents navigation tags upload seqs])
 
@@ -82,14 +82,17 @@
        (sort-by val >)
        (mapv key)))
 
-(defn tag-document-count-pairs
-  "Returns a seq of [tag-name document-count] pairs."
-  [state]
-  (->> (:tags state)
-       (om/value)
-       (seq)
-       (sort-by second >)
-       (vec)))
+(defn tag-count-map
+  ([state]
+   (-> (:tags state)
+       (om/value)))
+  ([state only-positive?]
+   (if only-positive?
+     (->> (:tags state)
+          (om/value)
+          (filterv (comp pos? val))
+          (into {}))
+     (tag-count-map state))))
 
 ;;; Page Movement
 
@@ -150,61 +153,3 @@
       :ui/sidebars
       (om/ref-cursor)))
 
-;; TODO: Simulation Testing
-
-(assert (= (move-pages [:foo :bar :baz :bla]
-                 [:bar]
-                 :after :bla)
-           [:foo :baz :bla :bar]))
-
-(assert (= (move-pages [:foo :bar :baz :bla]
-                 [:bar]
-                 :before :bla)
-           [:foo :baz :bar :bla]))
-
-(assert (= (move-pages [:foo :bar :baz :bla]
-                 [:foo :bar]
-                 :before :bla)
-           [:baz :foo :bar :bla]))
-
-(assert (= (move-pages [:foo :bar :baz :bla]
-                 [:foo :bar]
-                 :before nil)
-           [:baz :bla :foo :bar]))
-
-(assert (= (move-pages [:foo :bar :baz :bla]
-                 [:foo :bar]
-                 :after nil)
-           [:baz :bla :foo :bar]))
-
-(assert (= (move-pages [:foo :bar :baz :bla]
-                 [:foo :bar :baz :bla]
-                 :before nil)
-           [:foo :bar :baz :bla]))
-
-(assert (= (move-pages [:foo :bar :baz :bla]
-                 [:foo :bar :baz]
-                 :after :bla)
-           [:bla :foo :bar :baz]))
-
-(assert (= (move-pages [:foo :bar :baz :bla]
-                 [:foo :bar :baz]
-                 :before :bla)
-           [:foo :bar :baz :bla]))
-
-(comment
-  ;; Extend ICursor to nil
-  (deftype NilCursor [state path]
-    om/ICursor
-    (-path [_] path)
-    (-state [_] state))
-
-  (extend-type nil
-    om/IToCursor
-    (-to-cursor [value state]
-      (om/-to-cursor value state nil))
-    (-to-cursor [_ state path]
-      (NilCursor. state path))
-
-    ICloneable
-    (-clone [_] nil)))

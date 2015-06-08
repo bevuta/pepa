@@ -13,10 +13,13 @@
 
 (enable-console-print!)
 
-(when-not (ws-repl/alive?)
+(defn ^:export repl-connect []
   (ws-repl/connect (str "ws://" js/window.location.hostname ":9009")
                    :verbose true
                    :print :console))
+
+(when-not (ws-repl/alive?)
+  (repl-connect))
 
 ;;; Preload Images
 (preloader/preload)

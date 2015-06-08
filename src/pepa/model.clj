@@ -8,7 +8,8 @@
             
             [clojure.string :as s]
             [clojure.set :as set]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io])
+  (:import [java.sql Date SQLException]))
 
 ;;; File Handling
 
@@ -104,7 +105,7 @@
   (db/with-transaction [conn db]
     (if-not (seq ids)
       []
-      (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, notes FROM documents WHERE id IN (%s)" ids))
+      (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, document_date, notes FROM documents WHERE id IN (%s)" ids))
             pages (get-associated conn "SELECT dp.document, p.id, p.rotation, p.render_status AS \"render-status\",
                                           (SELECT array_agg(dpi) from page_images where page = id) AS dpi
                                         FROM pages AS p
@@ -120,10 +121,12 @@
                                        ORDER BY dt.seq"
                                  ids :document)]
         (map (fn [{:keys [id] :as document}]
-               (assoc document
-                      :pages (->> (vec (get pages id))
-                                  (mapv #(update-in % [:dpi] pg-array->set)))
-                      :tags (mapv :name (get tags id))))
+               (-> document
+                   (assoc :pages (->> (vec (get pages id))
+                                      (mapv #(update-in % [:dpi] pg-array->set)))
+                          :tags (mapv :name (get tags id))
+                          :document-date (:document_date document))
+                   (dissoc :document_date)))
              documents)))))
 
 (defn get-document [db id]
@@ -141,13 +144,11 @@
                condition)
           params)))
 
-(defn query-documents
-  ([db]
-   (db/query db documents-base-query))
-  ([db query]
-   (if (nil? query)
-     (query-documents db)
-     (db/query db (documents-query query)))))
+(defn query-documents [db & [query]]
+  (map #(set/rename-keys %1 {:document_date :document-date})
+       (if (nil? query)
+         (db/query db documents-base-query)
+         (db/query db (documents-query query)))))
 
 (defn document-file
   "Returns the id of the file associated to document with ID. Might be
@@ -194,8 +195,7 @@
     (when (= :processing-status/processed (processing-status conn file))
       (add-pages*! conn document (page-ids conn file)))))
 
-(defn link-file! [db document file]
-  (log/info db "Linking document" document "to file" file)
+(defn link-file! [db document file]  (log/info db "Linking document" document "to file" file)
   (db/with-transaction [db db]
     (link-file*! db document file)
     (db/notify! db :documents/updated {:id document})))
@@ -232,20 +232,26 @@
 
 (defn update-document!
   "Updates document with ID. PROPS is a map of changed
-  properties (currently only :title), ADDED-TAGS and REMOVED-TAGS are
+  properties (currently only :title, :document-date), ADDED-TAGS and REMOVED-TAGS are
   lists of added and removed tag-values (strings)."
   [db id props added-tags removed-tags]
 
   (assert (every? string? added-tags))
   (assert (every? string? removed-tags))
-  (assert (every? #{:title} (keys props)))
-  (log/info db "Updating document" id {:props props
-                                       :tags/added added-tags
-                                       :tags/removed removed-tags})
+  (assert (every? #{:title :document-date} (keys props)))
+  (log/info db "Updating document" id (pr-str {:props props
+                                               :tags/added added-tags
+                                               :tags/removed removed-tags}))
   (db/with-transaction [conn db]
     (if-let [document (get-document conn id)]
       (let [added-tags (set added-tags)
             removed-tags (set removed-tags)
+            props (->
+                   props
+                   (update :document-date
+                           (fn [date]
+                             (some-> date (.getTime) (Date.))))
+                   (set/rename-keys {:document-date :document_date}))
             ;; Subtract removed-tags from added-tags so we don't
             ;; create tags which will be removed instantly
             added-tags (set/difference added-tags removed-tags)]
@@ -264,7 +270,7 @@
 ;;; Tag Functions
 
 (defn normalize-tags [tags]
-  (assert (every? string? tags))
+  {:pre [(every? string? tags)]}
   (->> tags
        (map s/lower-case)
        (map s/trim)
@@ -278,16 +284,34 @@
   (when-not (s/blank? origin)
     (str "origin/" origin)))
 
-(defn all-tags [db]
-  (db/query db ["SELECT t.name, COUNT(dt.document)
-                 FROM tags AS t
-                 JOIN document_tags AS dt ON dt.tag = t.id
-                 GROUP BY t.name"]))
+(defn all-tags
+  "Fetches a list of all known tags."
+  [db]
+  (mapv :name (db/query db ["SELECT name FROM tags ORDER BY name"])))
 
 (defn document-tags [db document-id]
-  (map :tag (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])))
+  (mapv :tag (db/query db ["SELECT tag FROM document_tags WHERE document = ?" document-id])))
 
-(defn get-or-create-tags!
+(defn tag-document-counts
+  "Returns a map from tag-name -> document-count."
+  [db]
+  (->> (db/query db ["SELECT t.name, COUNT(dt.document)
+                      FROM tags AS t
+                      JOIN document_tags AS dt ON dt.tag = t.id
+                      GROUP BY t.name"])
+       (map (juxt :name :count))
+       (into {})))
+
+(defn tag-documents [db tag]
+  (->> (db/query db ["SELECT dt.document
+                      FROM document_tags AS dt
+                      JOIN tags AS t ON dt.tag = t.id
+                      WHERE t.name = ?
+                      GROUP BY dt.document"
+                     tag])
+       (mapv :document)))
+
+(defn ^:private get-or-create-tags!
   "Gets tags for TAG-VALUES from DB. Creates them if necessary."
   [db tag-values]
   ;; Nothing to do if TAG-VALUES is empty
@@ -298,21 +322,22 @@
             ;; NOTE: It's important that tag-values is not empty
             existing (db/query conn (db/sql+placeholders "SELECT id, name FROM tags WHERE name IN (%s)" tag-values))
             new (set/difference tag-values (set (map :name existing)))
-            new (map tag->db-tag new)
+            new (mapv tag->db-tag new)
+            _ (log/debug db "Transparently creating new tags:" (pr-str new))
             new (db/insert-coll! conn :tags new)]
         (concat existing new)))))
 
 (defn ^:private add-tags*! [db document-id tags]
-  (assert (number? document-id))
-  (assert (every? string? tags))
+  {:pre [(every? string? tags)
+         (number? document-id)]}
   (db/with-transaction [db db]
     (let [db-tags (get-or-create-tags! db tags)
-          old-tags (document-tags db document-id)
-          new-tags (set/difference (set (map :id db-tags))
-                                   (set old-tags))]
-      (when (seq new-tags)
+          old-tag-ids (document-tags db document-id)
+          new-tag-ids (set/difference (set (map :id db-tags))
+                                      (set old-tag-ids))]
+      (when (seq new-tag-ids)
         (db/insert-coll! db :document_tags
-                         (for [tag new-tags]
+                         (for [tag new-tag-ids]
                            {:document document-id :tag tag}))))))
 
 (defn add-tags! [db document-id tags]
@@ -338,17 +363,18 @@
     (remove-tags*! db document-id tags)
     (db/notify! db :documents/updated {:id document-id, :tags/removed tags})))
 
-(defn auto-tag*! [db document-id tagging-config
-                  {:keys [origin] :as data}]
+(defn auto-tag*! [db document-id tagging-config data]
   (let [tags (concat
               ;; Add origin-tag if enabled
-              (when (:add-origin? tagging-config)
-                [(origin-tag origin)])
+              (when (:origin tagging-config)
+                [(origin-tag (:origin data))])
               ;; Add sender-address as tag if configured
               (when (:mail/to tagging-config)
                 [(:mail/to data)])
               (when (:mail/from tagging-config)
                 [(:mail/from data)])
+              (when (:printing/queue tagging-config)
+                [(:printing/queue data)])
               ;; Add 'automatic' initial tags
               (when-let [tags (-> tagging-config :new-document seq)]
                 (set tags)))]
@@ -484,20 +510,16 @@
                    (mapv :id))})
 
 (defmethod changed-entities* :document_tags [db _ seq-num]
-  {:documents (->> (db/query db ["SELECT DISTINCT d.id
-                                  FROM document_tags AS dt
-                                  LEFT JOIN documents as d
-                                    ON d.id = dt.document
-                                  WHERE dt.state_seq > ?" seq-num])
-                   (mapv :id))
-   ;; Special case: Also send down used tags
-   ;; TODO: We return a wrong count of tags here.
-   :tags (->> (db/query db ["SELECT t.name, COUNT(dt.document)
-                             FROM tags AS t
-                             JOIN document_tags AS dt ON t.id = dt.tag
-                             WHERE dt.state_seq > ?
-                             GROUP BY t.name" seq-num])
-              (set))})
+  (let [dts (db/query db ["SELECT t.name, t.id, dt.document
+                            FROM tags as t
+                            LEFT JOIN document_tags as dt
+                              ON t.id = dt.tag
+                            WHERE dt.state_seq > ?"
+                          seq-num])
+        documents (set (map :document dts))
+        tags (set (map :name dts))]
+    {:documents documents
+     :tags tags}))
 
 (defmethod changed-entities* :pages [db _ seq-num]
   (let [pages (mapv :id (db/query db ["SELECT id FROM pages WHERE state_seq > ?" seq-num]))]
@@ -541,9 +563,16 @@
                (mapv :page)
                (set))})
 
+(defn ^:private tag-name [db tag-id]
+  (-> (db/query db ["SELECT name FROM tags WHERE id = ?" tag-id]) first :name))
+
 (defmethod changed-entities* :deletions [db _ seq-num]
   {:deletions (reduce (fn [deletions {:keys [id entity]}]
-                        (update-in deletions [(-> entity name keyword)] (comp set conj) id))
+                        ;; Special handling for tags
+                        (let [id (if (= entity :entity/tags)
+                                   (tag-name db id)
+                                   id)]
+                         (update-in deletions [(-> entity name keyword)] (comp set conj) id)))
                       {}
                       (db/query db ["SELECT id, entity FROM deletions WHERE state_seq > ?" seq-num]))})
 

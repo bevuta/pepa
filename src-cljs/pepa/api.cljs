@@ -4,12 +4,12 @@
 
             [clojure.string :as s]
             [goog.string :as gstring]
-            
+
             [om.core :as om]
             [pepa.data :as data]
 
             [clojure.browser.event :as event])
-  (:import [goog.net XhrIo XmlHttp XmlHttpFactory])
+  (:import [goog.net XhrIo XmlHttp XmlHttpFactory EventType])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def +xhr-timeout+ (* 5 1000))
@@ -34,7 +34,7 @@
      :successful? (.isSuccess xhr)})))
 
 
-;;; HACK: Because the current release of Google Closure doens't
+;;; HACK: Because the current release of Google Closure doesn't
 ;;; include support for the 'progress' event of Xhr, we have to attach
 ;;; events to the underlying native object. But we have to do this
 ;;; *before* Closure calls .open() on the object or else we won't
@@ -59,30 +59,34 @@
 
   Returns a channel containing something."
   ([uri method content-type data timeout & [progress]]
-   (let [ch (async/chan)]
-     (assert uri)
-     (let [factory (xhr-factory-dummy)
-           xhr (XhrIo. factory)] 
-       (let [put! (fn [d] (when progress (async/put! progress d)))]
-         (doto (.-upload (.createInstance factory))
-           (.addEventListener "progress" #(put! (/ (.-loaded %) (.-total %))))
-           (.addEventListener "load "    #(put! :loaded))
-           (.addEventListener "error"    #(put! :error))
-           (.addEventListener "abort"    #(put! :abort))))
-       (doto xhr
-         (.setTimeoutInterval timeout)
-         (event/listen "complete" (fn [e]
-                                    (when progress
-                                      (async/close! progress))
-                                    (async/put! ch (parse-xhr-response e.target))))
-         (.send uri
-                (s/upper-case (name method))
-                (if (= "application/transit+json" content-type)
-                  (transit/write writer data)
-                  data)
-                (clj->js
-                 (merge {"Accept" "application/transit+json"}
-                        (when data {"Content-Type" (when data content-type)}))) )))
+   {:pre [(string? uri)
+          (keyword? method)
+          (string? content-type)]}
+   (let [ch (async/chan)
+         factory (xhr-factory-dummy)
+         xhr (XhrIo. factory)]
+     ;; Request load/error/abort requests
+     (let [upload (.-upload (.createInstance factory))
+           put! (fn [d] (when progress (async/put! progress d)))]
+       (doseq [[type f] [[EventType.PROGRESS #(put! (/ (.-loaded %) (.-total %)))]
+                         [EventType.LOAD     #(put! :loaded)]
+                         [EventType.ERROR    #(put! :error)]
+                         [EventType.ABORT    #(put! :abort)]]]
+         (.addEventListener upload type f)))
+     (doto xhr
+       (.setTimeoutInterval timeout)
+       (event/listen EventType.COMPLETE
+                     (fn [e]
+                       (when progress (async/close! progress))
+                       (async/put! ch (parse-xhr-response e.target))))
+       (.send uri
+              (s/upper-case (name method))
+              (if (= "application/transit+json" content-type)
+                (transit/write writer data)
+                data)
+              (clj->js
+               (merge {"Accept" "application/transit+json"}
+                      (when data {"Content-Type" (when data content-type)}))) ))
      ch))
   ([uri method content-type data]
    (xhr-request! uri method content-type data +xhr-timeout+))
@@ -181,7 +185,7 @@
 (defn update-document!
   "Diffs the document with the same id on the server with DOCUMENT and
   updates it to match DOCUMENT. Will also update the application
-  state (wether DOCUMENT is a cursor or not)."
+  state (whether DOCUMENT is a cursor or not)."
   [document]
   (go
     (println "saving document" (:id document))
@@ -190,6 +194,8 @@
           title (when-not (= (:title document)
                              (:title server))
                   (:title document))
+          date (not= (:document-date document)
+                     (:document-date server))
           tags {:added (remove (set (:tags server)) (:tags document))
                 :removed (remove (set (:tags document)) (:tags server))}]
       (when-not server
@@ -197,12 +203,12 @@
                         {:document document
                          :document/id (:id document)
                          :response server})))
-      (if (or title (seq (:added tags)) (seq (:removed tags)))
+      (if (or title date (seq (:added tags)) (seq (:removed tags)))
         (let [response (<! (xhr-request! (str "/documents/" (:id document))
                                          :post
-                                         {:title title, :tags tags}))]
+                                         {:title title, :document-date (:document-date document) :tags tags}))]
           (if (= 200 (:status response))
-            (let [new-document (-> response  
+            (let [new-document (-> response
                                    :response/transit
                                    (db-document->Document))]
               (data/store-document! new-document)
@@ -216,22 +222,34 @@
 
 ;;; Tag Handling
 
-(defn fetch-tags []
+(defn fetch-tags [& [detailed?]]
   (go
-    (let [response (<! (xhr-request! "/tags" :get))]
+    (let [response (<! (xhr-request!
+                        (str "/tags" (when detailed? "?detailed=true"))
+                        :get))]
       (when (= 200 (:status response))
         (:response/transit response)))))
 
 (defn ^:private store-tags! [state tags]
-  (om/transact! state :tags
-                (fn [old-tags]
-                  (merge old-tags
-                         (into {}
-                               (map (juxt :name :count) tags))))))
+  (om/transact! state :tags #(merge % tags)))
 
 (defn fetch-tags! [state]
   (go
-    (store-tags! state (<! (fetch-tags)))))
+    (store-tags! state (<! (fetch-tags true)))))
+
+;;; TODO: We might want to store all document-ids for a tag. That
+;;; would allow us to skip querying the server when doing a tag
+;;; search. This should work as tags are always up-to-date (via push).
+(defn refresh-tag! [state tag]
+  (go
+    (println "refreshing tag" (pr-str tag))
+    (let [response (<! (xhr-request!
+                        (str "/tags/" (-> tag name gstring/urlEncode))
+                        :get))]
+      (when (= 200 (:status response))
+        (let [response (:response/transit response)]
+          (om/update! state [:tags tag]
+                      (-> response :documents count)))))))
 
 ;;; Page Rotation
 
@@ -274,11 +292,16 @@
 
 (defmethod entities-changed* :tags [state _ changes]
   (when-let [tags (:tags changes)]
-    (store-tags! state tags)))
+    ;; TODO: Batch this in one request when we have the endpoint
+    (doseq [tag tags]
+      (refresh-tag! state tag))))
 
 ;;; HACK
 (defmethod entities-changed* :deletions [state _ changes]
-  (js/console.warn "NOT applying deletions: Not implemented"))
+  (js/console.warn "NOT applying (most) deletions: Not implemented")
+  (when-let [changed-tags (get-in changes [:deletions :tags])]
+    (doseq [tag changed-tags]
+      (refresh-tag! state tag))))
 
 (defn entities-changed! [state changes]
   (doseq [entity (keys changes)]

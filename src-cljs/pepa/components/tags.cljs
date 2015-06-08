@@ -73,8 +73,7 @@
                (contains? (om/get-state owner :selected) tag))
       (.focus (om/get-node owner))))
   (render-state [_ {:keys [selected]}]
-    (let [[tag document-count] (if (string? tag) [tag nil]
-                                   tag)]
+    (let [[tag document-count] (if (string? tag) [tag nil] tag)]
       [:li.tag {:tab-index 0
                 :class [(when (contains? selected tag) "selected")]
                 :on-click (fn [e]
@@ -92,25 +91,28 @@
           [:span.count {:title (str document-count " documents have this tag")}
            document-count])]])))
 
+(defn ^:private document-tags [documents]
+  (distinct (mapcat :tags documents)))
 
 (defn ^:private remove-tag!
   "Removes tag. Might alter DOCUMENT or put [:remove TAG] into
-  the :tags channel of OWNER. No-op if DOCUMENT already has TAG."
-  [document owner tag]
-  (when (some #{tag} (:tags @document))
-    (if-let [chan (om/get-state owner :tags)]
+  the :tag-changes channel of OWNER. No-op if DOCUMENT already has TAG."
+  [documents owner tag]
+  (when (some #{tag} (document-tags documents))
+    (if-let [chan (om/get-state owner :tag-changes)]
       (async/put! chan [:remove tag])
-      (om/transact! document :tags #(data/remove-tags % #{tag})))))
+      (doseq [document documents]
+        (om/transact! document :tags #(data/remove-tags % #{tag}))))))
 
 (defn ^:private add-tag!
-  "Adds TAG. Might alter DOCUMENT or put [:add TAG] into the :tags
+  "Adds TAG. Might alter DOCUMENT or put [:add TAG] into the :tag-changes
   channel of OWNER. No-op if DOCUMENT already has TAG."
-  [document owner tag]
-  (when-not (some #{tag} (:tags @document))
-    (if-let [chan (om/get-state owner :tags)]
+  [documents owner tag]
+  (when-not (some #{tag} (document-tags documents))
+    (if-let [chan (om/get-state owner :tag-changes)]
       (async/put! chan [:add tag])
-      (om/transact! document :tags
-                    #(data/add-tags % #{tag})))))
+      (doseq [document documents]
+        (om/transact! document :tags #(data/add-tags % #{tag}))))))
 
 (defn ^:private sseq
   "like seq but for strings"
@@ -128,11 +130,11 @@
 
 (defn store-tag!
   "Attempts to parse a tag from the value of the tags input field and
-  stores it in the document."
-  [document owner]
+  stores it in the document(s)."
+  [documents owner]
   (let [el (om/get-node owner "tag-input")]
     (when-let [tag (parse-tag (.-value el))]
-      (add-tag! document owner tag)
+      (add-tag! documents owner tag)
       (set! (.-value el) "")
       true)))
 
@@ -147,22 +149,22 @@
       (and (zero? (.-selectionStart input))
            (zero? (.-selectionEnd input)))))
 
-(defn handle-tags-key-down! [document owner e]
+(defn handle-tags-key-down! [documents owner e]
   (let [element (om/get-node owner "tag-input")]
     (let [key-code (.-keyCode e)]
       (cond
         ;; Catch tag-delimiting keystrokes and parse the input as tag
         (tag-delimiter? key-code)
-        (when (or (store-tag! document owner)
+        (when (or (store-tag! documents owner)
                   (= keycodes/COMMA key-code))
           (.preventDefault e))
 
         (and (= keycodes/BACKSPACE key-code)
              (cursor-at-start? element))
-        (send-event! owner [:focus (om/value (last (:tags document)))])))))
+        (send-event! owner [:focus (om/value (last (document-tags documents)))])))))
 
-(defn handle-tags-blur! [document owner e]
-  (when (store-tag! document owner)
+(defn handle-tags-blur! [documents owner e]
+  (when (store-tag! documents owner)
     (.preventDefault e)))
 
 (defn ^:private focus-tag-input [owner]
@@ -170,19 +172,20 @@
           (om/get-node "tag-input")
           (.focus)))
 
-(ui/defcomponent tags-input [document owner _]
+(ui/defcomponent tags-input [documents owner _]
   (init-state [_]
     {:selected #{}
      :events (async/chan)})
   (will-mount [_]
     (go-loop []
       (when-let [event (<! (om/get-state owner :events))]
-        (let [[event tag] event]
+        (let [[event tag] event
+              documents (om/get-props owner)]
           (case event
             ;; Click just toggles selection-status
             :focus (om/set-state! owner :selected #{tag})
             :blur (om/update-state! owner :selected #(disj % tag))
-            :remove (do (remove-tag! document owner tag)
+            :remove (do (remove-tag! documents owner tag)
                         (focus-tag-input owner)))
           (recur)))))
   (render-state [_ {:keys [events selected]}]
@@ -198,15 +201,15 @@
                                 (when (re-find #"\w" text)
                                   (focus-tag-input owner)
                                   (.stopPropagation e))))}
-     (om/build-all tag (:tags document)
+     (om/build-all tag (document-tags documents)
                    {:key-fn identity
                     :init-state {:events events}
                     :state {:selected selected}})
      [:li.input
       [:input {:ref "tag-input"
                :tab-index 0
-               :on-key-down (partial handle-tags-key-down! document owner)
-               :on-blur (partial handle-tags-blur! document owner)}]]]))
+               :on-key-down (partial handle-tags-key-down! documents owner)
+               :on-blur (partial handle-tags-blur! documents owner)}]]]))
 
 ;;; TOOD: Support selection of multiple tags for drag&drop
 (ui/defcomponent tags-list [tags]

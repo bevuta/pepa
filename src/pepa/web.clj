@@ -1,6 +1,7 @@
 (ns pepa.web
   (:require [pepa.web.handlers :refer [make-handlers]]
             [pepa.log :as log]
+            [pepa.zeroconf :as zeroconf]
 
             [com.stuartsierra.component :as component]
             [immutant.web :as http-server]))
@@ -9,17 +10,15 @@
   component/Lifecycle
   (start [component]
     (log/info component "Starting HTTP Server")
-    (let [config (:web config)
-          {:keys [host port]} config
-          handlers (if (:static-handlers config)
+    (let [{:keys [host port static-handlers]} (:web config)
+          handlers (if static-handlers
                      (make-handlers component)
                      #((make-handlers component) %))]
       (log/info component (str "Started web server on http://" host ":" port "/"))
       (assoc component
-        :server (http-server/run handlers
-                  :host host
-                  :port port))))
-
+             :server (http-server/run handlers
+                       :host host
+                       :port port))))
   (stop [component]
     (log/info component "Stopping HTTP Server")
     (http-server/stop server)
@@ -27,3 +26,14 @@
 
 (defn make-component []
   (map->Web {}))
+
+;;; Zeroconf Service Implementation
+
+(defmethod zeroconf/service-info :web [module config]
+  (let [name "Pepa DMS"
+        port (get-in config [:web :port])]
+    (assert (< 0 port 65535))
+    (zeroconf/map->Service {:type "_http._tcp.local."
+                            :name name
+                            :port port
+                            :props {}})))

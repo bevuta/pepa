@@ -25,7 +25,7 @@ DROP TYPE IF EXISTS PROCESSING_STATUS;
 DROP TYPE IF EXISTS ENTITY;
 
 CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
-CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox');
+CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox', 'tags');
 
 CREATE TABLE files (
        id SERIAL PRIMARY KEY CHECK(id > 0),
@@ -81,6 +81,7 @@ CREATE TABLE documents (
        id SERIAL PRIMARY KEY CHECK(id > 0),
        title TEXT NOT NULL,
        modified TIMESTAMP,
+       document_date DATE,
        created TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
        notes TEXT,
        -- If set, this document correspondents exactly to file
@@ -287,6 +288,19 @@ CREATE TRIGGER insert_document_tags_state_seq_trigger
   ON document_tags
   FOR EACH ROW
   EXECUTE PROCEDURE update_document_tags_state_seq_func();
+
+
+CREATE OR REPLACE FUNCTION delete_document_tags_track_func() RETURNS TRIGGER AS $$
+       BEGIN
+         INSERT INTO deletions (entity, id) VALUES ('tags', OLD.tag);
+         RETURN OLD;
+       END;
+$$ LANGUAGE PLPGSQL;
+
+CREATE TRIGGER delete_document_tags_track_trigger
+  AFTER DELETE ON document_tags
+  FOR EACH ROW
+  EXECUTE PROCEDURE delete_document_tags_track_func();
 
 CREATE TABLE inbox (
        page INT NOT NULL REFERENCES pages);

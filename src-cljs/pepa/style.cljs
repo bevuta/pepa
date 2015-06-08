@@ -37,6 +37,7 @@
 (def border-buttons "#a2a2a2")
 
 (def dashboard-page-count-color "#aaaaaa")
+(def dashboard-selection-color "#bedbff")
 
 ;;; Font
 
@@ -189,11 +190,11 @@
             (let [selector (keyword (str "&." row))]
               [selector
                [:.menu-link
-                [:div
+                [:.title
                  [:&:before {:background-image (image-url (str "menu-icons/" row ".svg"))}]]]
                [:&.active
                 [:.menu-link
-                 [:div
+                 [:.title
                   [:&:before :&:after {:background-color blue-background}]
                   [:&:before {:background-image (image-url (str "menu-icons/" row "-active.svg"))}]]]]]))
           [:&.inbox {:position :relative}
@@ -202,13 +203,13 @@
                      :right (px 26)
                      :font-size (pt 11)
                      :color blue-text}]]
-          [:&.tags {:cursor :pointer}
+          [:&.tags
            ;; Use different icon when open?
-           [:div.open
-            [:&:before {:background-image (image-url "menu-icons/tags-open.svg")}]]
+           ;; [:div.open
+           ;;  [:&:before {:background-image (image-url "menu-icons/tags-open.svg")}]]
+           [:ul :.show-more {:padding-left (px (+ (* 2 padding-left)
+                                                  icon-size))}]
            [:ul {:list-style-type :none
-                 :padding-left (px (+ (* 2 padding-left)
-                                      icon-size))
                  :overflow-y :auto}
             (let [color-size 12]
               [:li.tag {:display :list-item
@@ -227,10 +228,13 @@
                          :padding {:left (px 4), :right (px 4)}}]
                [:.color {:width (px color-size)
                          :height (px color-size)
-                         :float :right}]])]]
+                         :float :right}]])]
+           [:.show-more {:font-weight :bold
+                         :font-size (px 10)
+                         :cursor :pointer}]]
           
           [:.menu-link
-           [:div {:height (px line-height)}
+           [:.title {:height (px line-height)}
             [:&:before :&:after {:content (pr-str " ")
                                  :display :block
                                  :height (px line-height)}]
@@ -309,6 +313,7 @@
      [:li.page {:width "100%"
                 :list-style-type :none
                 :user-select :none}
+      ;; TODO: Move this into a generic css rule
       [:&.selected
        [:.thumbnail {:position :relative}
         [:&:before {:content (pr-str " ")
@@ -350,11 +355,13 @@
       [:.documents {:overflow-y :auto
                     :display :flex
                     :flex-flow [[:row :wrap]]}
+       [:&.working {:opacity "0.2"}]
        [:.document {:height (px document-height)
                     :width (px document-width)
                     :padding (px document-padding)
                     :cursor :pointer}
         [:&:hover {:background-color dark-background}]
+        [:&.selected {:background-color dashboard-selection-color}]
 
         page-css
         
@@ -458,27 +465,29 @@
                 :position :relative}
      [:header {:text-align :center
                :font-style :italic}]
-     (draggable-css :left)
-     ;; Meta Data Table
-     [:aside {:padding {:left (px 25)
-                        :right (px 25)}}]
-     [:ul.meta {:font-size (pt 10)
-                :line-height (pt 15)
-                :padding 0
-                :list-style "none"}
-      [:span {:display :inline-block}
-       [:&.title {:font-weight 500
-                  :height "1em"
-                  :width "30%"}
-        [:&:after {:content (pr-str ": ")}]]
-       (let [left-padding 8]
-         [:&.value (list
-                    {:padding-left (px left-padding)
-                     :white-space :nowrap
-                     :overflow :hidden
-                     :vertical-align :top
-                     :text-overflow :ellipsis}
-                    (calc-property :width ["70%" - left-padding]))])]]]]])
+     (draggable-css :left)]]])
+
+(def generic-sidebar-css
+  [:.sidebar
+   [:aside {:padding {:left (px 25)
+                      :right (px 25)}}
+    [:ul.meta {:font-size (pt 10)
+               :line-height (pt 15)
+               :padding 0
+               :list-style "none"}
+     [:span {:display :inline-block}
+      [:&.title {:font-weight 500
+                 :height "1em"
+                 :width "30%"}
+       [:&:after {:content (pr-str ": ")}]]
+      (let [left-padding 8]
+        [:&.value (list
+                   {:padding-left (px left-padding)
+                    :white-space :nowrap
+                    :overflow :hidden
+                    :vertical-align :top
+                    :text-overflow :ellipsis}
+                   (calc-property :width ["70%" - left-padding]))])]]]])
 
 (def workflow-css
   [:.workflow {:height "100%" :width "100%"
@@ -491,6 +500,7 @@
             :min-width 0    
             :height "100%"}]
    generic-header-css
+   generic-sidebar-css
 
    dashboard-css
    document-css

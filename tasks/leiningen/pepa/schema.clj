@@ -7,7 +7,7 @@ DROP TYPE IF EXISTS PROCESSING_STATUS;
 DROP TYPE IF EXISTS ENTITY;
 
 CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
-CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox');
+CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox', 'tags');
 ")
 
 (def tables
@@ -28,6 +28,7 @@ CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox');
        id SERIAL PRIMARY KEY CHECK(id > 0),
        title TEXT NOT NULL,
        modified TIMESTAMP,
+       document_date DATE,
        created TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
        notes TEXT,
        -- If set, this document correspondents exactly to file
@@ -78,7 +79,9 @@ CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox');
        tag INT NOT NULL REFERENCES tags,
        UNIQUE (document, tag),
        seq SERIAL CHECK (seq > 0)"
-     :state-seq? true}]
+     :state-seq? true
+     :track-deletions? "tags"
+     :entity-id-field "tag"}]
 
    ["inbox"
     {:columns "
@@ -197,12 +200,12 @@ CREATE TRIGGER insert_%1$s_state_seq_trigger
   EXECUTE PROCEDURE update_%1$s_state_seq_func();
 " table))
 
-(defn add-deletion-trigger [table id-field]
+(defn add-deletion-trigger [table entity-name id-field]
   (printf "
 
 CREATE OR REPLACE FUNCTION delete_%1$s_track_func() RETURNS TRIGGER AS $$
        BEGIN
-         INSERT INTO deletions (entity, id) VALUES ('%1$s', OLD.%2$s);
+         INSERT INTO deletions (entity, id) VALUES ('%2$s', OLD.%3$s);
          RETURN OLD;
        END;
 $$ LANGUAGE PLPGSQL;
@@ -211,7 +214,7 @@ CREATE TRIGGER delete_%1$s_track_trigger
   AFTER DELETE ON %1$s
   FOR EACH ROW
   EXECUTE PROCEDURE delete_%1$s_track_func();
-" table id-field))
+" table (name entity-name) id-field))
 
 
 (defn maybe-println [x]
@@ -233,8 +236,11 @@ CREATE TRIGGER delete_%1$s_track_trigger
     (when (:state-seq? spec)
       (add-state-seq table)) 
     (maybe-println (:after spec))
-    (when (:track-deletions? spec)
-      (add-deletion-trigger table (or (:entity-id-field spec) "id")))
+    (when-let [track-deletions (:track-deletions? spec)]
+      (let [entity (if (string? track-deletions)
+                     track-deletions
+                     table)]
+       (add-deletion-trigger table entity (or (:entity-id-field spec) "id"))))
     (newline))
   (println epilogue)
   (println "COMMIT;")

@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-nix-shell -p pdftk poppler leiningen cuneiform tesseract --command "lein $*"
+nix-shell -p pdftk poppler_utils leiningen cuneiform tesseract ghostscript --command "lein $*"

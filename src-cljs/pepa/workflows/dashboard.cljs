@@ -1,16 +1,20 @@
 (ns pepa.workflows.dashboard
   (:require [om.core :as om :include-macros true]
+            [nom.ui :as ui]
+
             [cljs.reader :as reader]
             [cljs.core.async :as async]
             [clojure.string :as s]
-            
+
             [pepa.api :as api]
             [pepa.data :as data]
             [pepa.search :as search]
             [pepa.navigation :as nav]
             [pepa.style :as css]
-            [nom.ui :as ui]
+            [pepa.selection :as selection]
 
+
+            [pepa.components.document :as document]
             [pepa.components.page :as page]
             [pepa.components.tags :as tags]
             [pepa.components.draggable :as draggable])
@@ -27,7 +31,14 @@
   (render [_]
     [:.page-count (count pages)]))
 
-(ui/defcomponent document-preview [document]
+(defn ^:private document-click [click-type document owner e]
+  {:pre [(contains? #{:single :double} click-type)]}
+  (when-let [clicks (om/get-state owner :clicks)]
+    (async/put! clicks (assoc (selection/event->click (:id document) e)
+                              ::type click-type)))
+  (ui/cancel-event e))
+
+(ui/defcomponent ^:private document-preview [document owner]
   (render [_]
     (let [href (nav/document-route document)]
       ;; NOTE: We can't wrap the <a> around all those divs. It's
@@ -37,11 +48,9 @@
       ;; horribly.
       [:.document {:on-drag-over tags/accept-tags-drop
                    :on-drop (partial handle-tags-drop document)
-                   :on-click (fn [e]
-                               (nav/navigate! (nav/document-route document))
-                               (doto e
-                                 (.stopPropagation)
-                                 (.preventDefault)))}
+                   :on-click (partial document-click :single document owner)
+                   :on-double-click (partial document-click :double document owner)
+                   :class [(when (::selected document) "selected")]}
        [:.preview {:key "preview"}
         [:a {:href href}
          (om/build page/thumbnail (-> document :pages first) {:key :id})
@@ -52,14 +61,23 @@
        (om/build tags/tags-list (:tags document)
                  {:react-key "tags-list"})])))
 
-(ui/defcomponent filter-sidebar [state owner _]
+(ui/defcomponent ^:private sidebar-pane [[state selected-documents] owner _]
   (render [_]
-    [:.sidebar
-     [:header "Sorting & Filtering"]
-     (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})]))
+    (let [sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
+                             css/default-sidebar-width)]
+      [:.pane {:key "sidebar-pane"
+               :style {:min-width sidebar-width :max-width sidebar-width}}
+       [:.sidebar
+        [:header "Sorting & Filtering"]
+        (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})
+
+        (om/build document/document-sidebar selected-documents
+                  ;; Get the real documents from IDs
+                  {:fn (fn [ids]
+                         (map #(get-in state [:documents %]) ids))})]])))
 
 (defn ^:private document-ids [state]
-  (:search/results state))
+  (:results (search/current-search state)))
 
 (def +initial-elements+ 50)
 (def +to-load+ 50)
@@ -91,43 +109,39 @@
     (let [ids (page-ids state)
           missing (remove (set (keys (:documents state))) ids)]
       (when (seq missing)
+        (println "fetching missing documents:" missing)
         (<! (api/fetch-documents! missing))))))
 
-(defn ^:private search-maybe! [state owner & [force-update?]]
-  (match [(-> @state :navigation :route)]
-    [[:search [:tag tag]]]
-    (search/search! state (list 'tag tag))
-    [[:search [:query query]]]
-    (search/search! state query) 
-    :else
-    (go (search/all-documents! state force-update?))))
-
-(ui/defcomponent ^:private document-count [state]
+(ui/defcomponent ^:private document-count [document-ids]
   (render [_]
     [:span.document-count
-     (when-let [ids (seq (document-ids state))]
-       (str "(" (count ids) ")"))]))
+     (str "(" (count document-ids) ")")]))
 
-(ui/defcomponent ^:private dashboard-title [state owner opts]
+(ui/defcomponent ^:private dashboard-title [search owner opts]
   (render [_]
-    (let [documents (document-ids state)]
+    (let [documents (:results search)
+          active-search? (search/search-active? search)]
       [:span
        (cond
-         (search/search-active? state)
+         active-search?
          "Loading..."
-      
-         (search/search-query state)
+
+         (search/all-documents? search)
+         "All Documents"
+
+         (:query search)
          "Search Results"
-    
+
          true
          "Dashboard")
-       (om/build document-count state
-                 {:react-key "document-count"})])))
+       (when-not active-search?
+         (om/build document-count documents
+                   {:react-key "document-count"}))])))
 
 ;;; Should be twice the document-height or so.
 (def +scroll-margin+ 500)
 
-(defn on-documents-scroll [state owner e]
+(defn ^:private on-documents-scroll [state owner e]
   (let [container e.currentTarget
         scroll-top (.-scrollTop container)
         scroll-height (.-scrollHeight container)
@@ -149,57 +163,78 @@
           (nav/navigate! :ignore-history :no-dispatch))
       (om/update! state [:navigation :query-params :count] num))))
 
-(defn scroll-to-offset! [state owner]
+(defn ^:private scroll-to-offset! [state owner]
   (let [el (om/get-node owner "documents")
         scroll-height (.-scrollHeight el)
         [num scroll] (parse-count-scroll state)
         elements (page-ids state)]
-    
     (cond
       (= 0 (.-scrollTop el))
       (set! (.-scrollTop el) (* scroll-height
                                 (/ scroll (count elements))))
-
       ;; TODO: :count isn't always nil (the query-params won't get
       ;; updated). Need another way to change the url without changing
       ;; history
       (every? nil? ((juxt :count :scroll) (get-in state [:navigation :query-params])))
       (set! (.-scrollTop el) 0))))
 
+(defn ^:private click-loop! [state owner]
+  (go-loop []
+    (when-let [click (<! (om/get-state owner :clicks))]
+      (if (= :double (::type click))
+        (nav/navigate! (nav/document-route {:id (:element click)}))
+        (om/update-state! owner :selection (fn [selection]
+                                             (selection/click selection click))))
+      (recur))))
+
+;; (defn on-document-click [state owner document])
+
 (ui/defcomponent dashboard [state owner]
   om/ICheckState
+  (init-state [_]
+    {:selection (selection/make-selection (document-ids state))
+     :clicks (async/chan)})
   (will-mount [_]
+    (click-loop! state owner)
     (go
-      (<! (search-maybe! state owner :force-update))
-      (<! (fetch-missing-documents! state owner))
-      (scroll-to-offset! state owner)))
+      (ui/with-working owner
+        (<! (fetch-missing-documents! state owner)))))
+  (will-receive-props [_ new-state]
+    (when (not= (document-ids (om/get-props owner))
+                (document-ids new-state))
+      (om/set-state! owner :selection
+                     (selection/make-selection (document-ids new-state))))
+
+    (go
+      (ui/with-working owner
+        (<! (fetch-missing-documents! new-state owner)))))
   (did-update [_ _ _]
-    (go
-      (<! (search-maybe! state owner))
-      (<! (fetch-missing-documents! state owner))
-      (scroll-to-offset! state owner)))
-  (render-state [_ local-state]
-    ;; Show all documents with ids found in :dashboard/document-ids
+    (scroll-to-offset! state owner))
+  (render-state [_ {:keys [working? selection clicks]}]
     (let [document-ids (page-ids state)
-          sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
-                             css/default-sidebar-width)]
+          search (search/current-search state)
+          working? (or working? (search/search-active? search))]
       [:.workflow.dashboard
        [:.pane {:key "documents-pane"}
         [:header {:key "header"}
-         (om/build dashboard-title state {:react-key "title"})]
+         (om/build dashboard-title search {:react-key "title"})]
         [:.documents {:ref "documents"
                       :key "documents"
-                      :on-scroll (partial on-documents-scroll state owner)}
+                      :on-scroll (partial on-documents-scroll state owner)
+                      :class [(when working? "working")]}
          (let [documents (->> document-ids
                               (map (partial get (:documents state)))
                               (remove nil?))]
            (om/build-all document-preview documents
-                         {:key :id}))]]
-       [:.pane {:key "sidebar-pane"
-                :style {:min-width sidebar-width
-                        :max-width sidebar-width}}
-        (om/build filter-sidebar state)]])))
+                         {:key :id
+                          ;; This is way more performant than passing
+                          ;; :selection via :state
+                          :fn #(assoc % ::selected
+                                      (contains? (:selected selection) (:id %)))
+                          :state {:clicks clicks}}))]]
+       (om/build sidebar-pane [state (:selected selection)])])))
 
 (defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]
   (draggable/limit
    (- (draggable/viewport-width) x)))
+

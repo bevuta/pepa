@@ -13,7 +13,7 @@
             [pepa.components.draggable :refer [resize-draggable]]
             [pepa.style :as css]
 
-            [pepa.search :refer [search-query]]
+            [pepa.search :refer [query-string]]
             [pepa.search.parser :as parser])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -42,7 +42,7 @@
 (ui/defcomponentmethod navigation-element :default [state _ [title id _ href]]
   (render [_]
     [:a.menu-link {:href href}
-     [:div title]]))
+     [:.title title]]))
 
 (defn ^:private inbox-drop! [state owner e]
   ;; NOTE: We need to handle all event-object interop BEFORE entering
@@ -66,29 +66,33 @@
 (ui/defcomponentmethod navigation-element :inbox [state owner [title id _ href]]
   (render-state [_ {:keys [drop? working?]}]
     [:a.menu-link {:href href}
-     [:div {:class [(when working? "working")
-                    (when drop? "drop-target")]
-            :on-drag-over upload/accept-file-drag
-            :on-drag-enter #(om/set-state! owner :drop? true)
-            :on-drag-leave #(om/set-state! owner :drop? false)
-            :on-drop (partial inbox-drop! state owner)} 
+     [:.title {:class [(when working? "working")
+                       (when drop? "drop-target")]
+               :on-drag-over upload/accept-file-drag
+               :on-drag-enter #(om/set-state! owner :drop? true)
+               :on-drag-leave #(om/set-state! owner :drop? false)
+               :on-drop (partial inbox-drop! state owner)}
       title
       (when-let [pages (-> state :workflows :inbox :documents :inbox :pages seq)]
         [:span.count (count pages)])]]))
 
+(def +tag-limit+ 5)
+
 (ui/defcomponentmethod navigation-element :tags [state owner [title id _ href]]
   (init-state [_]
-    {:open? true})
-  (render-state [_ {:keys [open?]}]
-    [:div.menu-link
-     [:div {:on-click (fn [e]
-                        (om/update-state! owner :open? not)
-                        (.preventDefault e))
-            :class [(when open? "open")]}
-      title]
-     (when open?
-       (om/build tags/tags-list
-                 (data/tag-document-count-pairs state)))]))
+    {:show-all? false})
+  (render-state [_ {:keys [show-all?]}]
+    [:.menu-link
+     [:.title title]
+     (let [tags (sort-by val > (data/tag-count-map state true))
+           tags (if-not show-all? (take +tag-limit+ tags) tags)]
+       (om/build tags/tags-list tags))
+     [:.show-more {:on-click (fn [e]
+                               (om/update-state! owner :show-all? not)
+                               (.preventDefault e))}
+      (if show-all?
+        "Less ▲"
+        "More ▼")]]))
 
 (defn ^:private route-matches? [route workflows]
   (let [route (if (seqable? route)
@@ -103,15 +107,14 @@
     (let [route (om/value (get-in state [:navigation :route]))
           width (get (om/observe owner (data/ui-sidebars)) ::sidebar
                      css/default-sidebar-width)]
-      [:#sidebar {:style (when width {:min-width width
-                                      :max-width width})}
+      [:#sidebar {:style {:min-width width :max-width width}}
        (om/build resize-draggable nil
                  {:opts {:sidebar ::sidebar}
                   :react-key "draggable"})
        (om/build logo/xeyes nil {:react-key "xeyes"})
 
        (om/build search-field nil
-                 {:state {:query (search-query state)}
+                 {:state {:query (query-string state)}
                   :react-key "search-field"})
        [:nav.workflows {:key "workflows"}
         [:ul
