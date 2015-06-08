@@ -8,7 +8,8 @@
             
             [clojure.string :as s]
             [clojure.set :as set]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io])
+  (:import [java.sql Date SQLException]))
 
 ;;; File Handling
 
@@ -104,7 +105,7 @@
   (db/with-transaction [conn db]
     (if-not (seq ids)
       []
-      (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, notes FROM documents WHERE id IN (%s)" ids))
+      (let [documents (db/query conn (db/sql+placeholders "SELECT id, title, created, modified, document_date, notes FROM documents WHERE id IN (%s)" ids))
             pages (get-associated conn "SELECT dp.document, p.id, p.rotation, p.render_status AS \"render-status\",
                                           (SELECT array_agg(dpi) from page_images where page = id) AS dpi
                                         FROM pages AS p
@@ -120,10 +121,12 @@
                                        ORDER BY dt.seq"
                                  ids :document)]
         (map (fn [{:keys [id] :as document}]
-               (assoc document
-                      :pages (->> (vec (get pages id))
-                                  (mapv #(update-in % [:dpi] pg-array->set)))
-                      :tags (mapv :name (get tags id))))
+               (-> document
+                   (assoc :pages (->> (vec (get pages id))
+                                      (mapv #(update-in % [:dpi] pg-array->set)))
+                          :tags (mapv :name (get tags id))
+                          :document-date (:document_date document))
+                   (dissoc :document_date)))
              documents)))))
 
 (defn get-document [db id]
@@ -141,13 +144,11 @@
                condition)
           params)))
 
-(defn query-documents
-  ([db]
-   (db/query db documents-base-query))
-  ([db query]
-   (if (nil? query)
-     (query-documents db)
-     (db/query db (documents-query query)))))
+(defn query-documents [db & [query]]
+  (map #(set/rename-keys %1 {:document_date :document-date})
+       (if (nil? query)
+         (db/query db documents-base-query)
+         (db/query db (documents-query query)))))
 
 (defn document-file
   "Returns the id of the file associated to document with ID. Might be
@@ -194,8 +195,7 @@
     (when (= :processing-status/processed (processing-status conn file))
       (add-pages*! conn document (page-ids conn file)))))
 
-(defn link-file! [db document file]
-  (log/info db "Linking document" document "to file" file)
+(defn link-file! [db document file]  (log/info db "Linking document" document "to file" file)
   (db/with-transaction [db db]
     (link-file*! db document file)
     (db/notify! db :documents/updated {:id document})))
@@ -232,21 +232,26 @@
 
 (defn update-document!
   "Updates document with ID. PROPS is a map of changed
-  properties (currently only :title), ADDED-TAGS and REMOVED-TAGS are
+  properties (currently only :title, :document-date), ADDED-TAGS and REMOVED-TAGS are
   lists of added and removed tag-values (strings)."
   [db id props added-tags removed-tags]
 
   (assert (every? string? added-tags))
   (assert (every? string? removed-tags))
-  (assert (every? #{:title} (keys props)))
-  (log/info db "Updating document" id (pr-str
-                                       {:props props
-                                        :tags/added added-tags
-                                        :tags/removed removed-tags}))
+  (assert (every? #{:title :document-date} (keys props)))
+  (log/info db "Updating document" id (pr-str {:props props
+                                               :tags/added added-tags
+                                               :tags/removed removed-tags}))
   (db/with-transaction [conn db]
     (if-let [document (get-document conn id)]
       (let [added-tags (set added-tags)
             removed-tags (set removed-tags)
+            props (->
+                   props
+                   (update :document-date
+                           (fn [date]
+                             (some-> date (.getTime) (Date.))))
+                   (set/rename-keys {:document-date :document_date}))
             ;; Subtract removed-tags from added-tags so we don't
             ;; create tags which will be removed instantly
             added-tags (set/difference added-tags removed-tags)]
