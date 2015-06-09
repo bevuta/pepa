@@ -398,6 +398,7 @@
   (db/with-transaction [db db]
     (->> (db/query db ["SELECT page FROM inbox"])
          (map :page)
+         ;; `get-pages' takes care of grouping/sorting
          (get-pages db))))
 
 (defn add-to-inbox!
