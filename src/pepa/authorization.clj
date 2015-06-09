@@ -32,7 +32,7 @@
 ;;; DB Restriction
 
 (defn restrict-db [db filter]
-  (assert (satisfies? AccessFilter filter))
+  {:pre [(satisfies? AccessFilter filter)]}
   (with-meta db {::filter filter}))
 
 (defn db-filter [db]
