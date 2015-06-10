@@ -4,30 +4,42 @@
   (:import pepa.db.Database))
 
 (defprotocol AccessFilter
-  ;; NOTE: The second arg can either be a list of maps containing an
-  ;; :id key or just an id. Implementations must handle this.
-  ;; TODO(mu): Provide wrappers to sanitize this?
-  (filter-files     [filter files])
-  (filter-documents [filter documents])
-  (filter-pages     [filter pages])
-  (filter-tags      [filter tags])
+  (-filter-files     [filter files])
+  (-filter-documents [filter documents])
+  (-filter-pages     [filter pages])
+  (-filter-tags      [filter tags])
   ;; TODO: `filter-inbox'?
   )
 
+;;; Filter Functions
 
-;;; Helper Functions
+(defmacro ^:private defentity [entity]
+  (let [filter-singular (symbol (str "filter-" entity))
+        filter-plural (symbol (str filter-singular  "s"))
+        filter-impl (symbol (str "-" filter-plural))]
+    `(do
+       ;; Plural Implementation
+       (defn ~filter-plural [filter# es#]
+         {:pre [(sequential? es#)]}
+         (when (seq es#)
+           ;; If we get an integer as first item, assume we got plain
+           ;; IDs everywhere.
+           (if (integer? (first es#))
+             (~filter-impl filter# es#)
+             ;; If it's a map of entities with :id keys, get set of
+             ;; valid IDs and remove the others from the original
+             ;; sequence.
+             (let [ids# (set (~filter-impl filter# (map :id es#)))]
+               (filter #(contains? ids# (:id %)) es#)))))
+     
+       ;; Singular Implementation
+       (defn ~filter-singular [filter# file#]
+         (first (~filter-plural filter# [file#]))))))
 
-(defn filter-file [filter file]
-  (first (filter-files filter [file])))
-
-(defn filter-document [filter document]
-  (first (filter-documents filter [document])))
-
-(defn filter-page [filter page]
-  (first (filter-pages filter [page])))
-
-(defn filter-tag [filter tag]
-  (first (filter-tags filter [tag])))
+(defentity file)
+(defentity document)
+(defentity page)
+(defentity tag)
 
 ;;; DB Restriction
 
@@ -41,22 +53,22 @@
 (def null-filter
   "A filter that allows everything."
   (reify AccessFilter
-    (filter-files     [_ files] files)
-    (filter-documents [_ documents] documents)
-    (filter-pages     [_ pages] pages)
-    (filter-tags      [_ tags] tags)))
+    (-filter-files     [_ files]     files)
+    (-filter-documents [_ documents] documents)
+    (-filter-pages     [_ pages]     pages)
+    (-filter-tags      [_ tags]      tags)))
 
 ;;; Extend pepa.db.Database to delegate to the filter. That allows to
 ;;; just run `filter-*' like: `(filter-files db ...)'.
 (extend-type pepa.db.Database
   AccessFilter
-  (filter-files     [db files]
+  (-filter-files     [db files]
     (filter-files (db-filter db) files))
-  (filter-documents [db documents]
+  (-filter-documents [db documents]
     (filter-documents (db-filter db) documents))
-  (filter-pages     [db pages]
+  (-filter-pages     [db pages]
     (filter-pages (db-filter db) pages))
-  (filter-tags      [db tags]
+  (-filter-tags      [db tags]
     (filter-tags (db-filter db) tags)))
 
 ;;; Ring/Liberator Helpers
