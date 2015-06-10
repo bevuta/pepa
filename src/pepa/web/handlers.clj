@@ -345,52 +345,61 @@
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
 
-(defn handlers [web]
-  (let [web (update-in web [:db] auth/restrict-db auth/null-filter)]
-    (routes (GET "/" []
-                 (html/root))
-            (ANY "/inbox" []
-                 (inbox web))
-            (ANY "/files/scanner" []
-                 (file-scanner web))
+(defn ^:private make-routes [web]
+  (routes (GET "/" []
+               (html/root))
+          (ANY "/inbox" []
+               (inbox web))
+          (ANY "/files/scanner" []
+               (file-scanner web))
 
-            (ANY "/pages/:id/image/:size" [id size]
-                 (page-image web id size))
-            (ANY "/pages/:id/image" [id]
-                 (page-image web id ::max))
-            (ANY "/pages/:id/rotation" [id]
-                 (page-rotation web id))
-            (ANY "/pages/:id" [id]
-                 (page web id))
+          (ANY "/pages/:id/image/:size" [id size]
+               (page-image web id size))
+          (ANY "/pages/:id/image" [id]
+               (page-image web id ::max))
+          (ANY "/pages/:id/rotation" [id]
+               (page-rotation web id))
+          (ANY "/pages/:id" [id]
+               (page web id))
 
-            (ANY "/documents" []
-                 (documents web))
-            (ANY "/documents/bulk" []
-                 (documents-bulk web))
-            (ANY "/documents/:id" [id]
-                 (document web id))
-            (ANY "/documents/:id/download" [id]
-                 (document-download web id))
+          (ANY "/documents" []
+               (documents web))
+          (ANY "/documents/bulk" []
+               (documents-bulk web))
+          (ANY "/documents/:id" [id]
+               (document web id))
+          (ANY "/documents/:id/download" [id]
+               (document-download web id))
 
-            (ANY "/tags" []
-                 (tags web))
-            (GET "/tags/:t" [t]
-                 (tag web t))
-            
-            (ANY "/poll" []
-                 (partial poll-handler web))
+          (ANY "/tags" []
+               (tags web))
+          (GET "/tags/:t" [t]
+               (tag web t))
+          
+          (ANY "/poll" []
+               (partial poll-handler web))
 
-            (route/resources "/")
-            (route/not-found "Nothing here"))))
+          (route/resources "/")
+          (route/not-found "Nothing here")))
 
-(defn wrap-logging [handler web]
+(defn ^:private handlers [req]
+  {:pre [(:pepa/web req)]}
+  ((make-routes (:pepa/web req)) req))
+
+(defn ^:private wrap-web-component
+  "Ring middleware that assocs WEB as :pepa/web."
+  [handler web]
+  (fn [req]
+    (handler (assoc req :pepa/web web))))
+
+(defn ^:private wrap-logging [handler web]
   (if (get-in web [:config :web :log-requests?])
     (fn [req]
       (log/debug web "HTTP Request" req)
       (handler req))
     handler))
 
-(defn wrap-stacktrace
+(defn ^:private wrap-stacktrace
   [handler web]
   (fn [request]
     (try
@@ -422,8 +431,12 @@
       (handler req))))
 
 (defn make-handlers [web-component]
-  (-> (#'handlers web-component)
-      #_(auth/wrap-authorization-warnings web-component)
+  (-> #'handlers
+      (auth/wrap-authorization-warnings)
+      ;; Restrict :pepa/web with a null-filter
+      (auth/wrap-db-filter (constantly auth/null-filter))
+      ;; Add :pepa/web
+      (wrap-web-component web-component)
       ;; NOTE: *first* transit, then JSON
       (wrap-transit-body)
       (wrap-params)

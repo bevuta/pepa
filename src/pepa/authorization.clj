@@ -64,11 +64,17 @@
 (defn wrap-authorization-warnings
   "Ring middleware that logs a warning if the request contains a
   database which isn't restricted via `restrict-db'."
-  [handler web]
+  [handler]
   (fn [req]
-    (when-not (db-filter (:db web))
-      (log/warn web "Got HTTP request with unrestricted DB:" req))
+    (when-not (db-filter (get-in req [:pepa/web :db]))
+      (log/warn (:pepa/web req) "Got HTTP request with unrestricted DB:" req))
     (handler req)))
+
+(defn wrap-db-filter [handler filter-fn]
+  {:pre [(fn? filter-fn)]}
+  (fn [req]
+    (assert (:pepa/web req))
+    (handler (update-in req [:pepa/web :db] #(restrict-db % (filter-fn req))))))
 
 (defn ^:private validation-fn [entity]
   (case entity
