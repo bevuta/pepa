@@ -421,13 +421,6 @@
              :body "Malformed request."})))
       (handler req))))
 
-(defn wrap-logging [handler web]
-  (fn [req]
-    (when (get-in web [:config :web :log-requests?])
-      (pprint req))
-    (handler req)))
-
-
 (defn make-handlers [web-component]
   (-> (#'handlers web-component)
       #_(auth/wrap-authorization-warnings web-component)
