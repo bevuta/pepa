@@ -66,10 +66,9 @@
   database which isn't restricted via `restrict-db'."
   [handler web]
   (fn [req]
-    (let [filter (db-filter (:db web))]
-      (when-not filter
-        (log/error web "Got HTTP request with unrestricted DB:" req))
-      (handler req))))
+    (when-not (db-filter (:db web))
+      (log/warn web "Got HTTP request with unrestricted DB:" req))
+    (handler req)))
 
 (defn ^:private validation-fn [entity]
   (case entity
