@@ -260,15 +260,15 @@
                   (catch SQLException e
                     (log/warn web "Generated SQL query failed" e)
                     [true {::error "Query string generated invalid SQL"}])))
-  ;; TODO(mu): Validate POST
   :authorized? (fn [ctx]
                  (let [db-filter (auth/db-filter (:db web))
                        method (get-in ctx [:request :request-method])]
                    (case method
+                     ;; TODO(mu): Validate POST
                      :post true
-                     :get (if-let [filtered (auth/filter-documents db-filter (::results ctx))]
-                            [true {::results filtered}]
-                            [false {::error "Query string generated invalid SQL"}]))))
+                     ;; GET is generally allowed, but might return no
+                     ;; results
+                     :get [true {::results (auth/filter-documents db-filter (::results ctx))}])))
   :post! (fn [{:keys [request, representation] :as ctx}]
            (db/with-transaction [conn (:db web)]
              (let [params (:body request)
