@@ -73,11 +73,11 @@
 
 (defn num-filter [n]
   (let [f (fn [es] (remove #(> % n) es))]
-   (reify AccessFilter
-     (-filter-files     [_ files]     (f files))
-     (-filter-documents [_ documents] (f documents))
-     (-filter-pages     [_ pages]     pages)
-     (-filter-tags      [_ tags]      tags))))
+    (reify AccessFilter
+      (-filter-files     [_ files]     (f files))
+      (-filter-documents [_ documents] (f documents))
+      (-filter-pages     [_ pages]     pages)
+      (-filter-tags      [_ tags]      tags))))
 
 (def null-filter
   "A filter that allows everything."
@@ -138,6 +138,11 @@
 (defn authorization-fn [web entity key]
   (let [filter-fn (entity-filter-fn entity)]
     (fn [ctx]
+      (when-not (contains? ctx key)
+        (throw (ex-info (str "Liberator context doesn't contain key" (pr-str key))
+                        {:ctx ctx
+                         :key key
+                         :entity entity})))
       (let [db (:db web)
             value (get ctx key)]
         (log/debug web "Validating" entity (str "(" value ")"))
