@@ -20,26 +20,29 @@
     `(do
        ;; Plural Implementation
        (defn ~filter-plural [filter# es#]
-         {:pre [(sequential? es#)]}
+         {:pre [(coll? es#)]}
          (when (seq es#)
            ;; If we get an integer as first item, assume we got plain
            ;; IDs everywhere.
-           (if (integer? (first es#))
-             (~filter-impl filter# es#)
-             ;; If it's a map of entities with :id keys, get set of
-             ;; valid IDs and remove the others from the original
-             ;; sequence.
-             (let [ids# (->> es# (map :id) (~filter-impl filter#) set)]
-               (->> es#
-                    (filter #(contains? ids# (:id %)))
-                    (seq))))))
+           (some->>
+            (if (integer? (first es#))
+              (~filter-impl filter# es#)
+              ;; If it's a map of entities with :id keys, get set of
+              ;; valid IDs and remove the others from the original
+              ;; sequence.
+              (let [ids# (->> es# (map :id) (~filter-impl filter#) set)]
+                (filter #(contains? ids# (:id %)) es#)))
+            ;; Make sure to return nil if empty
+            (seq)
+            ;; Return same collection type as given
+            (into (empty es#)))))
        ;; Singular Implementation
        (defn ~filter-singular [filter# file#]
          (first (~filter-plural filter# [file#]))))))
 
 (comment
   (defn filter-documents [filter entities]
-    {:pre [(sequential? entities)]}
+    {:pre [(coll? entities)]}
     (when (seq entities)
       (if (integer? (first entities))
         (-filter-documents filter entities)
@@ -99,6 +102,21 @@
 
 ;;; Ring/Liberator Helpers
 
+(defn entity-filter-fn
+  "Returns the correct filter-fn for ENTITY. Throws for invalid entities."
+  [entity]
+  (case entity
+    ;; Singular
+    :file       filter-file
+    :document   filter-document
+    :page       filter-page
+    :tag        filter-tag
+    ;; Plural
+    :files      filter-files
+    :documents  filter-documents
+    :pages      filter-pages
+    :tags       filter-tags))
+
 (defn wrap-authorization-warnings
   "Ring middleware that logs a warning if the request contains a
   database which isn't restricted via `restrict-db'."
@@ -114,27 +132,16 @@
     (assert (:pepa/web req))
     (handler (update-in req [:pepa/web :db] #(restrict-db % (filter-fn req))))))
 
-(defn ^:private validation-fn [entity]
-  (case entity
-    ;; Singular
-    :file filter-file
-    :document filter-document
-    :page filter-page
-    :tag filter-tag
-    ;; Plural
-    :files (comp seq filter-files)
-    :documents (comp seq filter-documents)
-    :pages (comp seq filter-pages)
-    :tags (comp seq filter-tags)))
+
 
 ;;; TODO(mu): We need to handle PUT/POST here too.
 (defn authorization-fn [web entity key]
-  (let [validation-fn (validation-fn entity)]
+  (let [filter-fn (entity-filter-fn entity)]
     (fn [ctx]
       (let [db (:db web)
             value (get ctx key)]
         (log/debug web "Validating" entity (str "(" value ")"))
-        (let [result (validation-fn db value)]
+        (let [result (filter-fn db value)]
           (cond
             ;; If the input is a list and the original value is empty,
             ;; the request is allowed unconditionally

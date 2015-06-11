@@ -3,6 +3,7 @@
             [pepa.db :as db]
             [pepa.bus :as bus]
             [pepa.log :as log]
+            [pepa.authorization :as auth]
 
             [clojure.data.json :as json]
             [cognitect.transit :as transit]
@@ -43,13 +44,29 @@
     (doseq [lock db/advisory-locks]
       (db/advisory-xact-lock! db lock))))
 
+(defn ^:private filter-changes
+  "Runs authorization filters from WEB over entity-ids in the
+  changeset CHANGES."
+  [web changes]
+  (if-let [db-filter (auth/db-filter (:db web))]
+    (let [entities (select-keys changes [:files :documents :pages :tags])
+          entities (for [[entity ids] entities]
+                     [entity (->> ids
+                                  ((auth/entity-filter-fn entity) db-filter)
+                                  ;; Make sure to return a coll even
+                                  ;; in the empty-case
+                                  (into (empty ids)))])]
+      (into changes entities))
+    changes))
+
 (defn ^:private handle-poll! [web config ch seqs content-type]
   (let [{:keys [db bus]} web
         send! (send-fn content-type)
         timeout (async/timeout (* 1000 (:timeout config)))
         bus-changes (bus/subscribe-all bus (async/sliding-buffer 1))]
     (go-loop []
-      (if-let [changed (m/changed-entities db seqs)]
+      (if-let [changed (some->> (m/changed-entities db seqs)
+                                (filter-changes web))]
         (do
           (log/debug web "Got changes from DB:" (pr-str changed))
           (send! ch changed))
