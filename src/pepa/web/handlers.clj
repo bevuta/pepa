@@ -261,7 +261,14 @@
                     (log/warn web "Generated SQL query failed" e)
                     [true {::error "Query string generated invalid SQL"}])))
   ;; TODO(mu): Validate POST
-  :authorized? (auth/authorization-fn web :documents ::results)
+  :authorized? (fn [ctx]
+                 (let [db-filter (auth/db-filter (:db web))
+                       method (get-in ctx [:request :request-method])]
+                   (case method
+                     :post true
+                     :get (if-let [filtered (auth/filter-documents db-filter (::results ctx))]
+                            [true {::results filtered}]
+                            [false {::error "Query string generated invalid SQL"}]))))
   :post! (fn [{:keys [request, representation] :as ctx}]
            (db/with-transaction [conn (:db web)]
              (let [params (:body request)
@@ -434,7 +441,8 @@
   (-> #'handlers
       (auth/wrap-authorization-warnings)
       ;; Restrict :pepa/web with a null-filter
-      (auth/wrap-db-filter (constantly auth/null-filter))
+      #_(auth/wrap-db-filter (constantly auth/null-filter))
+      (auth/wrap-db-filter (constantly (auth/num-filter 5)))
       ;; Add :pepa/web
       (wrap-web-component web-component)
       ;; NOTE: *first* transit, then JSON

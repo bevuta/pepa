@@ -29,12 +29,30 @@
              ;; If it's a map of entities with :id keys, get set of
              ;; valid IDs and remove the others from the original
              ;; sequence.
-             (let [ids# (set (~filter-impl filter# (map :id es#)))]
-               (filter #(contains? ids# (:id %)) es#)))))
-     
+             (let [ids# (->> es# (map :id) (~filter-impl filter#) set)]
+               (->> es#
+                    (filter #(contains? ids# (:id %)))
+                    (seq))))))
        ;; Singular Implementation
        (defn ~filter-singular [filter# file#]
          (first (~filter-plural filter# [file#]))))))
+
+(comment
+  (defn filter-documents [filter entities]
+    {:pre [(sequential? entities)]}
+    (when (seq entities)
+      (if (integer? (first entities))
+        (-filter-documents filter entities)
+        (let [ids (->> entities
+                       (map :id)
+                       (-filter-documents filter)
+                       set)]
+          (filter
+           #(contains? ids (:id %))
+           entities)))))
+  (defn filter-document [filter document]
+    (first
+     (filter-documents filter [document]))))
 
 (defentity file)
 (defentity document)
@@ -49,6 +67,14 @@
 
 (defn db-filter [db]
   (::filter (meta db)))
+
+(defn num-filter [n]
+  (let [f (fn [es] (remove #(> % n) es))]
+   (reify AccessFilter
+     (-filter-files     [_ files]     (f files))
+     (-filter-documents [_ documents] (f documents))
+     (-filter-pages     [_ pages]     pages)
+     (-filter-tags      [_ tags]      tags))))
 
 (def null-filter
   "A filter that allows everything."
