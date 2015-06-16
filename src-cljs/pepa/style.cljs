@@ -101,7 +101,7 @@
     [:header {:min-height (px header-height)
               :max-height (px header-height)
               :line-height (px header-height)
-              :z-index 1000
+              :z-index 110
               :background-color header-color
               :padding {:left (px header-padding)
                         :right (px header-padding)}}]))
@@ -113,7 +113,7 @@
                  :top (px 0)
                  :width (px draggable-size)
                  :height (px draggable-size)
-                 :z-index 10
+                 :z-index 120
                  :cursor :ew-resize
                  :background {:image (image-url "resize.svg")
                               :size [(px draggable-size)
@@ -141,7 +141,7 @@
                :left (px 0)
                :right (px 0)
                :top (px 0)
-               :z-index 100
+               :z-index 20
                :height (px (- header-height 2))
                :background header-color}]
     ;; Logo
