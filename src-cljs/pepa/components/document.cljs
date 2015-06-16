@@ -180,4 +180,4 @@
                              :disabled (not single?)}
            "Download"]
           [:button.delete {:disabled true}
-           "Nukular vernichten"]])])))
+           "Delete"]])])))

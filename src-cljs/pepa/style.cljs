@@ -134,16 +134,6 @@
              :flex-direction :row
              :align-items :center}
 
-    ;;this is the shadow element
-    [:&:after {:content (pr-str " ")
-               :position :fixed
-               :box-shadow "0px 0px 8px 0px rgba(0,0,0,0.66)"
-               :left (px 0)
-               :right (px 0)
-               :top (px 0)
-               :z-index 20
-               :height (px (- header-height 2))
-               :background header-color}]
     ;; Logo
     (let [logo-width 38]
       [:.logo {:width (px logo-width)
@@ -594,21 +584,23 @@
          [:&:focus {:outline 0}]]])]))
 
 (def button-css
-  (let [padding (px 10)]
+  (let [padding (px 15)]
     [:button :a.button
-     {:background "linear-gradient(to bottom, #ffffff 0%,#e4e4e4 100%)"
-      :border (str "1px solid " border-buttons)
-      :color blue-text
-      :text-shadow "1px 1px #ffffff"
+     {:background "linear-gradient(to bottom, #ffffff 0%,#dadada 100%)"      
+      :color grey-3
       :height (px 25)
       :font {:family default-font
              :size (px 14)
              :weight 400}
       :outline :none
+      :border :none
       :padding {:left padding
                 :right padding}
-      :border-radius (px 3)
-      :box-shadow "0px 0px 3px #dddddd"}
+      :margin {:right padding
+               :top padding}
+      :border-radius (px 2)
+      :box-shadow "0px 0px 3px 0px rgba(0,0,0,.8)"
+      }
      [:&:hover {:background "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"}]
      [:&:active {:box-shadow "inset 0 0 3px #000000;"}]
      [:&:disabled :&.disabled {:background "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"
@@ -739,6 +731,7 @@
 (def auto-prefix #{:transition
                    :user-select
                    :border-radius
+                   :pointer-events
                    :transform
                    :appearance
                    :box-shadow
@@ -769,7 +762,23 @@
    [:#app {:height "100%"}
     [:.container {:height "100%"
                   :display :flex
-                  :flex-direction :row}]
+                  :flex-direction :row}
+
+     ;;this is the HEADER SHADOW ELEMENT
+     ;; it has to be the before element of the .container,
+     ;; because the header is splitted in three parts.
+     ;; and there are some bugs with the z-index and positioning
+     [:&:before {:content (pr-str " ")
+                 :position :absolute ;absolute not fixed due to safari scroll special behaviour
+                 :box-shadow "0px 0px 8px 0px rgba(0,0,0,0.66)"
+                 :left (px 0)
+                 :right (px 0)
+                 :top (px 0)
+                 :z-index 20
+                 :pointer-events :none
+                 :height (px (- header-height 2))
+                 :background "transparent)"
+                 }]]
     [:&.file-drop
      {:background "red"}]
     clear-a-css
