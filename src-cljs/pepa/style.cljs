@@ -101,10 +101,10 @@
     [:header {:min-height (px header-height)
               :max-height (px header-height)
               :line-height (px header-height)
+              :z-index 1000
               :background-color header-color
               :padding {:left (px header-padding)
-                        :right (px header-padding)}
-              :border-bottom (str "2px solid white")}]))
+                        :right (px header-padding)}}]))
 
 (def draggable-size 24)
 (defn draggable-css [position]
@@ -133,6 +133,17 @@
              :display :flex
              :flex-direction :row
              :align-items :center}
+
+    ;;this is the shadow element
+    [:&:after {:content (pr-str " ")
+               :position :fixed
+               :box-shadow "0px 0px 8px 0px rgba(0,0,0,0.66)"
+               :left (px 0)
+               :right (px 0)
+               :top (px 0)
+               :z-index 100
+               :height (px (- header-height 2))
+               :background header-color}]
     ;; Logo
     (let [logo-width 38]
       [:.logo {:width (px logo-width)
@@ -268,7 +279,7 @@
      [:.rotate {:position :absolute
                 :top 0, :right 0
                 :height (px rotate-height)
-                :z-index 500
+                :z-index 1
                 :background-color "rgba(255, 255, 255, 0.8)"
                 :margin (px 5)
                 :border-radius (px 4)}
@@ -433,7 +444,6 @@
               :margin-right (px 10)}]]]
    [:.pane
     [:&>div {:height "100%"
-             :border-right (str "1px solid " border-dark)
              :display :flex
              :flex-direction :column}
      [:ul.pages {:overflow :auto
