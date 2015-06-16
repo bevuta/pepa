@@ -157,17 +157,12 @@
               :padding (px search-input-padding)
               :padding-right (px (* 5 search-input-padding))
               :width "100%"
-              :color default-text
-              :outline :none
-              :font {:family default-font
-                     :size (px 13)
-                     :weight 400}
+              :color default-text             
               :background {:image (image-url "glass.svg")
                            :repeat :no-repeat
                            :position "center right"}
               :height (px (- height (+ (* 2 search-margin-vertical) (* 2 search-input-padding))))
-              :border-radius (px search-input-padding)
-              :border (str "1px solid " border-dark)}]]))
+              :border-radius (px search-input-padding)}]]))
 
 (def sidebar-css
   (let [search-height 80]
@@ -482,6 +477,21 @@
                :font-style :italic}]
      (draggable-css :left)]]])
 
+(def generic-input-css
+  (let [padding (px 5)
+        height (px 14)
+        radius (px 3)]
+    [:input {
+             :padding padding
+             :color default-text
+             :outline :none
+             :font {:family default-font
+                    :size (px 13)
+                    :weight 400}
+             :height height
+             :border-radius radius
+             :border (str "1px solid " border-dark)}]))
+
 (def generic-sidebar-css
   [:.sidebar
    [:aside {:padding {:left (px 25)
@@ -516,7 +526,7 @@
             :height "100%"}]
    generic-header-css
    generic-sidebar-css
-
+   
    dashboard-css
    document-css
    inbox-css])
@@ -586,25 +596,21 @@
 (def button-css
   (let [padding (px 15)]
     [:button :a.button
-     {:background "linear-gradient(to bottom, #ffffff 0%,#dadada 100%)"      
+     {:background "linear-gradient(to bottom, #ffffff 0%,#f5f5f5 100%)"      
       :color grey-3
       :height (px 25)
       :font {:family default-font
              :size (px 14)
              :weight 400}
       :outline :none
-      :border :none
+      :border "1px solid #c7c7c7"
       :padding {:left padding
                 :right padding}
-      :margin {:right padding
-               :top padding}
-      :border-radius (px 2)
-      :box-shadow "0px 0px 3px 0px rgba(0,0,0,.8)"
-      }
-     [:&:hover {:background "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"}]
+      :border-radius (px 2)}
+     [:&:hover {:background "linear-gradient(to bottom, #f5f5f5 0%,#e5e5e5 100%)"}]
      [:&:active {:box-shadow "inset 0 0 3px #000000;"}]
-     [:&:disabled :&.disabled {:background "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"
-                               :color text-color-disabled}]]))
+     [:&:disabled :&.disabled {:opacity .5}]]))
+
 
 (def dropdown-css
   (let [font-size (px 14)
@@ -770,7 +776,7 @@
      ;; and there are some bugs with the z-index and positioning
      [:&:before {:content (pr-str " ")
                  :position :absolute ;absolute not fixed due to safari scroll special behaviour
-                 :box-shadow "0px 0px 8px 0px rgba(0,0,0,0.66)"
+                 :box-shadow "0px 0px 8px 0px rgba(0,0,0,0.4)"
                  :left (px 0)
                  :right (px 0)
                  :top (px 0)
@@ -783,6 +789,8 @@
      {:background "red"}]
     clear-a-css
     button-css
+    generic-input-css
+    
     dropdown-css
     sidebar-css
     tags-css
