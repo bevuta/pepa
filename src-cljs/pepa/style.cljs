@@ -106,22 +106,23 @@
                         :right (px header-padding)}
               :border-bottom (str "2px solid white")}]))
 
-(def draggable-size 15)
+(def draggable-size 24)
 (defn draggable-css [position]
   [:.draggable (assoc
                 {:position :absolute
-                 :top (px (- (/ header-height 2)
-                             (/ draggable-size 2)))
+                 :top (px 0)
                  :width (px draggable-size)
                  :height (px draggable-size)
                  :z-index 10
                  :cursor :ew-resize
-                 :background {:image (image-url "material/resize-drag-button.svg")
+                 :background {:image (image-url "resize.svg")
                               :size [(px draggable-size)
                                      (px draggable-size)]}
                  :opacity 0.5}
                 (or position :left)
-                (px (- (/ draggable-size 2))))
+                (px (if (= position :right)
+                      0
+                      (* -1 draggable-size))))
    [:&:hover {:opacity 1.0}]])
 
 (def sidebar-header-css
@@ -140,24 +141,38 @@
      [:&.brand {:font-weight 400}]]]))
 
 (defn sidebar-search-css [height]
-  (let [search-padding 10]
+  (let [search-margin-horizontal 20
+        search-margin-vertical 25
+        search-input-padding 5]
     [:.search {:height (px height)
                :position :relative
-               :border-bottom (str "1px solid " border-dark)
                :display :flex
                :align-items :center
                :justify-content :space-around}
-     [:input {:margin {:left (px search-padding)
-                       :right (px search-padding)}
+     [:input {:margin {:left (px search-margin-horizontal)
+                       :right (px search-margin-horizontal)
+                       :top (px search-margin-vertical)
+                       :bottom (px search-margin-vertical)}
+              :padding (px search-input-padding)
+              :padding-right (px (* 5 search-input-padding))
               :width "100%"
+              :color default-text
+              :outline :none
+              :font {:family default-font
+                     :size (px 13)
+                     :weight 400}
+              :background {:image (image-url "glass.svg")
+                           :repeat :no-repeat
+                           :position "center right"}
+              :height (px (- height (+ (* 2 search-margin-vertical) (* 2 search-input-padding))))
+              :border-radius (px search-input-padding)
               :border (str "1px solid " border-dark)}]]))
 
 (def sidebar-css
-  (let [search-height 50]
+  (let [search-height 80]
     [:#sidebar {:height "100%"
                 :display :flex
                 :background-color sidebar-color
-                :border-right (str "1px solid " border-dark)
                 :position :relative
                 :flex-direction :column}
      (draggable-css :right)
@@ -398,7 +413,6 @@
       [:.sidebar {:height "100%"
                   :width "100%"
                   :background-color dark-background
-                  :border-left (str "1px solid " border-dark)
                   :position :relative}
        (draggable-css :left)]]]))
 
@@ -423,6 +437,7 @@
              :display :flex
              :flex-direction :column}
      [:ul.pages {:overflow :auto
+                 :outline :none
                  :margin 0, :padding 0}
       page-css
       [:li
