@@ -151,6 +151,11 @@
   (go
     (vec (:response/transit (<! (xhr-request! "/inbox" :get))))))
 
+(defn fetch-inbox! []
+  (go (om/update! (om/root-cursor data/state)
+                  [:inbox :pages]
+                  (<! (fetch-inbox)))))
+
 (defn delete-from-inbox! [pages]
   (go
     (let [res (<! (xhr-request! "/inbox" :delete (map :id pages)))]
@@ -285,10 +290,8 @@
   (go
     (let [page-ids (:inbox changes)
           pages (mapv fetch-page page-ids)]
-      (doseq [p pages]
-        (let [p (<! p)]
-          ;; TODO: Apply the changes to the Inbox
-          (js/console.warn "Not applying changes to Inbox: Not implemented"))))))
+      ;; Just overwrite the inbox-stuff for now
+      (fetch-inbox!))))
 
 (defmethod entities-changed* :tags [state _ changes]
   (when-let [tags (:tags changes)]

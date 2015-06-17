@@ -10,11 +10,12 @@
 (defrecord Page [id rotation render-status dpi])
 (defrecord Document [id title pages created modified document-date notes])
 
-(defrecord State [documents navigation tags upload seqs])
+(defrecord State [documents inbox navigation tags upload seqs])
 
 (defonce state (atom (map->State {:documents {}
                                   :navigation {:route :dashboard}
                                   :tags {}
+                                  :inbox {:pages []}
                                   :upload {}
                                   :ui/sidebars {}
                                   :seqs {}})))
@@ -153,3 +154,7 @@
       :ui/sidebars
       (om/ref-cursor)))
 
+;;; Inbox
+
+(defn inbox-pages [state]
+  (get-in state [:inbox :pages]))
