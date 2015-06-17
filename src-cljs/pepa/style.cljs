@@ -29,8 +29,9 @@
 (def default-text grey-2)
 
 (def tags-text default-text)
-(def tags-background "#e8eaea")
+(def tags-background dark-background)
 (def tags-selected-background light-blue-background)
+(def tags-border "#e8e8e8")
 
 (def border-light "#f0f0f0")
 (def border-dark "#cbcbcb")
@@ -230,7 +231,8 @@
                         ;; Not sure if this is a good idea
                         :font-size (px color-size)
                         :line-height (px color-size)
-                        :height (px color-size)}
+                        :height (px color-size)
+                        :border :none}
                [:.tag-name {:position :absolute
                             :top "50%" :transform "translateY(-50%)"
                             :overflow :hidden
@@ -239,7 +241,8 @@
                          :padding {:left (px 4), :right (px 4)}}]
                [:.color {:width (px color-size)
                          :height (px color-size)
-                         :float :right}]])]
+                         :float :right
+                         :border-radius "50%"}]])]
            [:.show-more {:font-weight :bold
                          :font-size (px 10)
                          :cursor :pointer}]]
@@ -495,7 +498,9 @@
 
 (def generic-sidebar-css
   [:.sidebar
-   [:aside {:padding {:left (px 25)
+   [:aside {:display :flex
+            :flex-direction :column
+            :padding {:left (px 25)
                       :right (px 25)}}
     [:ul.meta {:font-size (pt 10)
                :line-height (pt 15)
@@ -513,7 +518,14 @@
                     :overflow :hidden
                     :vertical-align :top
                     :text-overflow :ellipsis}
-                   (calc-property :width ["70%" - left-padding]))])]]]])
+                   (calc-property :width ["70%" - left-padding]))])]]
+    [:.buttons {:display :flex
+                :flex-direction :column
+                :justify-content :space-between
+                :flex-wrap :wrap}
+     [:button {:margin-top (px 10)
+               :flex-grow 1
+               }]]]])
 
 (def workflow-css
   [:.workflow {:height "100%" :width "100%"
@@ -545,44 +557,56 @@
                :min-height (px tags-min-height)
                :line-height (px (+ 2 tags-min-height))}
      [:&.editable (list
-                   {:padding-left (px tag-icon-box)
+                   {:padding {:left (px tag-icon-box)
+                              :top (px 6)}
                     :border (str "1px solid " border-dark)
                     :border-radius (px 3)
                     :height :auto
                     :background {:image (image-url "tag-icon.svg")
                                  :repeat :no-repeat
                                  :size (px 14)
-                                 :position [[(px 4) (px 4)]]
+                                 :position [[(px 8) (px 8)]]
                                  :color :white}
                     :white-space :initial}
                    (calc-property :width ["100%" -  (px tag-icon-box)]))
       [:&:before {:content (pr-str "Tags:")
-                  :font-size (em 1.2)}]]
-     (let [tag-height 16]
+                  :font-size (em 1.2)
+                  :display :block
+                  :float :left
+                  :line-height (px 18)
+                  :margin-left (px 2)
+                  }]]
+     (let [tag-height 15
+           tag-inner-margin 2
+           radius  (px 5)]
        [:li.tag {:display :inline-block
                  :background-color tags-background
                  :height (px tag-height)
-                 :padding {:left (px 4)
-                           :right (px 4)}
-                 :margin {:left (px 2)
-                          :right (px 2)}
+                 :padding {:right (px 10)}
+                 :margin {:left (px tag-inner-margin)
+                          :right (px tag-inner-margin)}
                  :color tags-text
-                 :line-height (px tag-height)
+                 :border (str "1px solid " tags-border)
                  :text-decoration :none
                  :outline :none
-                 :border-radius (em 0.5)}
-        [:&.selected {:background-color tags-selected-background
-                      :border (str "1px solid" border-dark)
-                      :padding {:left (px 3)
-                                :right (px 3)}}]
+                 :overflow :hidden
+                 :border-radius radius}
+        [:a {:display :block
+             :height "100%"}]
+        [:.tag-name {:margin-left (px tag-inner-margin)
+                     :line-height (px tag-height)
+                     :height (px tag-height)
+                     :display :inline-block
+                     :vertical-align :top}]
+        [:&.selected {:background-color tags-selected-background}]
         (let [color-size 8]
+          
           [:.color {:display :inline-block
-                    :height (px color-size)
-                    :width (px color-size)
-                    :margin-right (px 2)
+                    :height (px tag-height)
+                    :width (px tag-height)
+                    :margin-right (px tag-inner-margin)
                     ;; Border looks horrible on non-high-DPI screens
                     ;; :border "1px solid white"
-                    :border-radius "50%"
                     }])])
      (let [input-padding 5]
        [:li {:display :inline-block}
