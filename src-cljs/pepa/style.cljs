@@ -284,55 +284,64 @@
   [:&.inbox {:overflow :auto
              :display :flex
              :flex-direction :row}
-   [:.pane {:height "100%"
-            :min-width (px document-width), :max-width (px document-width)
-            :display :flex
-            :flex-direction :column
-            :flex-grow 1}
+   [:.column {:height "100%"
+              :min-width (px document-width), :max-width (px document-width)
+              :display :flex
+              :flex-direction :column
+              :flex-grow 1}
     [:header {:display :flex
               :flex-flow [[:row :wrap]]
               :align-items :center
-              :justify-content :space-between}]]
-   ;; Create Document Column
-   [:.create-document {:align-items :center
-                       :justify-content :space-around}
-    [:.note
-     [:.arrow {:background {:image (image-url "drop-arrow.svg")
-                            :repeat :no-repeat
-                            :position :center
-                            :size (px 72)}
-               :height (px 72)}]]]
-   ;; A 'Document' (with pages inside)
-   [:.document
-    [:header {:max-height :initial}
-     [:.tags {:margin-bottom (px 5)}]]
-    
-    [:ul.pages {:margin 0, :padding 0
-                :overflow-y :auto
-                :flex-shrink 999}
-     [:li.page {:width "100%"
-                :list-style-type :none
-                :user-select :none}
-      ;; TODO: Move this into a generic css rule
-      [:&.selected
-       [:.thumbnail {:position :relative}
-        [:&:before {:content (pr-str " ")
-                    :display :block
-                    :width "100%", :height "100%"
-                    :position :absolute
-                    :top 0 :left 0
-                    :background-color "rgba(0,0,1,0.5)"
-                    :z-index 10}]]]
+              :justify-content :space-between}]
+    [:ul.pages {:list-style-type :none
+                :margin 0, :padding 0
+                :overflow-y :auto}
+     [:li {:width "100%"}
       page-css
       [:img {:max-width "100%"
-             :max-height "100%"}]]]
-    [:barter {:min-height (px 40)
-              :max-height (px 40)
-              :display :flex
-              :flex-direction :row
-              :justify-content :space-around
-              :align-items :center
-              :background-color header-color}]]])
+             :max-height "100%"}]
+      ]]]
+   ;; Create Document Column
+   ;; [:.create-document {:align-items :center
+   ;;                     :justify-content :space-around}
+   ;;  [:.note
+   ;;   [:.arrow {:background {:image (image-url "drop-arrow.svg")
+   ;;                          :repeat :no-repeat
+   ;;                          :position :center
+   ;;                          :size (px 72)}
+   ;;             :height (px 72)}]]]
+   ;; A 'Document' (with pages inside)
+   ;; [:.document
+   ;;  [:header {:max-height :initial}
+   ;;   [:.tags {:margin-bottom (px 5)}]]
+    
+   ;;  [:ul.pages {:margin 0, :padding 0
+   ;;              :overflow-y :auto
+   ;;              :flex-shrink 999}
+   ;;   [:li.page {:width "100%"
+   ;;              :list-style-type :none
+   ;;              :user-select :none}
+   ;;    ;; TODO: Move this into a generic css rule
+   ;;    [:&.selected
+   ;;     [:.thumbnail {:position :relative}
+   ;;      [:&:before {:content (pr-str " ")
+   ;;                  :display :block
+   ;;                  :width "100%", :height "100%"
+   ;;                  :position :absolute
+   ;;                  :top 0 :left 0
+   ;;                  :background-color "rgba(0,0,1,0.5)"
+   ;;                  :z-index 10}]]]
+   ;;    page-css
+   ;;    [:img {:max-width "100%"
+   ;;           :max-height "100%"}]]]
+   ;;  [:barter {:min-height (px 40)
+   ;;            :max-height (px 40)
+   ;;            :display :flex
+   ;;            :flex-direction :row
+   ;;            :justify-content :space-around
+   ;;            :align-items :center
+   ;;            :background-color header-color}]]
+   ])
 
 ;;; Dashboard
 (def dashboard-css
