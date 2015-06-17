@@ -365,7 +365,8 @@
                           :padding-left (px 5)}]]
       [:.documents {:overflow-y :auto
                     :display :flex
-                    :flex-flow [[:row :wrap]]}
+                    :flex-flow [[:row :wrap]]
+                    :justify-content :space-around}
        [:&.working {:opacity "0.2"}]
        [:.document {:height (px document-height)
                     :width (px document-width)

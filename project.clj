@@ -56,7 +56,7 @@
              "-XX:MaxPermSize=128M"]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
-  :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.0-SNAPSHOT"]]
+  :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.0"]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              :dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
