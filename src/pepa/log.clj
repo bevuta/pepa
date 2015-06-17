@@ -4,7 +4,7 @@
 
 ;;; Logger is a special component. Instead of being available via
 ;;; `component/using' we inject it into every component already in the
-;;; system. That wasy ::loggre is available in every component and can
+;;; system. That wasy ::logger is available in every component and can
 ;;; be used like:
 ;;;
 ;;; (log/info some-component ...)
