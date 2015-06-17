@@ -26,7 +26,7 @@
               (log/warn zeroconf (str "Couldn't get service-info for " module)))))
         (get-in zeroconf [:config :zeroconf :modules])))
 
-(defrecord Zeroconf [config db mdns server]
+(defrecord Zeroconf [config mdns]
   component/Lifecycle
   (start [component]
     (if (get-in config [:zeroconf :enable])
@@ -46,8 +46,7 @@
     (when-let [mdns (:mdns component)]
       (.close mdns))
     (assoc component
-           :mdns nil
-           :server nil)))
+           :mdns nil)))
 
 (defn make-zeroconf-component []
   (map->Zeroconf {}))
