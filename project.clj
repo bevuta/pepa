@@ -50,7 +50,8 @@
   :exclusions [org.clojure/data.json
                log4j/log4j
                org.clojure/tools.reader]
-  :plugins [[lein-cljsbuild "1.0.4"]]
+  :plugins [[lein-cljsbuild "1.0.5"]
+            [lein-figwheel "0.3.3"]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"
              "-XX:MaxPermSize=128M"]
@@ -72,15 +73,14 @@
                                         :exclusions [org.clojure/tools.reader]]
                                        [sablono "0.3.4" :exclusions [cljsjs/react]]
                                        [secretary "1.2.3"]
-                                       [the/parsatron "0.0.7"]
-
-                                       [org.clojars.the-kenny/weasel "0.7.0-SNAPSHOT"]]}}
+                                       [the/parsatron "0.0.7"]]}}
   ;; Cljsbuild configuration. Also see profiles.clj
-  :cljsbuild {:builds {:pepa {:source-paths ["src/" "src-cljs/"]
+  :cljsbuild {:builds {:pepa {:source-paths ["src" "src-cljs"]
+                              :figwheel {:on-jsload "pepa.core/on-js-reload"}
                               :compiler {:output-to "resources/public/pepa.js"
-                                         :output-dir "resources/public/out/"
+                                         :output-dir "resources/public/out"
                                          :source-map "resources/public/pepa.js.map"
-                                         :asset-path "out/"
+                                         :asset-path "out"
                                          :main pepa.core
                                          :cache-analysis true
                                          :optimizations :none

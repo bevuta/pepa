@@ -1,4 +1,4 @@
-(ns pepa.style
+(ns ^:figwheel-always pepa.style
   (:require [garden.core :refer [css]]
             [garden.units :as u :refer [px em pt]]
             [garden.stylesheet :refer [at-keyframes cssfn]]
