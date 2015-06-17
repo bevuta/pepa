@@ -329,7 +329,15 @@
         (js/console.error "[poll] Caught Exception: " e)))))
 
 (defn start-polling! [state]
-  (go-loop []
-    (<! (poll! state))
-    (<! (async/timeout 1000))
-    (recur)))
+  (let [control (async/chan)]
+    (go-loop []
+      (let [timeout (async/timeout 1000)
+            [_ ch] (alts! [control timeout])]
+        (when (= ch timeout)
+          (<! (poll! state))
+          (<! (async/timeout 1000))
+          (recur))))
+    control))
+
+(defn stop-polling! [control]
+  (async/close! control))
