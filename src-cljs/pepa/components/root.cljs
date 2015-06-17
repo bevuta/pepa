@@ -70,7 +70,10 @@
       (draggable/resize-handle-loop owner)
 
       ;; Start Polling
-      (api/start-polling! state)))
+      (om/set-state! owner :poll-control (api/start-polling! state))))
+  (will-unmount [_]
+    (println "Stopping polling...")
+    (api/stop-polling! (om/get-state owner :poll-control)))
   (will-update [_ next-props next-state]
     (when-not (= (get-in (om/get-props owner) [:navigation :route])
                  (get-in next-props [:navigation :route]))
