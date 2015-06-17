@@ -7,9 +7,7 @@
 (defmulti service-info (fn [module config] module))
 (defmethod service-info :default [module _] nil)
 
-(defrecord Service [type name port props])
-
-(defn ^:private Service->ServiceInfo [^Service service]
+(defn ^:private map->ServiceInfo [service]
   (let [{:keys [type name port props]} service]
     (assert (string? type))
     (assert (string? name))
@@ -20,13 +18,13 @@
     (ServiceInfo/create ^String type ^String name ^int port 10 10 true props)))
 
 (defn ^:private service-infos [zeroconf]
-  (->> (for [module (get-in zeroconf [:config :zeroconf :modules])]
-         (let [service (service-info module (:config zeroconf))]
-           (assert (or (nil? service) (instance? Service service)))
-           (if service
-             (Service->ServiceInfo service)
-             (log/warn zeroconf (str "Couldn't get Service for " module)))))
-       (remove nil?)))
+  (keep (fn [module]
+          (let [service (service-info module (:config zeroconf))]
+            (assert (or (nil? service) (map? service)))
+            (if service
+              (map->ServiceInfo service)
+              (log/warn zeroconf (str "Couldn't get service-info for " module)))))
+        (get-in zeroconf [:config :zeroconf :modules])))
 
 (defrecord Zeroconf [config db mdns server]
   component/Lifecycle

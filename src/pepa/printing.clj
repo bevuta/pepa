@@ -105,11 +105,11 @@
         port (get-in config [:printing :lpd :port])
         queue "documents"]
     (assert (< 0 port 65535))
-    (zeroconf/map->Service {:type "_printer._tcp.local."
-                            :name name
-                            :port port
-                            :props {"pdl" "application/pdf,application/postscript"
-                                    "rp" queue
-                                    "txtvers" "1"
-                                    "qtotal" "1" ;count of queues
-                                    "ty" (str name " (Queue: " queue ")")}})))
+    {:type "_printer._tcp.local."
+     :name name
+     :port port
+     :props {"pdl" "application/pdf,application/postscript"
+             "rp" queue
+             "txtvers" "1"
+             "qtotal" "1" ;count of queues
+             "ty" (str name " (Queue: " queue ")")}}))
