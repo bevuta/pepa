@@ -9,6 +9,7 @@
             [pepa.components.sidebar :refer [sidebar-component]]
             [pepa.components.draggable :as draggable]
             [pepa.workflows.inbox :as inbox]
+            [pepa.workflows.inbox2 :as inbox2]
             [pepa.workflows.dashboard :as dashboard]
             [pepa.workflows.document :as document]
             [pepa.workflows.upload :refer [upload-dialog] :as upload-list]
@@ -70,7 +71,10 @@
       (draggable/resize-handle-loop owner)
 
       ;; Start Polling
-      (api/start-polling! state)))
+      (om/set-state! owner :poll-control (api/start-polling! state))))
+  (will-unmount [_]
+    (println "Stopping polling...")
+    (api/stop-polling! (om/get-state owner :poll-control)))
   (will-update [_ next-props next-state]
     (when-not (= (get-in (om/get-props owner) [:navigation :route])
                  (get-in next-props [:navigation :route]))
@@ -88,8 +92,9 @@
         (match [(om/value route)]
           [:dashboard]  (om/build dashboard/dashboard state)
           [[:search _]] (om/build dashboard/dashboard state)
-          [:inbox] (when-let [c (:workflow/inbox state)]
-                     (om/build inbox/group-pages-workflow c))
+          ;; [:inbox] (when-let [c (:workflow/inbox state)]
+          ;;            (om/build inbox/group-pages-workflow c))
+          [:inbox] (om/build inbox2/inbox state)
           [[:document id]] (when-let [d (get-in state [:documents id])]
                              (let [page (some-> (:page query-params)
                                                 (js/parseInt 10)
