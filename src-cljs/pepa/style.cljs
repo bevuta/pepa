@@ -132,15 +132,14 @@
    [:header {:text-decoration :none
              :font-size (em 1.2)
              :display :flex
-             :flex-direction :row
-             :align-items :center}
-
+             :justify-content :flex-start
+             :flex-direction :row}
     ;; Logo
-    (let [logo-width 38]
-      [:.logo {:width (px logo-width)
-               :height (px logo-width)}])
-    [:span {:padding-left (px 5)}
-     [:&.brand {:font-weight 400}]]]))
+    ;; (let [logo-height 48
+    ;;           logo-width 211]
+    ;;       [:.logo {:width (px logo-width)
+    ;;                :height (px logo-height)}])
+    ]))
 
 (defn sidebar-search-css [height]
   (let [search-margin-horizontal 20

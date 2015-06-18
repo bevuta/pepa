@@ -45,8 +45,10 @@
   (render [_]
     [:a {:href (nav/dashboard-route)}
      [:header
-      [:object.logo {:ref "logo"
-                     :data "img/logo-2.svg"
-                     :type "image/svg+xml"}]
-      [:span.brand "Pepa"]
-      [:span.name "DMS"]]]))
+      [:img {:src "img/pepa_logo.svg"}]      
+      ;; [:object.logo {:ref "logo"
+      ;;                :data "img/logo-2.svg"
+      ;;                :type "image/svg+xml"}]
+      ;; [:span.brand "Pepa"]
+      ;; [:span.name "DMS"]
+      ]]))
