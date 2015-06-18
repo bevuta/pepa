@@ -59,19 +59,26 @@
     "Fake")
   (column-pages [_ state]
     (get-in state [::fake-column-pages]))
-  ;; ColumnDropTarget
-  ;; (accepts-drop? [_ state]
-  ;;   true)
-  ;; ;; TODO: Make immutable?
-  ;; (accept-drop! [_ state pages]
-  ;;   (println "dropping" (pr-str pages))
-  ;;   (om/transact! state ::fake-column-pages #(vec (concat % pages))))
-  )
+  ColumnDropTarget
+  (accepts-drop? [_ state]
+    true)
+  ;; TODO: Make immutable?
+  (accept-drop! [_ state pages]
+    (println "dropping" (pr-str pages))
+    #_(om/transact! state ::fake-column-pages #(vec (concat % pages)))))
 
+;;; NOTE: We need on-drag-start in `inbox-column' and in
+;;; `inbox-column-page' (the latter to handle selection-updates when
+;;; dragging). We bubble it from `inbox-column-page', adding its own
+;;; `:id' and use that id to update the selection information.
 (ui/defcomponent inbox-column-page [page owner {:keys [page-click!]}]
   (render [_]
-    [:li.page {;; :draggable true
+    [:li.page {:draggable true
                :class [(when (:selected? page) "selected")]
+               :on-drag-start (fn [e]
+                                (println "inbox-column-page")
+                                (doto e.dataTransfer
+                                  (.setData "application/x-pepa-page" (:id page))))
                :on-click (fn [e]
                            (page-click!
                             (selection/event->click (:id page) e))
@@ -79,7 +86,33 @@
      (om/build page/thumbnail page
                {:opts {:enable-rotate? true}})]))
 
-(defn ^:private mark-page-selected [selected-pages page]
+(defn ^:private column-drag-start
+  "Called from `inbox-column' when `dragstart' event is fired. Manages
+  selection-updates and sets the drag-data in the event."
+  [state column owner e]
+  (println "on-drag-start")
+  (let [selection (om/get-state owner :selection)
+        ;; Update selection with the current event object
+        dragged-page (some-> e.dataTransfer
+                             (.getData "application/x-pepa-page")
+                             (read-string))
+        ;; If the dragged-page is already in selection, don't do
+        ;; anything. Else, update selection as if we clicked on the
+        ;; page.
+        selection (if (contains? (:selected selection) dragged-page)
+                    selection
+                    (selection/click selection (selection/event->click dragged-page e)))
+        ;; this approach makes sure the pages arrive in the correct order
+        page-ids (filterv (:selected selection)
+                          (map :id (column-pages column state)))]
+    (doto e.dataTransfer
+      (.setData "application/x-pepa-pages" (pr-str page-ids))
+      (.setData "text/plain" (pr-str page-ids)))))
+
+(defn ^:private mark-page-selected
+  "Assocs {:selected? true} to `page' if `selected-pages'
+  contains (:id page). Used in `index-column'."
+  [selected-pages page]
   (assoc page :selected? (contains? (set selected-pages) (:id page))))
 
 (ui/defcomponent inbox-column [[state column] owner opts]
@@ -87,30 +120,33 @@
     {:selection (->> (column-pages column state)
                      (map :id)
                      (selection/make-selection))})
-  ;; TODO: Reset selection elements 
+  (will-receive-props [_ new-state]
+    ;; Handle changed contents of this components column by resetting
+    ;; the selection
+    (let [[old-state old-column] (om/get-props owner)
+          [new-state new-column] new-state
+          old-pages (mapv :id (column-pages old-column old-state))
+          new-pages (mapv :id (column-pages new-column new-state))]
+      (when (not= (om/value old-pages)
+                  (om/value new-pages))
+        (println "resetting selection:" (pr-str  new-pages))
+        (om/set-state! owner :selection
+                       (selection/make-selection new-pages)))))
   (render-state [_ {:keys [selection]}]
     ;; NOTE: `column' needs to be a value OR we need to extend cursors
-    [:.column { ;; :on-drag-over (when (satisfies? ColumnDropTarget (om/value column))
-               ;;                 (fn [e]
-               ;;                   (when (accepts-drop? column state)
-               ;;                     (.preventDefault e))))
-               
-               ;; :on-drag-start (fn [e]
-               ;;                  (println "on-drag-start")
-               ;;                  (let [drag-pages (keep selected-pages (map :id (column-pages column state)))]
-               ;;                    (doto e.dataTransfer
-               ;;                      (.setData "application/x-pepa-pages" (pr-str drag-pages))
-               ;;                      (.setData "text/plain" (pr-str (vec drag-pages))))))
-               ;; :on-drag-end (fn [_]
-               ;;                (println "on-drag-end"))
-               
-               ;; :on-drop (fn [e]
-               ;;            (when-let [pages (some-> e.dataTransfer
-               ;;                                     (.getData "application/x-pepa-pages")
-               ;;                                     (read-string))]
-               ;;              (accept-drop! column state pages)
-               ;;              (ui/cancel-event e)))
-               }
+    [:.column {:on-drag-over (when (satisfies? ColumnDropTarget (om/value column))
+                               (fn [e]
+                                 (when (accepts-drop? column state)
+                                   (.preventDefault e))))
+               :on-drag-start (partial column-drag-start state column owner)
+               :on-drag-end (fn [_]
+                              (println "on-drag-end"))
+               :on-drop (fn [e]
+                          (when-let [pages (some-> e.dataTransfer
+                                                   (.getData "application/x-pepa-pages")
+                                                   (read-string))]
+                            (accept-drop! column state pages)
+                            (ui/cancel-event e)))}
      [:header (column-title column)]
      [:ul.pages
       (om/build-all inbox-column-page (column-pages column state)
