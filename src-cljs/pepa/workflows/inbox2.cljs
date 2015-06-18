@@ -9,6 +9,7 @@
             [nom.ui :as ui]
             [pepa.api :as api]
             [pepa.data :as data]
+            [pepa.selection :as selection]
 
             [pepa.components.page :as page]
 
@@ -58,42 +59,65 @@
     "Fake")
   (column-pages [_ state]
     (get-in state [::fake-column-pages]))
-  ColumnDropTarget
-  (accepts-drop? [_ state]
-    true)
-  (accept-drop! [_ state pages]
-    (println "dropping" (pr-str pages))
-    (om/transact! state ::fake-column-pages #(vec (concat % pages)))))
+  ;; ColumnDropTarget
+  ;; (accepts-drop? [_ state]
+  ;;   true)
+  ;; ;; TODO: Make immutable?
+  ;; (accept-drop! [_ state pages]
+  ;;   (println "dropping" (pr-str pages))
+  ;;   (om/transact! state ::fake-column-pages #(vec (concat % pages))))
+  )
 
-(ui/defcomponent inbox-column-page [page]
+(ui/defcomponent inbox-column-page [page owner {:keys [page-click!]}]
   (render [_]
-    [:li.page {:on-drag-start (fn [e]
-                                (println "on-drag-start")
-                                (doto e.dataTransfer
-                                  (.setData "application/x-pepa-pages" (pr-str [page]))
-                                  (.setData "text/plain" (pr-str [(:id page)]))))
-               :draggable true
-               :on-drag-end (fn [_]
-                              (println "on-drag-end"))}
+    [:li.page {;; :draggable true
+               :class [(when (:selected? page) "selected")]
+               :on-click (fn [e]
+                           (page-click!
+                            (selection/event->click (:id page) e))
+                           (ui/cancel-event e))}
      (om/build page/thumbnail page
                {:opts {:enable-rotate? true}})]))
 
-(ui/defcomponent inbox-column [[state column]]
-  (render [_]
+(defn ^:private mark-page-selected [selected-pages page]
+  (assoc page :selected? (contains? (set selected-pages) (:id page))))
+
+(ui/defcomponent inbox-column [[state column] owner opts]
+  (init-state [_]
+    {:selection (->> (column-pages column state)
+                     (map :id)
+                     (selection/make-selection))})
+  ;; TODO: Reset selection elements 
+  (render-state [_ {:keys [selection]}]
     ;; NOTE: `column' needs to be a value OR we need to extend cursors
-    [:.column {:on-drag-over (when (satisfies? ColumnDropTarget (om/value column))
-                               (fn [e]
-                                 (when (accepts-drop? column state)
-                                   (.preventDefault e))))
-               :on-drop (fn [e]
-                          (when-let [pages (some-> e.dataTransfer
-                                                   (.getData "application/x-pepa-pages")
-                                                   (read-string))]
-                            (accept-drop! column state pages)
-                            (ui/cancel-event e)))}
+    [:.column { ;; :on-drag-over (when (satisfies? ColumnDropTarget (om/value column))
+               ;;                 (fn [e]
+               ;;                   (when (accepts-drop? column state)
+               ;;                     (.preventDefault e))))
+               
+               ;; :on-drag-start (fn [e]
+               ;;                  (println "on-drag-start")
+               ;;                  (let [drag-pages (keep selected-pages (map :id (column-pages column state)))]
+               ;;                    (doto e.dataTransfer
+               ;;                      (.setData "application/x-pepa-pages" (pr-str drag-pages))
+               ;;                      (.setData "text/plain" (pr-str (vec drag-pages))))))
+               ;; :on-drag-end (fn [_]
+               ;;                (println "on-drag-end"))
+               
+               ;; :on-drop (fn [e]
+               ;;            (when-let [pages (some-> e.dataTransfer
+               ;;                                     (.getData "application/x-pepa-pages")
+               ;;                                     (read-string))]
+               ;;              (accept-drop! column state pages)
+               ;;              (ui/cancel-event e)))
+               }
      [:header (column-title column)]
      [:ul.pages
-      (om/build-all inbox-column-page (column-pages column state))]]))
+      (om/build-all inbox-column-page (column-pages column state)
+                    {:opts {:page-click! (fn [click] 
+                                           (om/update-state! owner :selection
+                                                             #(selection/click % click)))}
+                     :fn (partial mark-page-selected (:selected selection))})]]))
 
 (ui/defcomponent inbox [state owner opts]
   (init-state [_]
@@ -101,7 +125,7 @@
                (->FakeColumnSource)]})
   (will-mount [_]
     (api/fetch-inbox! state))
-  (render-state [_ {:keys [columns]}]
+  (render-state [_ {:keys [columns selected-pages]}]
     [:.workflow.inbox
      (om/build-all inbox-column columns
                    {:fn (fn [column]

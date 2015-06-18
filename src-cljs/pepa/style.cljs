@@ -296,7 +296,11 @@
     [:ul.pages {:list-style-type :none
                 :margin 0, :padding 0
                 :overflow-y :auto}
-     [:li {:width "100%"}
+     [:li {:width "100%"
+           :display :flex
+           :justify-content :space-around}
+      [:&.selected {:background-color "red"}]
+      [:.thumbnail {:width "80%"}]
       page-css
       [:img {:max-width "100%"
              :max-height "100%"}]
