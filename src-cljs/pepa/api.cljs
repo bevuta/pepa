@@ -151,8 +151,8 @@
   (go
     (vec (:response/transit (<! (xhr-request! "/inbox" :get))))))
 
-(defn fetch-inbox! []
-  (go (om/update! (om/root-cursor data/state)
+(defn fetch-inbox! [state]
+  (go (om/update! state
                   [:inbox :pages]
                   (<! (fetch-inbox)))))
 
@@ -291,7 +291,7 @@
     (let [page-ids (:inbox changes)
           pages (mapv fetch-page page-ids)]
       ;; Just overwrite the inbox-stuff for now
-      (fetch-inbox!))))
+      (fetch-inbox! (om/root-cursor data/state)))))
 
 (defmethod entities-changed* :tags [state _ changes]
   (when-let [tags (:tags changes)]

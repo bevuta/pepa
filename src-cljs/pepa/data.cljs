@@ -154,7 +154,3 @@
       :ui/sidebars
       (om/ref-cursor)))
 
-;;; Inbox
-
-(defn inbox-pages [state]
-  (get-in state [:inbox :pages]))
