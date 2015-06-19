@@ -16,7 +16,8 @@
             [cljs.reader :refer [read-string]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]])
-  (:import [cljs.core.ExceptionInfo]))
+  (:import [cljs.core.ExceptionInfo]
+           goog.ui.IdGenerator))
 
 (defprotocol ColumnSource
   (column-title [_])
@@ -93,8 +94,8 @@
      (om/build page/thumbnail page
                {:opts {:enable-rotate? true}})]))
 
-(defn ^:private get-transfer-data [transfer key]
-  (some-> transfer
+(defn ^:private get-transfer-data [e key]
+  (some-> e.dataTransfer
           (.getData (name key))
           (read-string)))
 
@@ -183,8 +184,9 @@
 
 (ui/defcomponent inbox [state owner opts]
   (init-state [_]
-    {:columns [(->InboxColumnSource (gensym))
-               (->FakeColumnSource (gensym))]})
+    (let [gen (IdGenerator.getInstance)]
+      {:columns [(->InboxColumnSource (.getNextUniqueId gen))
+                 (->FakeColumnSource (.getNextUniqueId gen))]}))
   (will-mount [_]
     (api/fetch-inbox! state))
   (render-state [_ {:keys [columns]}]
