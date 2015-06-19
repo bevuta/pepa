@@ -46,14 +46,14 @@
 
 ;;; TODO: `remove-pages!'
 
-(defrecord InboxColumnSource []
+(defrecord InboxColumnSource [id]
   ColumnSource
   (column-title [_]
     "Inbox")
   (column-pages [_ state]
     (get-in state [:inbox :pages])))
 
-(defrecord FakeColumnSource []
+(defrecord FakeColumnSource [id]
   ColumnSource
   (column-title [_]
     "Fake")
@@ -93,6 +93,11 @@
      (om/build page/thumbnail page
                {:opts {:enable-rotate? true}})]))
 
+(defn ^:private get-transfer-data [transfer key]
+  (some-> transfer
+          (.getData (name key))
+          (read-string)))
+
 (defn ^:private column-drag-start
   "Called from `inbox-column' when `dragstart' event is fired. Manages
   selection-updates and sets the drag-data in the event."
@@ -100,9 +105,7 @@
   (println "on-drag-start")
   (let [selection (om/get-state owner :selection)
         ;; Update selection with the current event object
-        dragged-page (some-> e.dataTransfer
-                             (.getData "application/x-pepa-page")
-                             (read-string))
+        dragged-page (get-transfer-data e "application/x-pepa-page")
         ;; If the dragged-page is already in selection, don't do
         ;; anything. Else, update selection as if we clicked on the
         ;; page.
@@ -116,6 +119,7 @@
     (om/set-state! owner :selection selection)
     (doto e.dataTransfer
       (.setData "application/x-pepa-pages" (pr-str page-ids))
+      (.setData "application/x-pepa-column" (pr-str (:id column)))
       (.setData "text/plain" (pr-str page-ids)))))
 
 (defn ^:private mark-page-selected
@@ -159,11 +163,9 @@
                               (println "on-drag-end"))
                :on-drop (fn [e]
                           (let [page-cache (::page-cache column)]
-                            (when-let [page-ids (some-> e.dataTransfer
-                                                        (.getData "application/x-pepa-pages")
-                                                        (read-string))]
+                            (when-let [page-ids (get-transfer-data e "application/x-pepa-pages")]
                               (accept-drop! column state (mapv page-cache page-ids))
-                              (ui/cancel-event e))))}
+                              #_(ui/cancel-event e))))}
      [:header (column-title column)]
      [:ul.pages
       (om/build-all inbox-column-page (column-pages column state)
@@ -172,22 +174,32 @@
                                                              #(selection/click % click)))}
                      :fn (partial mark-page-selected (:selected selection))})]]))
 
+(defn make-page-cache [state columns]
+  (into {}
+        ;; Transducerpower
+        (comp (mapcat #(column-pages % state))
+              (map (juxt :id identity)))
+        columns))
+
 (ui/defcomponent inbox [state owner opts]
   (init-state [_]
-    {:columns [(->InboxColumnSource)
-               (->FakeColumnSource)]})
+    {:columns [(->InboxColumnSource (gensym))
+               (->FakeColumnSource (gensym))]})
   (will-mount [_]
     (api/fetch-inbox! state))
-  (render-state [_ {:keys [columns selected-pages]}]
+  (render-state [_ {:keys [columns]}]
     ;; We generate a lookup table from all known pages so `on-drop' in
     ;; `inbox-column' can access it (as the drop `dataTransfer' only
     ;; contains IDs)
-    (let [page-cache (into {}
-                           ;; Transducerpower
-                           (comp (mapcat #(column-pages % state))
-                                 (map (juxt :id identity)))
-                           columns)]
-      [:.workflow.inbox
+    (let [page-cache (make-page-cache state columns)]
+      [:.workflow.inbox {:on-drop (fn [e]
+                                    ;; TODO: Handle the on-drop to
+                                    ;; remove the pages from the
+                                    ;; source column
+                                    (println "inbox/on-drop")
+                                    (let [source-column (get-transfer-data e "application/x-pepa-column")
+                                          page-ids (get-transfer-data e "application/x-pepa-pages")]
+                                      (prn source-column page-ids)))}
        (om/build-all inbox-column columns
                      {:fn (fn [column]
                             [state
