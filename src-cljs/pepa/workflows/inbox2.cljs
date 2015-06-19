@@ -200,6 +200,9 @@
                                     ;; source column
                                     (println "inbox/on-drop")
                                     (let [source-column (get-transfer-data e "application/x-pepa-column")
+                                          source-column (some #(when (= source-column
+                                                                        (:id %)) %)
+                                                              columns)
                                           page-ids (get-transfer-data e "application/x-pepa-pages")]
                                       (prn source-column page-ids)))}
        (om/build-all inbox-column columns
