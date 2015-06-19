@@ -63,9 +63,13 @@
   (accepts-drop? [_ state]
     true)
   ;; TODO: Make immutable?
-  (accept-drop! [_ state pages]
-    (println "dropping" (pr-str pages))
-    (om/transact! state ::fake-column-pages #(vec (concat % pages)))))
+  (accept-drop! [_ state new-pages]
+    (println "dropping" (pr-str new-pages))
+    (om/transact! state ::fake-column-pages
+                  (fn [pages]
+                    (into pages
+                          (remove #(contains? (set (map :id pages)) (:id %)))
+                          new-pages)))))
 
 ;;; NOTE: We need on-drag-start in `inbox-column' and in
 ;;; `inbox-column-page' (the latter to handle selection-updates when
