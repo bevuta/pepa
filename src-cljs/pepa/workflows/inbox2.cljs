@@ -105,6 +105,8 @@
         ;; this approach makes sure the pages arrive in the correct order
         page-ids (filterv (:selected selection)
                           (map :id (column-pages column state)))]
+    ;; Update `:selection' in `owner'
+    (om/set-state! owner :selection selection)
     (doto e.dataTransfer
       (.setData "application/x-pepa-pages" (pr-str page-ids))
       (.setData "text/plain" (pr-str page-ids)))))
