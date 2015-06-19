@@ -65,7 +65,7 @@
   ;; TODO: Make immutable?
   (accept-drop! [_ state pages]
     (println "dropping" (pr-str pages))
-    #_(om/transact! state ::fake-column-pages #(vec (concat % pages)))))
+    (om/transact! state ::fake-column-pages #(vec (concat % pages)))))
 
 ;;; NOTE: We need on-drag-start in `inbox-column' and in
 ;;; `inbox-column-page' (the latter to handle selection-updates when
@@ -73,8 +73,11 @@
 ;;; `:id' and use that id to update the selection information.
 (ui/defcomponent inbox-column-page [page owner {:keys [page-click!]}]
   (render [_]
-    [:li.page {:draggable true
-               :class [(when (:selected? page) "selected")]
+    [:li.page {:draggable true          ;TODO: only `:draggable' when
+                                        ;`(not :unsaved?)'
+               :class [(when (:selected? page) "selected")
+                       ;; TODO: `:unsaved?'
+                       (when (:working? page)  "working")]
                :on-drag-start (fn [e]
                                 (println "inbox-column-page")
                                 (doto e.dataTransfer
@@ -131,9 +134,16 @@
           new-pages (mapv :id (column-pages new-column new-state))]
       (when (not= (om/value old-pages)
                   (om/value new-pages))
-        (println "resetting selection:" (pr-str  new-pages))
         (om/set-state! owner :selection
                        (selection/make-selection new-pages)))))
+  ;; ;; Rotate all pages randomly
+  ;; (will-mount [_]
+  ;;   (go-loop []
+  ;;     (<! (async/timeout 100))
+  ;;     (om/transact! state [:inbox :pages] (fn [pages]
+  ;;                                           (update-in pages [(rand-int (count pages)) :rotation]
+  ;;                                                      #(mod (+ % 90) 360))))
+  ;;     (recur)))
   (render-state [_ {:keys [selection]}]
     ;; NOTE: `column' needs to be a value OR we need to extend cursors
     [:.column {:on-drag-over (when (satisfies? ColumnDropTarget (om/value column))
@@ -144,11 +154,12 @@
                :on-drag-end (fn [_]
                               (println "on-drag-end"))
                :on-drop (fn [e]
-                          (when-let [pages (some-> e.dataTransfer
-                                                   (.getData "application/x-pepa-pages")
-                                                   (read-string))]
-                            (accept-drop! column state pages)
-                            (ui/cancel-event e)))}
+                          (let [page-cache (::page-cache column)]
+                            (when-let [page-ids (some-> e.dataTransfer
+                                                        (.getData "application/x-pepa-pages")
+                                                        (read-string))]
+                              (accept-drop! column state (mapv page-cache page-ids))
+                              (ui/cancel-event e))))}
      [:header (column-title column)]
      [:ul.pages
       (om/build-all inbox-column-page (column-pages column state)
@@ -164,7 +175,16 @@
   (will-mount [_]
     (api/fetch-inbox! state))
   (render-state [_ {:keys [columns selected-pages]}]
-    [:.workflow.inbox
-     (om/build-all inbox-column columns
-                   {:fn (fn [column]
-                          [state column])})]))
+    ;; We generate a lookup table from all known pages so `on-drop' in
+    ;; `inbox-column' can access it (as the drop `dataTransfer' only
+    ;; contains IDs)
+    (let [page-cache (into {}
+                           ;; Transducerpower
+                           (comp (mapcat #(column-pages % state))
+                                 (map (juxt :id identity)))
+                           columns)]
+      [:.workflow.inbox
+       (om/build-all inbox-column columns
+                     {:fn (fn [column]
+                            [state
+                             (assoc column ::page-cache page-cache)])})])))

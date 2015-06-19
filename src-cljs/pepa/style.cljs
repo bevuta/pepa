@@ -300,6 +300,7 @@
            :display :flex
            :justify-content :space-around}
       [:&.selected {:background-color "red"}]
+      [:&.selected {:background-color "green"}]
       [:.thumbnail {:width "80%"}]
       page-css
       [:img {:max-width "100%"
