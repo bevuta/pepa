@@ -110,8 +110,8 @@
                     selection
                     (selection/click selection (selection/event->click dragged-page e)))
         ;; this approach makes sure the pages arrive in the correct order
-        page-ids (filterv (:selected selection)
-                          (map :id (column-pages column state)))]
+        page-ids (keep (comp (:selected selection) :id)
+                       (column-pages column state))]
     ;; Update `:selection' in `owner'
     (om/set-state! owner :selection selection)
     (doto e.dataTransfer
