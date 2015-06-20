@@ -51,7 +51,7 @@
                log4j/log4j
                org.clojure/tools.reader]
   :plugins [[lein-cljsbuild "1.0.5"]
-            [lein-figwheel "0.3.3"]]
+            [lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"
              "-XX:MaxPermSize=128M"]
