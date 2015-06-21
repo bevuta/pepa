@@ -48,5 +48,5 @@
     (assoc component
            :mdns nil)))
 
-(defn make-zeroconf-component []
+(defn make-component []
   (map->Zeroconf {}))
