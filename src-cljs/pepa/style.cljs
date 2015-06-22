@@ -350,6 +350,8 @@
 ;;; Dashboard
 (def dashboard-css
   (let [document-width 200
+        document-min-width 200
+        document-max-width 350
         title-height 20
         tags-height 40
         preview-height (/ document-width x43-ratio)
@@ -368,10 +370,16 @@
       [:.documents {:overflow-y :auto
                     :display :flex
                     :flex-flow [[:row :wrap]]
-                    :justify-content :space-around}
+                    :align-content :stretch
+                    :justify-content :flex-start}
        [:&.working {:opacity "0.2"}]
        [:.document {:height (px document-height)
-                    :width (px document-width)
+                    :flex 1
+                    :border-right (str "1px solid " border-light)
+                    :border-bottom (str "1px solid " border-light)
+                    :min-width (px document-min-width)
+                    :max-width (px document-max-width)
+                    :flex-basis (px document-min-width)
                     :padding (px document-padding)
                     :cursor :pointer}
         [:&:hover {:background-color dark-background}]
@@ -380,11 +388,11 @@
         page-css
         
         [:.preview {:height (px preview-height)
-                    :border {:width (px 1)
-                             :style :solid
-                             :color border-light}
                     :background-color light-background
                     :position :relative
+                    :left "50%"
+                    :transform "translateX(-50%)";
+                    :width (px 200)
                     :overflow :hidden}
          [:img (list
                 {:max-height "100%"
