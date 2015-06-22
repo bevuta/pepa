@@ -1,13 +1,13 @@
 (ns ^:figwheel-always pepa.style
-  (:require [garden.core :refer [css]]
-            [garden.units :as u :refer [px em pt]]
-            [garden.stylesheet :refer [at-keyframes cssfn]]
-            
-            [nom.ui :as ui]
-            [pepa.navigation :refer [navigation-elements]]
+    (:require [garden.core :refer [css]]
+              [garden.units :as u :refer [px em pt]]
+              [garden.stylesheet :refer [at-keyframes cssfn]]
+              
+              [nom.ui :as ui]
+              [pepa.navigation :refer [navigation-elements]]
 
-            [clojure.string :as s]
-            [goog.string :as gstring]))
+              [clojure.string :as s]
+              [goog.string :as gstring]))
 
 ;;; Colors
 
@@ -405,12 +405,12 @@
                           :bottom (px margin)
                           :font-size (pt 9)
                           :color dashboard-page-count-color}])]
-        (let [title-padding 5
+        (let [title-padding (px 5)
               title-height (em 2)]
           [:.title {:width "100%"
                     :display :block
-                    :padding {:top (px title-padding)
-                              :bottom (px title-padding)}
+                    :padding {:top title-padding
+                              :bottom title-padding}
                     :height title-height
                     :line-height title-height
                     :overflow :hidden
@@ -444,7 +444,7 @@
              :flex-direction :column}
      [:ul.pages {:overflow :auto
                  :outline :none
-                 :margin 0, :padding 0}
+                 :margin 0 :padding 0}
       page-css
       [:li
        [:img {:max-width "100%"
@@ -473,9 +473,10 @@
     ;; Full Page View
     [:.full
      [:header {:text-align :right}]
-     [:ul.pages #_{:min-width (px 400)}
+     [:ul.pages
       [:li
-       (let [page-margin 20, page-border 1]
+       (let [page-margin 20
+             page-border 1]
          [:img (list {:margin {:left (px page-margin)
                                :right (px page-margin)
                                :top (px (/ page-margin 2))}
@@ -492,8 +493,7 @@
   (let [padding (px 5)
         height (px 14)
         radius (px 3)]
-    [:input {
-             :padding padding
+    [:input {:padding padding
              :color default-text
              :outline :none
              :font {:family default-font
@@ -646,19 +646,19 @@
 
 (def dropdown-css
   (let [font-size (px 14)
-        height 25]
+        height (px 25)]
     [:label.dropdown {:background "linear-gradient(to bottom, #ffffff 0%,#e4e4e4 100%)"
                       :font-size font-size
                       :position :relative
-                      :height (px height)
+                      :height height
                       :text-shadow "1px 1px #ffffff"
-                      :line-height (px height)
+                      :line-height height
                       :display :inline-flex
                       :padding  {:left (px 10)
-                                 :right (px 0)
-                                 :top (px 0)
-                                 :bottom (px 0)}
-                      :border (str "1px solid " border-buttons)
+                                 :right 0
+                                 :top 0
+                                 :bottom 0}
+                      :border [[(px 1) :solid border-buttons]]
                       :border-radius (px 4)
                       :box-shadow "0px 0px 3px #dddddd"}
      [:span {:padding {:left (px 20)
@@ -668,14 +668,15 @@
                      :border {:top :none
                               :bottom :none
                               :right :none
-                              :left (str "1px solid " border-buttons)}
+                              :left [[(px 1) :solid border-buttons]]}
                      :border-top {:right-radius (px 3)
-                                  :left-radius (px 0)}
+                                  :left-radius 0}
                      :border-bottom {:right-radius (px 3)
-                                     :left-radius (px 0)}
+                                     :left-radius 0}
                      :text-shadow "1px 1px #ffffff"
                      :font-size font-size
-                     :background (str (image-url "dropdown-arrow.svg") " 10px center no-repeat")
+                     :background (str (image-url "dropdown-arrow.svg")
+                                      " 10px center no-repeat")
                      :color blue-text
                      :outline :none
                      :font-family default-font
@@ -802,21 +803,19 @@
                   :display :flex
                   :flex-direction :row}
 
-     ;;this is the HEADER SHADOW ELEMENT
-     ;; it has to be the before element of the .container,
-     ;; because the header is splitted in three parts.
-     ;; and there are some bugs with the z-index and positioning
+     ;; This is the HEADER SHADOW ELEMENT. It has to be the :before
+     ;; element of the .container because the header is split in three
+     ;; parts and there are some bugs with the z-index and positioning
      [:&:before {:content (pr-str " ")
-                 :position :absolute ;absolute not fixed due to safari scroll special behaviour
+                 :position :absolute ;Not fixed due to safari scroll special behaviour
                  :box-shadow "0px 0px 8px 0px rgba(0,0,0,0.4)"
-                 :left (px 0)
-                 :right (px 0)
-                 :top (px 0)
+                 :left 0
+                 :right 0
+                 :top 0
                  :z-index 20
                  :pointer-events :none
                  :height (px (- header-height 2))
-                 :background "transparent)"
-                 }]]
+                 :background :transparent}]]
     [:&.file-drop
      {:background "red"}]
     clear-a-css
