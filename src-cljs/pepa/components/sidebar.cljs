@@ -8,7 +8,7 @@
             [pepa.data :as data]
             [pepa.navigation :as nav]
             [pepa.api.upload :as upload]
-            [pepa.components.logo :as logo]
+            [pepa.components.logo :refer [logo]]
             [pepa.components.tags :as tags]
             [pepa.components.draggable :refer [resize-draggable]]
             [pepa.style :as css]
@@ -111,7 +111,7 @@
        (om/build resize-draggable nil
                  {:opts {:sidebar ::sidebar}
                   :react-key "draggable"})
-       (om/build logo/xeyes nil {:react-key "xeyes"})
+       (om/build logo nil {:react-key "logo"})
 
        (om/build search-field nil
                  {:state {:query (query-string state)}
