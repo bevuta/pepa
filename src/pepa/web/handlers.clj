@@ -320,14 +320,6 @@
   :handle-created (fn [{documents ::documents}]
                     (zipmap (map :id documents) documents)))
 
-(defn wrap-component [handler {:keys [config db bus] :as web}]
-  (fn [req]
-    (handler (assoc req
-                    :pepa/web web
-                    :pepa/config config
-                    :pepa/db db
-                    :pepa/bus bus))))
-
 (def handlers
   (routes (GET "/" [] (html/root))
           (ANY "/inbox" [] inbox)
@@ -379,16 +371,24 @@
              :body "Malformed request."})))
       (handler req))))
 
-(defn wrap-logging [handler]
+(defn wrap-request-logging [handler]
   (fn [req]
     (when (get-in req [:pepa/config :web :log-requests?])
       (pprint req))
     (handler req)))
+
+(defn wrap-component [handler {:keys [config db bus] :as web}]
+  (fn [req]
+    (handler (assoc req
+                    :pepa/web web
+                    :pepa/config config
+                    :pepa/db db
+                    :pepa/bus bus))))
 
 (defn make-handlers [web-component]
   (-> #'handlers
       ;; NOTE: *first* transit, then JSON
       (wrap-transit-body)
       (wrap-params)
-      (wrap-logging)
+      (wrap-request-logging)
       (wrap-component web-component)))

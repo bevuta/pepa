@@ -1,6 +1,6 @@
 (defproject pepa "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "Pepa: Document Management System"
+  :url "https://github.com/bevuta/pepa"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0-RC1"]
@@ -51,7 +51,7 @@
                log4j/log4j
                org.clojure/tools.reader]
   :plugins [[lein-cljsbuild "1.0.5"]
-            [lein-figwheel "0.3.3"]]
+            [lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"
              "-XX:MaxPermSize=128M"]
