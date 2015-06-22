@@ -33,7 +33,7 @@
   (let [name "Pepa DMS"
         port (get-in config [:web :port])]
     (assert (< 0 port 65535))
-    (zeroconf/map->Service {:type "_http._tcp.local."
-                            :name name
-                            :port port
-                            :props {}})))
+    {:type "_http._tcp.local."
+     :name name
+     :port port
+     :props {}}))

@@ -43,7 +43,7 @@
              (printing/make-lpd-component)
              [:config :db])
        :zeroconf (component/using
-                  (zeroconf/make-zeroconf-component)
+                  (zeroconf/make-component)
                   [:config]))
       (wrap-logging)))
 
