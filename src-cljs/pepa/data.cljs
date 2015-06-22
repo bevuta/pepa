@@ -114,7 +114,10 @@
   "Removes pages from document."
   [document pages]
   (update-in document [:pages]
-             #(into (empty %) (remove (set pages) %))))
+             (fn [pages]
+               (into (empty pages)
+                     (remove (set pages))
+                     pages))))
 
 (defn move-pages
   "Removes pages-to-move (a seq) from pages (a seq) and inserts it
