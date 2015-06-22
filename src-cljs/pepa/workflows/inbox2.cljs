@@ -21,7 +21,9 @@
 
 (defprotocol ColumnSource
   (column-title [_])
-  (column-pages  [_ state]))
+  (column-pages  [_ state])
+
+  (remove-pages! [_ state page-ids]))
 
 (defprotocol ColumnDropTarget
   (accepts-drop? [_ state #_pages])     ;can't get data in drag-over
@@ -45,14 +47,23 @@
                        (map #(-update-pages % state pages))
                        (into (empty columns)))))))
 
-;;; TODO: `remove-pages!'
-
 (defrecord InboxColumnSource [id]
   ColumnSource
   (column-title [_]
     "Inbox")
   (column-pages [_ state]
-    (get-in state [:inbox :pages])))
+    (get-in state [:inbox :pages]))
+  (remove-pages! [_ state page-ids]
+    (go
+      (println "Removing pages from Inbox...")
+      ;; TODO: Handle updates coming via the poll channel
+      (<! (api/delete-from-inbox! (map (fn [id] {:id id}) page-ids)))
+      (let [page-ids (set page-ids)]
+        (om/transact! state [:inbox :pages]
+                      (fn [pages]
+                        (into (empty pages)
+                              (remove #(contains? page-ids (:id %)))
+                              pages)))))))
 
 (defrecord FakeColumnSource [id]
   ColumnSource
@@ -60,17 +71,24 @@
     "Fake")
   (column-pages [_ state]
     (get-in state [::fake-column-pages]))
+  (remove-pages! [_ state page-ids]
+    (go
+      (js/console.warn "Unimplemented: Removing pages from Fake...")))
   ColumnDropTarget
   (accepts-drop? [_ state]
     true)
   ;; TODO: Make immutable?
   (accept-drop! [_ state new-pages]
-    (println "dropping" (pr-str new-pages))
-    (om/transact! state ::fake-column-pages
-                  (fn [pages]
-                    (into pages
-                          (remove #(contains? (set (map :id pages)) (:id %)))
-                          new-pages)))))
+    (go
+      (println "dropping" (pr-str new-pages))
+      (om/transact! state ::fake-column-pages
+                    (fn [pages]
+                      (into pages
+                            (remove #(contains? (set (map :id pages)) (:id %)))
+                            new-pages)))
+      (println "Fake-saving...")
+      (<! (async/timeout 2000))
+      (println "Saved!"))))
 
 ;;; NOTE: We need on-drag-start in `inbox-column' and in
 ;;; `inbox-column-page' (the latter to handle selection-updates when
@@ -129,7 +147,7 @@
   [selected-pages page]
   (assoc page :selected? (contains? (set selected-pages) (:id page))))
 
-(ui/defcomponent inbox-column [[state column] owner opts]
+(ui/defcomponent inbox-column [[state column] owner {:keys [handle-drop!]}]
   (init-state [_]
     {:selection (->> (column-pages column state)
                      (map :id)
@@ -145,14 +163,6 @@
                   (om/value new-pages))
         (om/set-state! owner :selection
                        (selection/make-selection new-pages)))))
-  ;; ;; Rotate all pages randomly
-  ;; (will-mount [_]
-  ;;   (go-loop []
-  ;;     (<! (async/timeout 100))
-  ;;     (om/transact! state [:inbox :pages] (fn [pages]
-  ;;                                           (update-in pages [(rand-int (count pages)) :rotation]
-  ;;                                                      #(mod (+ % 90) 360))))
-  ;;     (recur)))
   (render-state [_ {:keys [selection]}]
     ;; NOTE: `column' needs to be a value OR we need to extend cursors
     [:.column {:on-drag-over (when (satisfies? ColumnDropTarget (om/value column))
@@ -163,10 +173,13 @@
                :on-drag-end (fn [_]
                               (println "on-drag-end"))
                :on-drop (fn [e]
-                          (let [page-cache (::page-cache column)]
-                            (when-let [page-ids (get-transfer-data e "application/x-pepa-pages")]
-                              (accept-drop! column state (mapv page-cache page-ids))
-                              #_(ui/cancel-event e))))}
+                          (let [page-cache (::page-cache column)
+                                source-column (get-transfer-data e "application/x-pepa-column")
+                                page-ids (get-transfer-data e "application/x-pepa-pages")]
+                            ;; Delegate to `inbox'
+                            (handle-drop! (:id column)
+                                          source-column
+                                          page-ids)))}
      [:header (column-title column)]
      [:ul.pages
       (om/build-all inbox-column-page (column-pages column state)
@@ -175,7 +188,21 @@
                                                              #(selection/click % click)))}
                      :fn (partial mark-page-selected (:selected selection))})]]))
 
-(defn make-page-cache [state columns]
+(defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids]
+  (prn target source page-ids)
+  ;; Call `accepts-drop!' in `target'
+  (let [columns (om/get-state owner :columns)
+        target (get columns target)
+        source (get columns source)
+        pages (mapv page-cache page-ids)
+        operation (accept-drop! target state pages)]
+    (go
+      (<! operation)
+      (println "Target saved. Removing from source...")
+      (<! (remove-pages! source state page-ids))
+      (println "Drop saved!"))))
+
+(defn ^:private make-page-cache [state columns]
   (into {}
         ;; Transducerpower
         (comp (mapcat #(column-pages (val %) state))
@@ -195,20 +222,13 @@
     ;; `inbox-column' can access it (as the drop `dataTransfer' only
     ;; contains IDs)
     (let [page-cache (make-page-cache state columns)]
-      [:.workflow.inbox {:on-drop (fn [e]
-                                    ;; TODO: Handle the on-drop to
-                                    ;; remove the pages from the
-                                    ;; source column
-                                    (println "inbox/on-drop")
-                                    (let [source-column (get-transfer-data e "application/x-pepa-column")
-                                          source-column (some #(when (= source-column
-                                                                        (:id %)) %)
-                                                              columns)
-                                          page-ids (get-transfer-data e "application/x-pepa-pages")]
-                                      (prn source-column page-ids)))}
+      [:.workflow.inbox
        (om/build-all inbox-column columns
                      {:fn (fn [column]
                             [state
                              (-> column
                                  val
-                                 (assoc ::page-cache page-cache))])})])))
+                                 (assoc ::page-cache page-cache))])
+                      ;; NOTE: Passing this callback as `opts' might
+                      ;; cause issues
+                      :opts {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}})])))
