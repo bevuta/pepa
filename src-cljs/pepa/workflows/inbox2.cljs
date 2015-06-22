@@ -147,7 +147,7 @@
   [selected-pages page]
   (assoc page :selected? (contains? (set selected-pages) (:id page))))
 
-(ui/defcomponent inbox-column [[state column] owner {:keys [handle-drop!]}]
+(ui/defcomponent inbox-column [[state column] owner opts]
   (init-state [_]
     {:selection (->> (column-pages column state)
                      (map :id)
@@ -163,7 +163,7 @@
                   (om/value new-pages))
         (om/set-state! owner :selection
                        (selection/make-selection new-pages)))))
-  (render-state [_ {:keys [selection]}]
+  (render-state [_ {:keys [selection handle-drop!]}]
     ;; NOTE: `column' needs to be a value OR we need to extend cursors
     [:.column {:on-drag-over (when (satisfies? ColumnDropTarget (om/value column))
                                (fn [e]
@@ -189,7 +189,6 @@
                      :fn (partial mark-page-selected (:selected selection))})]]))
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids]
-  (prn target source page-ids)
   ;; Call `accepts-drop!' in `target'
   (let [columns (om/get-state owner :columns)
         target (get columns target)
@@ -198,7 +197,8 @@
         target-pages (mapv :id (column-pages target state))
         pages (into []
                     (comp (remove (set target-pages))
-                          (map page-cache))
+                          (map page-cache)
+                          (map om/value))
                     page-ids)]
     (if-not (seq pages)
       (js/console.warn "Ignoring drop consisting only of duplicate pages:"
@@ -213,6 +213,7 @@
   (into {}
         ;; Transducerpower
         (comp (mapcat #(column-pages (val %) state))
+              #_(map om/value)
               (map (juxt :id identity)))
         columns))
 
@@ -221,7 +222,8 @@
     (let [gen (IdGenerator.getInstance)
           columns [(->InboxColumnSource (.getNextUniqueId gen))
                    (->FakeColumnSource (.getNextUniqueId gen))]]
-      {:columns (into {} (map (juxt :id identity)) columns)}))
+      {:columns (into {} (map (juxt :id identity))
+                      columns)}))
   (will-mount [_]
     (api/fetch-inbox! state))
   (render-state [_ {:keys [columns]}]
@@ -238,4 +240,4 @@
                                  (assoc ::page-cache page-cache))])
                       ;; NOTE: Passing this callback as `opts' might
                       ;; cause issues
-                      :opts {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}})])))
+                      :state {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}})])))
