@@ -361,6 +361,9 @@
     (remove-tags*! db document-id tags)
     (db/notify! db :documents/updated {:id document-id, :tags/removed tags})))
 
+(defn remove-all-tags! [db document-id]
+  (db/delete! db :document_tags ["document = ?" document-id]))
+
 (defn auto-tag*! [db document-id tagging-config data]
   (let [tags (concat
               ;; Add origin-tag if enabled
@@ -571,7 +574,7 @@
                         (let [id (if (= entity :entity/tags)
                                    (tag-name db id)
                                    id)]
-                         (update-in deletions [(-> entity name keyword)] (comp set conj) id)))
+                          (update-in deletions [(-> entity name keyword)] (comp set conj) id)))
                       {}
                       (db/query db ["SELECT id, entity FROM deletions WHERE state_seq > ?" seq-num]))})
 

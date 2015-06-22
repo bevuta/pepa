@@ -56,7 +56,13 @@
             ;; Move to inbox if the file's origin dictates that
             (when (m/inbox-origin? config origin)
               (log/info component "Moving pages from file" id "to inbox")
-              (m/add-to-inbox! db (m/page-ids db id))))))
+              (m/add-to-inbox! db (m/page-ids db id))))
+          ;; Error Case. For now, log the error & remove all tags from
+          ;; the document, effectively hiding it (in an ugly way)
+          (when (= :processing-status/failed (:status update))
+            (log/warn component (str "Failed to render file " id))
+            (doseq [document (m/file-documents db id)]
+              (m/remove-all-tags! db document)))))
       (log/info component "Finished processing of file" id)))
 
   component/Lifecycle
