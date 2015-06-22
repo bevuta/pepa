@@ -7,12 +7,6 @@
             [pepa.log :as log]
             [clojure.string :as s]))
 
-(defrecord FilePageExtractor [config db processor])
-
-(defn make-component []
-  (map->FilePageExtractor {}))
-
-
 (defn ^:private extract-pages [processor file-id data]
   (pdf/with-reader [pdf data]
     (doseq [page (range 0 (pdf/page-count pdf))]
@@ -27,7 +21,7 @@
                      :number page
                      :text text})))))
 
-(extend-type FilePageExtractor
+(defrecord FilePageExtractor [config db processor]
   IProcessor
   (next-item [component]
     "SELECT id, content_type, data, origin FROM files WHERE status = 'pending' ORDER BY id LIMIT 1")
@@ -77,6 +71,9 @@
       (processor/stop processor))
     (assoc component
            :processor nil)))
+
+(defn make-component []
+  (map->FilePageExtractor {}))
 
 (defmethod clojure.core/print-method FilePageExtractor
   [ext ^java.io.Writer writer]

@@ -7,11 +7,6 @@
   (:import java.security.MessageDigest
            java.math.BigInteger))
 
-(defrecord PageRenderer [config db processor])
-
-(defn make-component []
-  (map->PageRenderer {}))
-
 (def +hashing-algorithm+ (MessageDigest/getInstance "SHA-256"))
 
 (defn ^:private hash-data
@@ -36,7 +31,8 @@
     (catch Exception e
       (log/error renderer "Rendering failed:" (str e)))))
 
-(extend-type PageRenderer
+
+(defrecord PageRenderer [config db processor]
   IProcessor
   (next-item [component]
     "SELECT p.id, p.number, f.data 
@@ -75,3 +71,6 @@
       (processor/stop processor))
     (assoc component
            :processor nil)))
+
+(defn make-component []
+  (map->PageRenderer {}))
