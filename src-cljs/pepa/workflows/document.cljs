@@ -231,7 +231,7 @@
 
 (defmethod draggable/pos->width ::thumbnails [sidebars sidebar [x _]]
   (draggable/limit
-   (- x (get sidebars :root/sidebar
+   (- x (get sidebars :pepa.components.sidebar/sidebar
              css/default-sidebar-width))
    100 400))
 
