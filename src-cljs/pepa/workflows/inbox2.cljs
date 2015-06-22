@@ -178,15 +178,16 @@
 (defn make-page-cache [state columns]
   (into {}
         ;; Transducerpower
-        (comp (mapcat #(column-pages % state))
+        (comp (mapcat #(column-pages (val %) state))
               (map (juxt :id identity)))
         columns))
 
 (ui/defcomponent inbox [state owner opts]
   (init-state [_]
-    (let [gen (IdGenerator.getInstance)]
-      {:columns [(->InboxColumnSource (.getNextUniqueId gen))
-                 (->FakeColumnSource (.getNextUniqueId gen))]}))
+    (let [gen (IdGenerator.getInstance)
+          columns [(->InboxColumnSource (.getNextUniqueId gen))
+                   (->FakeColumnSource (.getNextUniqueId gen))]]
+      {:columns (into {} (map (juxt :id identity)) columns)}))
   (will-mount [_]
     (api/fetch-inbox! state))
   (render-state [_ {:keys [columns]}]
@@ -208,4 +209,6 @@
        (om/build-all inbox-column columns
                      {:fn (fn [column]
                             [state
-                             (assoc column ::page-cache page-cache)])})])))
+                             (-> column
+                                 val
+                                 (assoc ::page-cache page-cache))])})])))
