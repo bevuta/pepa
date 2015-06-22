@@ -77,6 +77,7 @@
   (html5
    [:html
     [:head
+     [:title "Pepa"]
      [:style#style {:type "text/css"}]]
     [:body
      [:div#app]
