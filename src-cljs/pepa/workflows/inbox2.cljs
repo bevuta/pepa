@@ -194,13 +194,20 @@
   (let [columns (om/get-state owner :columns)
         target (get columns target)
         source (get columns source)
-        pages (mapv page-cache page-ids)
-        operation (accept-drop! target state pages)]
-    (go
-      (<! operation)
-      (println "Target saved. Removing from source...")
-      (<! (remove-pages! source state page-ids))
-      (println "Drop saved!"))))
+        ;; Remove page-ids already in `target'
+        target-pages (mapv :id (column-pages target state))
+        pages (into []
+                    (comp (remove (set target-pages))
+                          (map page-cache))
+                    page-ids)]
+    (if-not (seq pages)
+      (js/console.warn "Ignoring drop consisting only of duplicate pages:"
+                       (pr-str page-ids))
+      (go
+        (<! (accept-drop! target state pages))
+        (println "Target saved. Removing from source...")
+        (<! (remove-pages! source state page-ids))
+        (println "Drop saved!")))))
 
 (defn ^:private make-page-cache [state columns]
   (into {}
