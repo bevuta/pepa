@@ -85,14 +85,16 @@
     [:.menu-link
      [:.title title]
      (let [tags (sort-by val > (data/tag-count-map state true))
-           tags (if-not show-all? (take +tag-limit+ tags) tags)]
+           ;; tags (if-not show-all? (take +tag-limit+ tags) tags)
+           ]
        (om/build tags/tags-list tags))
-     [:.show-more {:on-click (fn [e]
-                               (om/update-state! owner :show-all? not)
-                               (.preventDefault e))}
-      (if show-all?
-        "Less ▲"
-        "More ▼")]]))
+     ;; [:.show-more {:on-click (fn [e]
+     ;;                           (om/update-state! owner :show-all? not)
+     ;;                           (.preventDefault e))}
+     ;;  (if show-all?
+     ;;    "Less ▲"
+     ;;    "More ▼")]
+     ]))
 
 (defn ^:private route-matches? [route workflows]
   (let [route (if (seqable? route)
