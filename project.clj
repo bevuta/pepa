@@ -75,7 +75,7 @@
                                        [secretary "1.2.3"]
                                        [the/parsatron "0.0.7"]]}}
   ;; Cljsbuild configuration. Also see profiles.clj
-  :cljsbuild {:builds {:pepa {:source-paths ["src" "src-cljs"]
+  :cljsbuild {:builds {:pepa {:source-paths ["src" "src-cljs" "dev"]
                               :figwheel {:on-jsload "pepa.core/on-js-reload"}
                               :compiler {:output-to "resources/public/pepa.js"
                                          :output-dir "resources/public/out"
