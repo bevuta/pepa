@@ -36,8 +36,7 @@
          all-components (remove (set (keys logger)) (keys system))]
      (-> system
          (component/system-using (zipmap all-components (repeat [::logger])))
-         (assoc ::logger (component/using logger
-                                          [:config])))))
+         (assoc ::logger (component/using logger [:config])))))
   ([system]
    (wrap-logging system (make-ctl-logger))))
 
@@ -79,6 +78,6 @@
     ([logger component level throwable message]
      (clojure.tools.logging/log (component-name component) level throwable message))
     ([logger component level message]
-     (clojure.tools.logging/log (component-name component) level nil message))))
+     (-log logger component level nil message))))
 
 
