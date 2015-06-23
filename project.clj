@@ -50,20 +50,28 @@
   :exclusions [org.clojure/data.json
                log4j/log4j
                org.clojure/tools.reader]
-  :plugins [[lein-cljsbuild "1.0.5"]
-            [lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
+  :plugins [[lein-cljsbuild "1.0.5"]]
   :jvm-opts ["-XX:+UseConcMarkSweepGC"
              "-XX:+CMSClassUnloadingEnabled"
              "-XX:MaxPermSize=128M"]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
+  :cljsbuild {:builds {:pepa {:source-paths ["src" "src-cljs"]
+                              :compiler {:output-to "resources/public/pepa.js"
+                                         :output-dir "resources/public/out"
+                                         :asset-path "out"
+                                         :main pepa.core
+                                         :cache-analysis true}}}}
   :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.0"]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
-             :dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
-                                  [org.clojure/tools.nrepl"0.2.10"]]
-                   
-                   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
+             :dev {:dependencies [[lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
+                   :plugins [[lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
+                   :cljsbuild {:builds {:pepa {:source-paths ["dev"]
+                                               :figwheel {:on-jsload "pepa.core/on-js-reload"}
+                                               :compiler {:source-map "resources/public/pepa.js.map"
+                                                          :optimizations :none
+                                                          :pretty-print true}}}}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
              :provided {:dependencies [[org.clojure/clojurescript "0.0-3297"]
                                        [com.cognitect/transit-cljs "0.8.215"]
@@ -73,18 +81,20 @@
                                         :exclusions [org.clojure/tools.reader]]
                                        [sablono "0.3.4" :exclusions [cljsjs/react]]
                                        [secretary "1.2.3"]
-                                       [the/parsatron "0.0.7"]]}}
-  ;; Cljsbuild configuration. Also see profiles.clj
-  :cljsbuild {:builds {:pepa {:source-paths ["src" "src-cljs" "dev"]
-                              :figwheel {:on-jsload "pepa.core/on-js-reload"}
-                              :compiler {:output-to "resources/public/pepa.js"
-                                         :output-dir "resources/public/out"
-                                         :source-map "resources/public/pepa.js.map"
-                                         :asset-path "out"
-                                         :main pepa.core
-                                         :cache-analysis true
-                                         :optimizations :none
-                                         :pretty-print true}}}}
+                                       [the/parsatron "0.0.7"]]}
+             ;; Advanced Cljs Compilation
+             :advanced [:provided
+                        {:cljsbuild {:builds {:pepa {:compiler {:optimizations :advanced
+                                                                :elide-asserts true
+                                                                :pretty-print false}}}}}]
+             :uberjar [:advanced
+                       {:aot [pepa.core
+                              ;; Hack to fix NoClassDefFoundErrors when uberjar-ing
+                              com.stuartsierra.component
+                              com.stuartsierra.dependency]
+                        :hooks [leiningen.cljsbuild]
+                        :jar-exclusions [#"^public/out"]}]}
+  
   :clean-targets ^{:protect false} [[:cljsbuild :builds :pepa :compiler :output-to]
                                     [:cljsbuild :builds :pepa :compiler :output-dir]
                                     :target-path :compile-path])
