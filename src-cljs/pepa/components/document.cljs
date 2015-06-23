@@ -95,7 +95,7 @@
     (let [supported? (date-input-supported?)
           value (when date (format-date date))]
       (if-not editing?
-        [:span.value {:key "value", :title (str value)
+        [:span.value.editable {:key "value", :title (str value)
                       :on-click (fn [e]
                                   (when supported?
                                     (om/set-state! owner :editing? true)))}
@@ -137,7 +137,7 @@
     (let [single? (= 1 (count documents))
           document (when single? (first documents))]
       [:ul.meta
-       (for [prop [:title :created :modified :document-date :creator :size]]
+       (for [prop [:title :created :modified :document-date ]] ;:creator :size
          (if single?
            (om/build meta-item [prop (get document prop)]
                      {:state {:change-callback (partial property-changed! document)}})

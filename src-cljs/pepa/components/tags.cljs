@@ -189,7 +189,7 @@
                         (focus-tag-input owner)))
           (recur)))))
   (render-state [_ {:keys [events selected]}]
-    [:ul.tags {:class "editable"
+    [:ul.tags {:class "tag-box"
                :tab-index 0
                :on-click (fn [e]
                            (ui/cancel-event e)
