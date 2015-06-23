@@ -27,8 +27,7 @@
     "SELECT id, content_type, data, origin FROM files WHERE status = 'pending' ORDER BY id LIMIT 1")
 
   (process-item [component file]
-    (let [{content-type :content_type :keys [id data origin]} file
-          config (:config component)]
+    (let [{content-type :content_type :keys [id data origin]} file]
       (log/info component "Start processing file" id (str "(" (count data) " bytes, origin: " origin ")"))
       (db/with-transaction [db (:db component)]
         (let [update (try
