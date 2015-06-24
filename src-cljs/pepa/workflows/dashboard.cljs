@@ -68,7 +68,7 @@
       [:.pane {:key "sidebar-pane"
                :style {:min-width sidebar-width :max-width sidebar-width}}
        [:.sidebar
-        [:header "Sorting & Filtering"]
+        [:header "Details"]
         (om/build draggable/resize-draggable nil {:opts {:sidebar ::sidebar}})
 
         (om/build document/document-sidebar selected-documents
