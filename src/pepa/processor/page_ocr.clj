@@ -10,11 +10,6 @@
             [clojure.string :as s]
             [clojure.java.io :as io]))
 
-(defrecord PageOcr [config db processor])
-
-(defn make-component []
-  (map->PageOcr {}))
-
 (defmulti run-ocr (fn [engine & _] engine))
 
 (defmethod run-ocr :cuneiform [_ config lang result-file image-file]
@@ -47,7 +42,7 @@
           [:processing-status/failed]
           [:processing-status/processed (str result)])))))
 
-(extend-type PageOcr
+(defrecord PageOcr [config db processor]
   IProcessor
   (next-item [component]
     "SELECT p.id, p.number, f.data
@@ -89,6 +84,9 @@
       (processor/stop processor))
     (assoc component
            :processor nil)))
+
+(defn make-component []
+  (map->PageOcr {}))
 
 (defmethod clojure.core/print-method PageOcr
   [ocr ^java.io.Writer writer]

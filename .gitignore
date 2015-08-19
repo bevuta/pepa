@@ -12,3 +12,4 @@ pom.xml.asc
 /resources/public/out
 /.repl/
 /result
+/resources/public/pepa.js.map

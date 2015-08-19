@@ -7,12 +7,6 @@
             [pepa.log :as log]
             [clojure.string :as s]))
 
-(defrecord FilePageExtractor [config db processor])
-
-(defn make-component []
-  (map->FilePageExtractor {}))
-
-
 (defn ^:private extract-pages [processor file-id data]
   (pdf/with-reader [pdf data]
     (doseq [page (range 0 (pdf/page-count pdf))]
@@ -27,14 +21,13 @@
                      :number page
                      :text text})))))
 
-(extend-type FilePageExtractor
+(defrecord FilePageExtractor [config db processor]
   IProcessor
   (next-item [component]
     "SELECT id, content_type, data, origin FROM files WHERE status = 'pending' ORDER BY id LIMIT 1")
 
   (process-item [component file]
-    (let [{content-type :content_type :keys [id data origin]} file
-          config (:config component)]
+    (let [{content-type :content_type :keys [id data origin]} file]
       (log/info component "Start processing file" id (str "(" (count data) " bytes, origin: " origin ")"))
       (db/with-transaction [db (:db component)]
         (let [update (try
@@ -56,7 +49,13 @@
             ;; Move to inbox if the file's origin dictates that
             (when (m/inbox-origin? config origin)
               (log/info component "Moving pages from file" id "to inbox")
-              (m/add-to-inbox! db (m/page-ids db id))))))
+              (m/add-to-inbox! db (m/page-ids db id))))
+          ;; Error Case. For now, log the error & remove all tags from
+          ;; the document, effectively hiding it (in an ugly way)
+          (when (= :processing-status/failed (:status update))
+            (log/warn component (str "Failed to render file " id))
+            (doseq [document (m/file-documents db id)]
+              (m/remove-all-tags! db document)))))
       (log/info component "Finished processing of file" id)))
 
   component/Lifecycle
@@ -71,6 +70,9 @@
       (processor/stop processor))
     (assoc component
            :processor nil)))
+
+(defn make-component []
+  (map->FilePageExtractor {}))
 
 (defmethod clojure.core/print-method FilePageExtractor
   [ext ^java.io.Writer writer]

@@ -3,15 +3,16 @@
             clojure.tools.logging))
 
 ;;; Logger is a special component. Instead of being available via
-;;; `component/using' we inject it into every component already in the
-;;; system. That wasy ::logger is available in every component and can
+;;; `component/using' we automatically inject it into every component
+;;; in the system. That wasy ::logger is available everywhere and can
 ;;; be used like:
 ;;;
 ;;; (log/info some-component ...)
 ;;;
 ;;; That allows us to log the name of the logging component & access
 ;;; its state. It also frees us from explicitly declaring ::logger as
-;;; a dependency in every component we want to log something.
+;;; a dependency of every component from which we want to log
+;;; something.
 
 (defprotocol ILogger
   (-log
@@ -22,27 +23,21 @@
     throwable and a message."))
 
 (defrecord CTLLogger [config])
-(defrecord DummyLogger [config])
 
 (defn make-ctl-logger
   "Creates a logger which logs via clojure.tools.logging."
   []
   (map->CTLLogger {}))
 
-(defn make-dummy-logger
-  "Creates a dummy logger which discards all input."
-  []
-  (map->DummyLogger {}))
-
 (defn wrap-logging
   ([system logger]
    (let [;; We can 'inject' ::logger into all components *except* the
          ;; components logger itself depends on.
-         all-components (remove (set (keys logger)) (keys system))]
+         logger-deps (set (keys logger))
+         all-components (remove logger-deps (keys system))]
      (-> system
          (component/system-using (zipmap all-components (repeat [::logger])))
-         (assoc ::logger (component/using logger
-                                          [:config])))))
+         (assoc ::logger (component/using logger (vec logger-deps))))))
   ([system]
    (wrap-logging system (make-ctl-logger))))
 
@@ -76,7 +71,7 @@
 ;;; Extend Logger 
 
 (defn ^:private component-name [c]
-  (.getSimpleName (class c)))
+  (some-> c class .getSimpleName))
 
 (extend-type CTLLogger
   ILogger
@@ -84,8 +79,6 @@
     ([logger component level throwable message]
      (clojure.tools.logging/log (component-name component) level throwable message))
     ([logger component level message]
-     (clojure.tools.logging/log (component-name component) level nil message))))
+     (-log logger component level nil message))))
 
-(extend-type DummyLogger
-  ILogger
-  (-log [& _]))
+

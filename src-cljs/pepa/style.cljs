@@ -1,13 +1,13 @@
 (ns ^:figwheel-always pepa.style
-  (:require [garden.core :refer [css]]
-            [garden.units :as u :refer [px em pt]]
-            [garden.stylesheet :refer [at-keyframes cssfn]]
-            
-            [nom.ui :as ui]
-            [pepa.navigation :refer [navigation-elements]]
+    (:require [garden.core :refer [css]]
+              [garden.units :as u :refer [px em pt]]
+              [garden.stylesheet :refer [at-keyframes cssfn]]
+              
+              [nom.ui :as ui]
+              [pepa.navigation :refer [navigation-elements]]
 
-            [clojure.string :as s]
-            [goog.string :as gstring]))
+              [clojure.string :as s]
+              [goog.string :as gstring]))
 
 ;;; Colors
 
@@ -29,8 +29,9 @@
 (def default-text grey-2)
 
 (def tags-text default-text)
-(def tags-background "#e8eaea")
+(def tags-background dark-background)
 (def tags-selected-background light-blue-background)
+(def tags-border "#e8e8e8")
 
 (def border-light "#f0f0f0")
 (def border-dark "#cbcbcb")
@@ -101,27 +102,28 @@
     [:header {:min-height (px header-height)
               :max-height (px header-height)
               :line-height (px header-height)
+              :z-index 110
               :background-color header-color
               :padding {:left (px header-padding)
-                        :right (px header-padding)}
-              :border-bottom (str "2px solid white")}]))
+                        :right (px header-padding)}}]))
 
-(def draggable-size 15)
+(def draggable-size 24)
 (defn draggable-css [position]
   [:.draggable (assoc
                 {:position :absolute
-                 :top (px (- (/ header-height 2)
-                             (/ draggable-size 2)))
+                 :top (px 0)
                  :width (px draggable-size)
                  :height (px draggable-size)
-                 :z-index 10
+                 :z-index 120
                  :cursor :ew-resize
-                 :background {:image (image-url "material/resize-drag-button.svg")
+                 :background {:image (image-url "resize.svg")
                               :size [(px draggable-size)
                                      (px draggable-size)]}
                  :opacity 0.5}
                 (or position :left)
-                (px (- (/ draggable-size 2))))
+                (px (if (= position :right)
+                      0
+                      (* -1 draggable-size))))
    [:&:hover {:opacity 1.0}]])
 
 (def sidebar-header-css
@@ -130,34 +132,43 @@
    [:header {:text-decoration :none
              :font-size (em 1.2)
              :display :flex
-             :flex-direction :row
-             :align-items :center}
+             :justify-content :flex-start
+             :flex-direction :row}
     ;; Logo
-    (let [logo-width 38]
-      [:.logo {:width (px logo-width)
-               :height (px logo-width)}])
-    [:span {:padding-left (px 5)}
-     [:&.brand {:font-weight 400}]]]))
+    ;; (let [logo-height 48
+    ;;           logo-width 211]
+    ;;       [:.logo {:width (px logo-width)
+    ;;                :height (px logo-height)}])
+    ]))
 
 (defn sidebar-search-css [height]
-  (let [search-padding 10]
+  (let [search-margin-horizontal 20
+        search-margin-vertical 25
+        search-input-padding 5]
     [:.search {:height (px height)
                :position :relative
-               :border-bottom (str "1px solid " border-dark)
                :display :flex
                :align-items :center
                :justify-content :space-around}
-     [:input {:margin {:left (px search-padding)
-                       :right (px search-padding)}
+     [:input {:margin {:left (px search-margin-horizontal)
+                       :right (px search-margin-horizontal)
+                       :top (px search-margin-vertical)
+                       :bottom (px search-margin-vertical)}
+              :padding (px search-input-padding)
+              :padding-right (px (* 5 search-input-padding))
               :width "100%"
-              :border (str "1px solid " border-dark)}]]))
+              :color default-text             
+              :background {:image (image-url "glass.svg")
+                           :repeat :no-repeat
+                           :position "center right"}
+              :height (px (- height (+ (* 2 search-margin-vertical) (* 2 search-input-padding))))
+              :border-radius (px search-input-padding)}]]))
 
 (def sidebar-css
-  (let [search-height 50]
+  (let [search-height 80]
     [:#sidebar {:height "100%"
                 :display :flex
                 :background-color sidebar-color
-                :border-right (str "1px solid " border-dark)
                 :position :relative
                 :flex-direction :column}
      (draggable-css :right)
@@ -219,7 +230,8 @@
                         ;; Not sure if this is a good idea
                         :font-size (px color-size)
                         :line-height (px color-size)
-                        :height (px color-size)}
+                        :height (px color-size)
+                        :border :none}
                [:.tag-name {:position :absolute
                             :top "50%" :transform "translateY(-50%)"
                             :overflow :hidden
@@ -228,7 +240,8 @@
                          :padding {:left (px 4), :right (px 4)}}]
                [:.color {:width (px color-size)
                          :height (px color-size)
-                         :float :right}]])]
+                         :float :right
+                         :border-radius "50%"}]])]
            [:.show-more {:font-weight :bold
                          :font-size (px 10)
                          :cursor :pointer}]]
@@ -253,7 +266,7 @@
      [:.rotate {:position :absolute
                 :top 0, :right 0
                 :height (px rotate-height)
-                :z-index 500
+                :z-index 1
                 :background-color "rgba(255, 255, 255, 0.8)"
                 :margin (px 5)
                 :border-radius (px 4)}
@@ -351,6 +364,8 @@
 ;;; Dashboard
 (def dashboard-css
   (let [document-width 200
+        document-min-width 200
+        document-max-width 350
         title-height 20
         tags-height 40
         preview-height (/ document-width x43-ratio)
@@ -369,10 +384,16 @@
       [:.documents {:overflow-y :auto
                     :display :flex
                     :flex-flow [[:row :wrap]]
-                    :justify-content :space-around}
+                    :align-content :stretch
+                    :justify-content :flex-start}
        [:&.working {:opacity "0.2"}]
        [:.document {:height (px document-height)
-                    :width (px document-width)
+                    :flex 1
+                    :border-right (str "1px solid " border-light)
+                    :border-bottom (str "1px solid " border-light)
+                    :min-width (px document-min-width)
+                    :max-width (px document-max-width)
+                    :flex-basis (px document-min-width)
                     :padding (px document-padding)
                     :cursor :pointer}
         [:&:hover {:background-color dark-background}]
@@ -381,11 +402,11 @@
         page-css
         
         [:.preview {:height (px preview-height)
-                    :border {:width (px 1)
-                             :style :solid
-                             :color border-light}
                     :background-color light-background
                     :position :relative
+                    :left "50%"
+                    :transform "translateX(-50%)";
+                    :width (px 200)
                     :overflow :hidden}
          [:img (list
                 {:max-height "100%"
@@ -398,12 +419,12 @@
                           :bottom (px margin)
                           :font-size (pt 9)
                           :color dashboard-page-count-color}])]
-        (let [title-padding 5
+        (let [title-padding (px 5)
               title-height (em 2)]
           [:.title {:width "100%"
                     :display :block
-                    :padding {:top (px title-padding)
-                              :bottom (px title-padding)}
+                    :padding {:top title-padding
+                              :bottom title-padding}
                     :height title-height
                     :line-height title-height
                     :overflow :hidden
@@ -413,7 +434,6 @@
       [:.sidebar {:height "100%"
                   :width "100%"
                   :background-color dark-background
-                  :border-left (str "1px solid " border-dark)
                   :position :relative}
        (draggable-css :left)]]]))
 
@@ -434,11 +454,11 @@
               :margin-right (px 10)}]]]
    [:.pane
     [:&>div {:height "100%"
-             :border-right (str "1px solid " border-dark)
              :display :flex
              :flex-direction :column}
      [:ul.pages {:overflow :auto
-                 :margin 0, :padding 0}
+                 :outline :none
+                 :margin 0 :padding 0}
       page-css
       [:li
        [:img {:max-width "100%"
@@ -467,9 +487,10 @@
     ;; Full Page View
     [:.full
      [:header {:text-align :right}]
-     [:ul.pages #_{:min-width (px 400)}
+     [:ul.pages
       [:li
-       (let [page-margin 20, page-border 1]
+       (let [page-margin 20
+             page-border 1]
          [:img (list {:margin {:left (px page-margin)
                                :right (px page-margin)
                                :top (px (/ page-margin 2))}
@@ -482,9 +503,25 @@
                :font-style :italic}]
      (draggable-css :left)]]])
 
+(def generic-input-css
+  (let [padding (px 5)
+        height (px 14)
+        radius (px 3)]
+    [:input {:padding padding
+             :color default-text
+             :outline :none
+             :font {:family default-font
+                    :size (px 13)
+                    :weight 400}
+             :height height
+             :border-radius radius
+             :border (str "1px solid " border-dark)}]))
+
 (def generic-sidebar-css
   [:.sidebar
-   [:aside {:padding {:left (px 25)
+   [:aside {:display :flex
+            :flex-direction :column
+            :padding {:left (px 25)
                       :right (px 25)}}
     [:ul.meta {:font-size (pt 10)
                :line-height (pt 15)
@@ -502,7 +539,14 @@
                     :overflow :hidden
                     :vertical-align :top
                     :text-overflow :ellipsis}
-                   (calc-property :width ["70%" - left-padding]))])]]]])
+                   (calc-property :width ["70%" - left-padding]))])]]
+    [:.buttons {:display :flex
+                :flex-direction :column
+                :justify-content :space-between
+                :flex-wrap :wrap}
+     [:button {:margin-top (px 10)
+               :flex-grow 1
+               }]]]])
 
 (def workflow-css
   [:.workflow {:height "100%" :width "100%"
@@ -516,7 +560,7 @@
             :height "100%"}]
    generic-header-css
    generic-sidebar-css
-
+   
    dashboard-css
    document-css
    inbox-css])
@@ -534,44 +578,56 @@
                :min-height (px tags-min-height)
                :line-height (px (+ 2 tags-min-height))}
      [:&.editable (list
-                   {:padding-left (px tag-icon-box)
+                   {:padding {:left (px tag-icon-box)
+                              :top (px 6)}
                     :border (str "1px solid " border-dark)
                     :border-radius (px 3)
                     :height :auto
                     :background {:image (image-url "tag-icon.svg")
                                  :repeat :no-repeat
                                  :size (px 14)
-                                 :position [[(px 4) (px 4)]]
+                                 :position [[(px 8) (px 8)]]
                                  :color :white}
                     :white-space :initial}
                    (calc-property :width ["100%" -  (px tag-icon-box)]))
       [:&:before {:content (pr-str "Tags:")
-                  :font-size (em 1.2)}]]
-     (let [tag-height 16]
+                  :font-size (em 1.2)
+                  :display :block
+                  :float :left
+                  :line-height (px 18)
+                  :margin-left (px 2)
+                  }]]
+     (let [tag-height 15
+           tag-inner-margin 2
+           radius  (px 5)]
        [:li.tag {:display :inline-block
                  :background-color tags-background
                  :height (px tag-height)
-                 :padding {:left (px 4)
-                           :right (px 4)}
-                 :margin {:left (px 2)
-                          :right (px 2)}
+                 :padding {:right (px 10)}
+                 :margin {:left (px tag-inner-margin)
+                          :right (px tag-inner-margin)}
                  :color tags-text
-                 :line-height (px tag-height)
+                 :border (str "1px solid " tags-border)
                  :text-decoration :none
                  :outline :none
-                 :border-radius (em 0.5)}
-        [:&.selected {:background-color tags-selected-background
-                      :border (str "1px solid" border-dark)
-                      :padding {:left (px 3)
-                                :right (px 3)}}]
+                 :overflow :hidden
+                 :border-radius radius}
+        [:a {:display :block
+             :height "100%"}]
+        [:.tag-name {:margin-left (px tag-inner-margin)
+                     :line-height (px tag-height)
+                     :height (px tag-height)
+                     :display :inline-block
+                     :vertical-align :top}]
+        [:&.selected {:background-color tags-selected-background}]
         (let [color-size 8]
+          
           [:.color {:display :inline-block
-                    :height (px color-size)
-                    :width (px color-size)
-                    :margin-right (px 2)
+                    :height (px tag-height)
+                    :width (px tag-height)
+                    :margin-right (px tag-inner-margin)
                     ;; Border looks horrible on non-high-DPI screens
                     ;; :border "1px solid white"
-                    :border-radius "50%"
                     }])])
      (let [input-padding 5]
        [:li {:display :inline-block}
@@ -584,41 +640,39 @@
          [:&:focus {:outline 0}]]])]))
 
 (def button-css
-  (let [padding (px 10)]
+  (let [padding (px 15)]
     [:button :a.button
-     {:background "linear-gradient(to bottom, #ffffff 0%,#e4e4e4 100%)"
-      :border (str "1px solid " border-buttons)
-      :color blue-text
-      :text-shadow "1px 1px #ffffff"
+     {:background "linear-gradient(to bottom, #ffffff 0%,#f5f5f5 100%)"      
+      :color grey-3
       :height (px 25)
       :font {:family default-font
              :size (px 14)
              :weight 400}
       :outline :none
+      :border "1px solid #c7c7c7"
       :padding {:left padding
                 :right padding}
-      :border-radius (px 3)
-      :box-shadow "0px 0px 3px #dddddd"}
-     [:&:hover {:background "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"}]
+      :border-radius (px 2)}
+     [:&:hover {:background "linear-gradient(to bottom, #f5f5f5 0%,#e5e5e5 100%)"}]
      [:&:active {:box-shadow "inset 0 0 3px #000000;"}]
-     [:&:disabled :&.disabled {:background "linear-gradient(to bottom, #f5f5f5 0%,#d0d0d0 100%)"
-                               :color text-color-disabled}]]))
+     [:&:disabled :&.disabled {:opacity .5}]]))
+
 
 (def dropdown-css
   (let [font-size (px 14)
-        height 25]
+        height (px 25)]
     [:label.dropdown {:background "linear-gradient(to bottom, #ffffff 0%,#e4e4e4 100%)"
                       :font-size font-size
                       :position :relative
-                      :height (px height)
+                      :height height
                       :text-shadow "1px 1px #ffffff"
-                      :line-height (px height)
+                      :line-height height
                       :display :inline-flex
                       :padding  {:left (px 10)
-                                 :right (px 0)
-                                 :top (px 0)
-                                 :bottom (px 0)}
-                      :border (str "1px solid " border-buttons)
+                                 :right 0
+                                 :top 0
+                                 :bottom 0}
+                      :border [[(px 1) :solid border-buttons]]
                       :border-radius (px 4)
                       :box-shadow "0px 0px 3px #dddddd"}
      [:span {:padding {:left (px 20)
@@ -628,14 +682,15 @@
                      :border {:top :none
                               :bottom :none
                               :right :none
-                              :left (str "1px solid " border-buttons)}
+                              :left [[(px 1) :solid border-buttons]]}
                      :border-top {:right-radius (px 3)
-                                  :left-radius (px 0)}
+                                  :left-radius 0}
                      :border-bottom {:right-radius (px 3)
-                                     :left-radius (px 0)}
+                                     :left-radius 0}
                      :text-shadow "1px 1px #ffffff"
                      :font-size font-size
-                     :background (str (image-url "dropdown-arrow.svg") " 10px center no-repeat")
+                     :background (str (image-url "dropdown-arrow.svg")
+                                      " 10px center no-repeat")
                      :color blue-text
                      :outline :none
                      :font-family default-font
@@ -729,6 +784,7 @@
 (def auto-prefix #{:transition
                    :user-select
                    :border-radius
+                   :pointer-events
                    :transform
                    :appearance
                    :box-shadow
@@ -759,11 +815,27 @@
    [:#app {:height "100%"}
     [:.container {:height "100%"
                   :display :flex
-                  :flex-direction :row}]
+                  :flex-direction :row}
+
+     ;; This is the HEADER SHADOW ELEMENT. It has to be the :before
+     ;; element of the .container because the header is split in three
+     ;; parts and there are some bugs with the z-index and positioning
+     [:&:before {:content (pr-str " ")
+                 :position :absolute ;Not fixed due to safari scroll special behaviour
+                 :box-shadow "0px 0px 8px 0px rgba(0,0,0,0.4)"
+                 :left 0
+                 :right 0
+                 :top 0
+                 :z-index 20
+                 :pointer-events :none
+                 :height (px (- header-height 2))
+                 :background :transparent}]]
     [:&.file-drop
      {:background "red"}]
     clear-a-css
     button-css
+    generic-input-css
+    
     dropdown-css
     sidebar-css
     tags-css

@@ -8,7 +8,7 @@
             [pepa.data :as data]
             [pepa.navigation :as nav]
             [pepa.api.upload :as upload]
-            [pepa.components.logo :as logo]
+            [pepa.components.logo :refer [logo]]
             [pepa.components.tags :as tags]
             [pepa.components.draggable :refer [resize-draggable]]
             [pepa.style :as css]
@@ -85,14 +85,16 @@
     [:.menu-link
      [:.title title]
      (let [tags (sort-by val > (data/tag-count-map state true))
-           tags (if-not show-all? (take +tag-limit+ tags) tags)]
+           ;; tags (if-not show-all? (take +tag-limit+ tags) tags)
+           ]
        (om/build tags/tags-list tags))
-     [:.show-more {:on-click (fn [e]
-                               (om/update-state! owner :show-all? not)
-                               (.preventDefault e))}
-      (if show-all?
-        "Less ▲"
-        "More ▼")]]))
+     ;; [:.show-more {:on-click (fn [e]
+     ;;                           (om/update-state! owner :show-all? not)
+     ;;                           (.preventDefault e))}
+     ;;  (if show-all?
+     ;;    "Less ▲"
+     ;;    "More ▼")]
+     ]))
 
 (defn ^:private route-matches? [route workflows]
   (let [route (if (seqable? route)
@@ -111,7 +113,7 @@
        (om/build resize-draggable nil
                  {:opts {:sidebar ::sidebar}
                   :react-key "draggable"})
-       (om/build logo/xeyes nil {:react-key "xeyes"})
+       (om/build logo nil {:react-key "logo"})
 
        (om/build search-field nil
                  {:state {:query (query-string state)}
