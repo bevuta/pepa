@@ -33,10 +33,11 @@
   ([system logger]
    (let [;; We can 'inject' ::logger into all components *except* the
          ;; components logger itself depends on.
-         all-components (remove (set (keys logger)) (keys system))]
+         logger-deps (set (keys logger))
+         all-components (remove logger-deps (keys system))]
      (-> system
          (component/system-using (zipmap all-components (repeat [::logger])))
-         (assoc ::logger (component/using logger [:config])))))
+         (assoc ::logger (component/using logger (vec logger-deps))))))
   ([system]
    (wrap-logging system (make-ctl-logger))))
 
