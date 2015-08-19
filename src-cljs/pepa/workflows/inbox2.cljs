@@ -20,13 +20,13 @@
            goog.ui.IdGenerator))
 
 (defprotocol ColumnSource
-  (column-title [_])
+  (column-title [_ state])
   (column-pages  [_ state])
-
+  ;; TODO: Handle immutable colum sources
   (remove-pages! [_ state page-ids]))
 
 (defprotocol ColumnDropTarget
-  (accepts-drop? [_ state #_pages])     ;can't get data in drag-over
+  (accepts-drop? [_ state])     ;can't get data in drag-over
   (accept-drop!  [_ state pages]))
 
 (comment
@@ -49,7 +49,7 @@
 
 (defrecord InboxColumnSource [id]
   ColumnSource
-  (column-title [_]
+  (column-title [_ _]
     "Inbox")
   (column-pages [_ state]
     (get-in state [:inbox :pages]))
@@ -65,30 +65,42 @@
                               (remove #(contains? page-ids (:id %)))
                               pages)))))))
 
-(defrecord FakeColumnSource [id]
+(comment
+  (defrecord FakeColumnSource [id]
+    ColumnSource
+    (column-title [_ _]
+      "Fake")
+    (column-pages [_ state]
+      (get-in state [::fake-column-pages]))
+    (remove-pages! [_ state page-ids]
+      (go
+        (js/console.warn "Unimplemented: Removing pages from Fake...")))
+    ColumnDropTarget
+    (accepts-drop? [_ state]
+      true)
+    ;; TODO: Make immutable?
+    (accept-drop! [_ state new-pages]
+      (go
+        (println "dropping" (pr-str new-pages))
+        (om/transact! state ::fake-column-pages
+                      (fn [pages]
+                        (into pages
+                              (remove #(contains? (set (map :id pages)) (:id %)))
+                              new-pages)))
+        (println "Fake-saving...")
+        (<! (async/timeout 2000))
+        (println "Saved!")))))
+
+(defrecord DocumentColumnSource [id document-id]
   ColumnSource
-  (column-title [_]
-    "Fake")
+  (column-title [_ state]
+    (get-in state [:documents document-id :title]
+            "Untitled Document"))
   (column-pages [_ state]
-    (get-in state [::fake-column-pages]))
+    (get-in state [:documents document-id :pages]))
   (remove-pages! [_ state page-ids]
     (go
-      (js/console.warn "Unimplemented: Removing pages from Fake...")))
-  ColumnDropTarget
-  (accepts-drop? [_ state]
-    true)
-  ;; TODO: Make immutable?
-  (accept-drop! [_ state new-pages]
-    (go
-      (println "dropping" (pr-str new-pages))
-      (om/transact! state ::fake-column-pages
-                    (fn [pages]
-                      (into pages
-                            (remove #(contains? (set (map :id pages)) (:id %)))
-                            new-pages)))
-      (println "Fake-saving...")
-      (<! (async/timeout 2000))
-      (println "Saved!"))))
+      (js/console.warn "Unimplemented: Removing pages from Fake..."))))
 
 ;;; NOTE: We need on-drag-start in `inbox-column' and in
 ;;; `inbox-column-page' (the latter to handle selection-updates when
@@ -180,7 +192,7 @@
                             (handle-drop! (:id column)
                                           source-column
                                           page-ids)))}
-     [:header (column-title column)]
+     [:header (column-title column state)]
      [:ul.pages
       (om/build-all inbox-column-page (column-pages column state)
                     {:opts {:page-click! (fn [click] 
@@ -221,8 +233,10 @@
   (init-state [_]
     (let [gen (IdGenerator.getInstance)
           columns [(->InboxColumnSource (.getNextUniqueId gen))
-                   (->FakeColumnSource (.getNextUniqueId gen))]]
-      {:columns (into {} (map (juxt :id identity))
+                   (->DocumentColumnSource (.getNextUniqueId gen) 1)
+                   (->DocumentColumnSource (.getNextUniqueId gen) 2)]]
+      {:columns (into {}
+                      (map (juxt :id identity))
                       columns)}))
   (will-mount [_]
     (api/fetch-inbox! state))
