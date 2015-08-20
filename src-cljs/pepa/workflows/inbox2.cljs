@@ -23,6 +23,7 @@
   (column-title [_ state])
   (column-pages  [_ state])
   ;; TODO: Handle immutable column sources
+  ;; TODO: How do we handle removal of the last page for documents?
   (remove-pages! [_ state page-ids]))
 
 (defprotocol ColumnDropTarget
@@ -68,31 +69,30 @@
   (will-mount [_]
     (api/fetch-inbox!)))
 
-(comment
- (defrecord FakeColumnSource [id]
-   ColumnSource
-   (column-title [_ _]
-     "Fake")
-   (column-pages [_ state]
-     (get-in state [::fake-column-pages]))
-   (remove-pages! [_ state page-ids]
-     (go
-       (js/console.warn "Unimplemented: Removing pages from Fake...")))
-   ColumnDropTarget
-   (accepts-drop? [_ state]
-     true)
-   ;; TODO: Make immutable?
-   (accept-drop! [_ state new-pages]
-     (go
-       (println "dropping" (pr-str new-pages))
-       (om/transact! state ::fake-column-pages
-                     (fn [pages]
-                       (into pages
-                             (remove #(contains? (set (map :id pages)) (:id %)))
-                             new-pages)))
-       (println "Fake-saving...")
-       (<! (async/timeout 2000))
-       (println "Saved!")))))
+(defrecord FakeColumnSource [id]
+  ColumnSource
+  (column-title [_ _]
+    "Fake")
+  (column-pages [_ state]
+    (get-in state [::fake-column-pages]))
+  (remove-pages! [_ state page-ids]
+    (go
+      (js/console.warn "Unimplemented: Removing pages from Fake...")))
+  ColumnDropTarget
+  (accepts-drop? [_ state]
+    true)
+  ;; TODO: Make immutable?
+  (accept-drop! [_ state new-pages]
+    (go
+      (println "dropping" (pr-str new-pages))
+      (om/transact! state ::fake-column-pages
+                    (fn [pages]
+                      (into pages
+                            (remove #(contains? (set (map :id pages)) (:id %)))
+                            new-pages)))
+      (println "Fake-saving...")
+      (<! (async/timeout 2000))
+      (println "Saved!"))))
 
 (defrecord DocumentColumnSource [id document-id]
   ColumnSource
@@ -103,7 +103,12 @@
     (get-in state [:documents document-id :pages]))
   (remove-pages! [_ state page-ids]
     (go
-      (js/console.warn "Unimplemented: Removing pages from Document " document-id "...")))
+      (if-let [document (om/value (get-in state [:documents document-id]))]
+        (<! (api/update-document! (update document
+                                          :pages
+                                          #(remove (comp (set page-ids) :id) %))))
+        (js/console.error (str "[DocumentColumnSource] Failed to get document " document-id)
+                          {:document-id document-id}))))
   om/IWillMount
   (will-mount [_]
     (assert (number? document-id))
@@ -240,7 +245,7 @@
   (init-state [_]
     (let [gen (IdGenerator.getInstance)
           columns [(->InboxColumnSource (.getNextUniqueId gen))
-                   #_(->FakeColumnSource (.getNextUniqueId gen))
+                   (->FakeColumnSource (.getNextUniqueId gen))
                    (->DocumentColumnSource (.getNextUniqueId gen) 1)
                    (->DocumentColumnSource (.getNextUniqueId gen) 2)]]
       {:columns (into {}

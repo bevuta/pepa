@@ -193,6 +193,9 @@
   updates it to match DOCUMENT. Will also update the application
   state (whether DOCUMENT is a cursor or not)."
   [document]
+  {:pre [(:id document)]}
+  (prn document)
+  (prn (type document))
   (go
     (println "saving document" (:id document))
     ;; TODO: Stop fetching the document here
@@ -200,19 +203,28 @@
           title (when-not (= (:title document)
                              (:title server))
                   (:title document))
-          date (not= (:document-date document)
-                     (:document-date server))
-          tags {:added (remove (set (:tags server)) (:tags document))
-                :removed (remove (set (:tags document)) (:tags server))}]
+          date (when-not (= (:document-date document)
+                            (:document-date server))
+                 (:document-date document))
+          tags {:added   (remove (set (:tags server))   (:tags document))
+                :removed (remove (set (:tags document)) (:tags server))}
+          pages (when-not (= (:pages document)
+                             (:pages server))
+                  (:pages document))]
       (when-not server
         (throw (ex-info (str "Couldn't find document with id " (:id document))
                         {:document document
                          :document/id (:id document)
                          :response server})))
-      (if (or title date (seq (:added tags)) (seq (:removed tags)))
+      (if (or title date pages
+              (seq (:added tags))
+              (seq (:removed tags)))
         (let [response (<! (xhr-request! (str "/documents/" (:id document))
                                          :post
-                                         {:title title, :document-date (:document-date document) :tags tags}))]
+                                         {:title title
+                                          :document-date date
+                                          :tags tags
+                                          :pages (mapv :id pages)}))]
           (if (= 200 (:status response))
             (let [new-document (-> response
                                    :response/transit
@@ -224,7 +236,9 @@
                              :server-document server
                              :title title
                              :changed-tags tags}))))
-        document))))
+        (do
+          (println "[update-document!] Found no difference between server and client")
+          document)))))
 
 ;;; Tag Handling
 
