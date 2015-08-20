@@ -305,7 +305,10 @@
     [:header {:display :flex
               :flex-flow [[:row :wrap]]
               :align-items :center
-              :justify-content :space-between}]
+              :justify-content :space-between
+              :overflow :hidden
+              :text-overflow :ellipsis
+              :white-space :nowrap}]
     [:ul.pages {:list-style-type :none
                 :margin 0, :padding 0
                 :overflow-y :auto}
