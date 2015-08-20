@@ -292,7 +292,7 @@
     (let [page-ids (:inbox changes)
           pages (mapv fetch-page page-ids)]
       ;; Just overwrite the inbox-stuff for now
-      (fetch-inbox! (om/root-cursor data/state)))))
+      (fetch-inbox!))))
 
 (defmethod entities-changed* :tags [state _ changes]
   (when-let [tags (:tags changes)]
