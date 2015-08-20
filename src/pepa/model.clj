@@ -159,7 +159,7 @@
 (defn document-pages
   "Returns a list of pages for the document with ID."
   [db id]
-  (db/query db ["SELECT p.file, p.number, p.rotation
+  (db/query db ["SELECT p.id, p.file, p.number, p.rotation
                  FROM pages AS p
                  JOIN document_pages AS dp on dp.page = p.id
                  WHERE dp.document = ?
@@ -272,7 +272,9 @@
             (db/update! conn :documents
                         props
                         ["id = ?" id])
-            (when (seq pages)
+            (when (and (seq pages)
+                       (not= (mapv :id (document-pages db id))
+                             (vec pages)))
               (set-pages*! db id (vec pages)))))
         (db/notify! conn :documents/updated {:id id}))
       (throw (ex-info (str "Couldn't find document with id " id)
