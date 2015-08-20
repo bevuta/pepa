@@ -151,10 +151,11 @@
   (go
     (vec (:response/transit (<! (xhr-request! "/inbox" :get))))))
 
-(defn fetch-inbox! [state]
-  (go (om/update! state
-                  [:inbox :pages]
-                  (<! (fetch-inbox)))))
+(defn fetch-inbox! []
+  (go
+    (om/update! (om/root-cursor data/state)
+                [:inbox :pages]
+                (<! (fetch-inbox)))))
 
 (defn delete-from-inbox! [pages]
   (go

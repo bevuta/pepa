@@ -63,33 +63,35 @@
                       (fn [pages]
                         (into (empty pages)
                               (remove #(contains? page-ids (:id %)))
-                              pages)))))))
+                              pages))))))
+  om/IWillMount
+  (will-mount [_]
+    (api/fetch-inbox!)))
 
-(comment
-  (defrecord FakeColumnSource [id]
-    ColumnSource
-    (column-title [_ _]
-      "Fake")
-    (column-pages [_ state]
-      (get-in state [::fake-column-pages]))
-    (remove-pages! [_ state page-ids]
-      (go
-        (js/console.warn "Unimplemented: Removing pages from Fake...")))
-    ColumnDropTarget
-    (accepts-drop? [_ state]
-      true)
-    ;; TODO: Make immutable?
-    (accept-drop! [_ state new-pages]
-      (go
-        (println "dropping" (pr-str new-pages))
-        (om/transact! state ::fake-column-pages
-                      (fn [pages]
-                        (into pages
-                              (remove #(contains? (set (map :id pages)) (:id %)))
-                              new-pages)))
-        (println "Fake-saving...")
-        (<! (async/timeout 2000))
-        (println "Saved!")))))
+(defrecord FakeColumnSource [id]
+  ColumnSource
+  (column-title [_ _]
+    "Fake")
+  (column-pages [_ state]
+    (get-in state [::fake-column-pages]))
+  (remove-pages! [_ state page-ids]
+    (go
+      (js/console.warn "Unimplemented: Removing pages from Fake...")))
+  ColumnDropTarget
+  (accepts-drop? [_ state]
+    true)
+  ;; TODO: Make immutable?
+  (accept-drop! [_ state new-pages]
+    (go
+      (println "dropping" (pr-str new-pages))
+      (om/transact! state ::fake-column-pages
+                    (fn [pages]
+                      (into pages
+                            (remove #(contains? (set (map :id pages)) (:id %)))
+                            new-pages)))
+      (println "Fake-saving...")
+      (<! (async/timeout 2000))
+      (println "Saved!"))))
 
 (defrecord DocumentColumnSource [id document-id]
   ColumnSource
@@ -237,13 +239,13 @@
   (init-state [_]
     (let [gen (IdGenerator.getInstance)
           columns [(->InboxColumnSource (.getNextUniqueId gen))
+                   (->FakeColumnSource (.getNextUniqueId gen))
                    (->DocumentColumnSource (.getNextUniqueId gen) 1)
                    (->DocumentColumnSource (.getNextUniqueId gen) 2)]]
       {:columns (into {}
                       (map (juxt :id identity))
                       columns)}))
   (will-mount [_]
-    (api/fetch-inbox! state)
     ;; HACK: Use om/IWillMount to fetch additional data needed by each
     ;; column
     (doseq [[_ column] (om/get-state owner :columns)]
