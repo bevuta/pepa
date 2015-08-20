@@ -68,30 +68,31 @@
   (will-mount [_]
     (api/fetch-inbox!)))
 
-(defrecord FakeColumnSource [id]
-  ColumnSource
-  (column-title [_ _]
-    "Fake")
-  (column-pages [_ state]
-    (get-in state [::fake-column-pages]))
-  (remove-pages! [_ state page-ids]
-    (go
-      (js/console.warn "Unimplemented: Removing pages from Fake...")))
-  ColumnDropTarget
-  (accepts-drop? [_ state]
-    true)
-  ;; TODO: Make immutable?
-  (accept-drop! [_ state new-pages]
-    (go
-      (println "dropping" (pr-str new-pages))
-      (om/transact! state ::fake-column-pages
-                    (fn [pages]
-                      (into pages
-                            (remove #(contains? (set (map :id pages)) (:id %)))
-                            new-pages)))
-      (println "Fake-saving...")
-      (<! (async/timeout 2000))
-      (println "Saved!"))))
+(comment
+ (defrecord FakeColumnSource [id]
+   ColumnSource
+   (column-title [_ _]
+     "Fake")
+   (column-pages [_ state]
+     (get-in state [::fake-column-pages]))
+   (remove-pages! [_ state page-ids]
+     (go
+       (js/console.warn "Unimplemented: Removing pages from Fake...")))
+   ColumnDropTarget
+   (accepts-drop? [_ state]
+     true)
+   ;; TODO: Make immutable?
+   (accept-drop! [_ state new-pages]
+     (go
+       (println "dropping" (pr-str new-pages))
+       (om/transact! state ::fake-column-pages
+                     (fn [pages]
+                       (into pages
+                             (remove #(contains? (set (map :id pages)) (:id %)))
+                             new-pages)))
+       (println "Fake-saving...")
+       (<! (async/timeout 2000))
+       (println "Saved!")))))
 
 (defrecord DocumentColumnSource [id document-id]
   ColumnSource
@@ -239,7 +240,7 @@
   (init-state [_]
     (let [gen (IdGenerator.getInstance)
           columns [(->InboxColumnSource (.getNextUniqueId gen))
-                   (->FakeColumnSource (.getNextUniqueId gen))
+                   #_(->FakeColumnSource (.getNextUniqueId gen))
                    (->DocumentColumnSource (.getNextUniqueId gen) 1)
                    (->DocumentColumnSource (.getNextUniqueId gen) 2)]]
       {:columns (into {}
@@ -258,11 +259,6 @@
     (let [page-cache (make-page-cache state columns)]
       [:.workflow.inbox
        (om/build-all inbox-column columns
-                     {:fn (fn [column]
-                            [state
-                             (-> column
-                                 val
-                                 (assoc ::page-cache page-cache))])
-                      ;; NOTE: Passing this callback as `opts' might
-                      ;; cause issues
+                     {:fn (fn [[_ column]]
+                            [state (assoc column ::page-cache page-cache)])
                       :state {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}})])))
