@@ -22,7 +22,7 @@
 (defprotocol ColumnSource
   (column-title [_ state])
   (column-pages  [_ state])
-  ;; TODO: Handle immutable colum sources
+  ;; TODO: Handle immutable column sources
   (remove-pages! [_ state page-ids]))
 
 (defprotocol ColumnDropTarget
@@ -100,7 +100,11 @@
     (get-in state [:documents document-id :pages]))
   (remove-pages! [_ state page-ids]
     (go
-      (js/console.warn "Unimplemented: Removing pages from Fake..."))))
+      (js/console.warn "Unimplemented: Removing pages from Document " document-id "...")))
+  om/IWillMount
+  (will-mount [_]
+    (assert (number? document-id))
+    (api/fetch-documents! [document-id])))
 
 ;;; NOTE: We need on-drag-start in `inbox-column' and in
 ;;; `inbox-column-page' (the latter to handle selection-updates when
@@ -239,7 +243,12 @@
                       (map (juxt :id identity))
                       columns)}))
   (will-mount [_]
-    (api/fetch-inbox! state))
+    (api/fetch-inbox! state)
+    ;; HACK: Use om/IWillMount to fetch additional data needed by each
+    ;; column
+    (doseq [[_ column] (om/get-state owner :columns)]
+      (when (satisfies? om/IWillMount column)
+        (om/will-mount column))))
   (render-state [_ {:keys [columns]}]
     ;; We generate a lookup table from all known pages so `on-drop' in
     ;; `inbox-column' can access it (as the drop `dataTransfer' only
