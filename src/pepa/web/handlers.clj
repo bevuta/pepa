@@ -29,7 +29,8 @@
            java.io.ByteArrayInputStream
            java.io.FileInputStream
            java.net.URLEncoder
-           java.sql.SQLException))
+           java.sql.SQLException
+           clojure.lang.ExceptionInfo))
 
 (def +default-media-types+ ["text/html"
                             "application/json"
@@ -124,19 +125,35 @@
              (m/rotate-page db id rotation))))
 
 (let [required #{:title}]
-  (defn sanitize-attrs [comp attrs]
+  (defn ^:private sanitize-attrs [comp attrs]
     (into {} (remove (fn [[k v]] (when (and (nil? v) (contains? required k))
                                    (do
                                      (log/warn comp (str "Required attribute is null attr: " k))
                                      true))) attrs))))
 
+(defn ^:private parse-document-post [ctx]
+  (when (= :post (get-in ctx [:request :request-method]))
+   (let [params (get-in ctx [:request :body])
+         attrs (->> (select-keys params [:title :document-date :pages])
+                    (sanitize-attrs (get-in ctx [:request :pepa/web])))
+         tags (:tags params)]
+     (when-not (every? string? (mapcat val tags))
+       (throw (ex-info "Tags must be strings" {:tags tags})))
+     {::tags tags
+      ::attrs attrs})))
+
 (defresource document [id]
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
-                (try [false {::id (Integer/parseInt id)}]
-                     (catch NumberFormatException e
-                       true)))
+                (try
+                  (let [id (Integer/parseInt id 10)
+                        post-data (parse-document-post ctx)]
+                    [false (merge {::id id} post-data)])
+                  (catch NumberFormatException e
+                    true)
+                  (catch ExceptionInfo e
+                    [true {:message (.getMessage e)}])))
   :exists? (fn [ctx]
              (when-let [d (m/get-document (get-in ctx [:request :pepa/db]) (::id ctx))]
                {::document d}))
@@ -144,22 +161,18 @@
   :location (fn [ctx] (str "/documents/" id))
   :post! (fn [ctx]
            (let [id (::id ctx)
-                 req (:request ctx)
-                 params (:body req)
-                 attrs (select-keys params [:title :document-date])
-                 attrs (sanitize-attrs (get-in ctx [:request :pepa/web]) attrs)
-                 {added-tags :added, removed-tags :removed} (:tags params)]
+                 {added-tags :added, removed-tags :removed} (::tags ctx)]
              (assert (every? string? added-tags))
              (assert (every? string? removed-tags))
              ;; Implement transaction-retries
              (loop [retries 5]
                (or (try
-                     (db/with-transaction [db (:pepa/db req)]
-                       (m/update-document! db id attrs added-tags removed-tags)
+                     (db/with-transaction [db (get-in ctx [:request :pepa/db])]
+                       (m/update-document! db id (::attrs ctx) added-tags removed-tags)
                        (log/debug db "Getting document:" (m/get-document db id))
                        {::document (m/get-document db id)})
                      (catch SQLException e
-                       (log/warn (:pepa/web req) "SQL Transaction to update document " id " failed."
+                       (log/warn (get-in ctx [:request :pepa/web]) "SQL Transaction to update document " id " failed."
                                  " Retrying... (" retries "left)")
                        nil))
                    (when (pos? retries)

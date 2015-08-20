@@ -183,11 +183,15 @@
     (add-pages*! db document page-ids)
     (db/notify! db :documents/updated {:id document})))
 
+(defn set-pages*! [db document page-ids]
+  (db/with-transaction [db db]
+    (db/delete! db :document_pages ["document = ?" document])
+    (add-pages*! db document page-ids)))
+
 (defn set-pages! [db document page-ids]
   (log/info db "Replacing pages for document" (str document ":") page-ids)
   (db/with-transaction [db db]
-    (db/delete! db :document_pages ["document = ?" document])
-    (add-pages*! db document page-ids)
+    (set-pages*! db document page-ids)
     (db/notify! db :documents/updated {:id document})))
 
 (defn ^:private link-file*!
@@ -237,13 +241,12 @@
 
 (defn update-document!
   "Updates document with ID. PROPS is a map of changed
-  properties (currently only :title, :document-date), ADDED-TAGS and REMOVED-TAGS are
+  properties (currently only :title, :document-date, :pages), ADDED-TAGS and REMOVED-TAGS are
   lists of added and removed tag-values (strings)."
   [db id props added-tags removed-tags]
-
-  (assert (every? string? added-tags))
-  (assert (every? string? removed-tags))
-  (assert (every? #{:title :document-date} (keys props)))
+  {:pre [(every? string? added-tags)
+         (every? string? removed-tags)
+         (every? #{:title :document-date :pages} (keys props))]}
   (log/info db "Updating document" id (pr-str {:props props
                                                :tags/added added-tags
                                                :tags/removed removed-tags}))
@@ -263,10 +266,14 @@
         (remove-tags*! conn id removed-tags)
         (add-tags*! conn id added-tags)
         ;; Update document title if necessary
-        (when (seq props)
-          (db/update! conn :documents
-                      props
-                      ["id = ?" id]))
+        (when-not (empty? props)
+          (let [pages (:pages props)
+                props (dissoc props :pages)]
+            (db/update! conn :documents
+                        props
+                        ["id = ?" id])
+            (when (seq pages)
+              (set-pages*! db id (vec pages)))))
         (db/notify! conn :documents/updated {:id id}))
       (throw (ex-info (str "Couldn't find document with id " id)
                       {:document/id id
