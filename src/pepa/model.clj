@@ -183,6 +183,13 @@
     (add-pages*! db document page-ids)
     (db/notify! db :documents/updated {:id document})))
 
+(defn set-pages! [db document page-ids]
+  (log/info db "Replacing pages for document" (str document ":") page-ids)
+  (db/with-transaction [db db]
+    (db/delete! db :document_pages ["document = ?" document])
+    (add-pages*! db document page-ids)
+    (db/notify! db :documents/updated {:id document})))
+
 (defn ^:private link-file*!
   "Sets a db-attribute to tell the processor to link all pages from
   FILE to DOCUMENT. Also handles already processed files."
