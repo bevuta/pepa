@@ -424,7 +424,7 @@
         (when (<! (api/save-new-document! document "inbox"))
           (om/transact! state :documents #(dissoc % (:id document)))
           (let [pages (:pages document)]
-            (when (<! (api/delete-from-inbox! pages))
+            (when (<! (api/delete-from-inbox! (map :id pages)))
               (om/transact! state [:documents :inbox :pages] #(filterv (complement (set pages)) %)))))))))
 
 (defn ^:private delete-pages!

@@ -226,12 +226,24 @@
   :handle-ok ::pdf-file)
 
 (defresource inbox
-  :allowed-methods #{:get :delete}
+  :allowed-methods #{:get :put :delete}
   :available-media-types +default-media-types+
+  :malformed? (fn [ctx]
+                (if (contains? #{:put :delete} (get-in ctx [:request :request-method]))
+                  (let [pages (seq (get-in ctx [:request :body]))]
+                    ;; TODO: Better validation
+                    (if (and (seq pages) (every? integer? pages))
+                      [false {::pages pages}]
+                      true))
+                  false))
+  :put! (fn [ctx]
+          (let [db (get-in ctx [:request :pepa/db])
+                pages (::pages ctx)]
+            (m/add-to-inbox! db pages)))
   :delete! (fn [ctx]
-             (let [db (get-in ctx [:request :pepa/db])]
-               (when-let [pages (seq (get-in ctx [:request :body]))]
-                 (m/remove-from-inbox! db pages))))
+             (let [db (get-in ctx [:request :pepa/db])
+                   pages (::pages ctx)]
+               (m/remove-from-inbox! db pages)))
   :handle-ok (fn [ctx]
                (let [pages (m/inbox (get-in ctx [:request :pepa/db]))]
                  (condp = (get-in ctx [:representation :media-type])

@@ -157,10 +157,15 @@
                 [:inbox :pages]
                 (<! (fetch-inbox)))))
 
-(defn delete-from-inbox! [pages]
+(defn add-to-inbox! [page-ids]
+  {:pre [(every? integer? page-ids)]}
   (go
-    (let [res (<! (xhr-request! "/inbox" :delete (map :id pages)))]
-      (:successful? res))))
+    (:successful? (<! (xhr-request! "/inbox" :put page-ids)))))
+
+(defn delete-from-inbox! [page-ids]
+  {:pre [(every? integer? page-ids)]}
+  (go
+    (:successful? (<! (xhr-request! "/inbox" :delete page-ids)))))
 
 (defn ^:private document->api-document [document]
   (-> document

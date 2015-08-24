@@ -58,13 +58,22 @@
     (go
       (println "Removing pages from Inbox...")
       ;; TODO: Handle updates coming via the poll channel
-      (<! (api/delete-from-inbox! (map (fn [id] {:id id}) page-ids)))
+      (<! (api/delete-from-inbox! page-ids))
+      ;; TODO: Is this necessary?
       (let [page-ids (set page-ids)]
         (om/transact! state [:inbox :pages]
                       (fn [pages]
                         (into (empty pages)
                               (remove #(contains? page-ids (:id %)))
                               pages))))))
+  ColumnDropTarget
+  (accepts-drop? [_ state]
+    true)
+  ;; TODO: Make immutable?
+  (accept-drop! [_ state new-pages]
+    (go
+      (println "dropping" (pr-str new-pages) "on inbox")
+      (<! (api/add-to-inbox! (map :id new-pages)))))
   om/IWillMount
   (will-mount [_]
     (api/fetch-inbox!)))
@@ -77,14 +86,17 @@
     (get-in state [::fake-column-pages]))
   (remove-pages! [_ state page-ids]
     (go
-      (js/console.warn "Unimplemented: Removing pages from Fake...")))
+      (println "Removing pages from fake-column")
+      (om/transact! state ::fake-column-pages
+                    (fn [pages]
+                      (remove #(contains? (set page-ids) (:id %)) pages)))))
   ColumnDropTarget
   (accepts-drop? [_ state]
     true)
   ;; TODO: Make immutable?
   (accept-drop! [_ state new-pages]
     (go
-      (println "dropping" (pr-str new-pages))
+      (println "dropping" (pr-str new-pages) "on fake column")
       (om/transact! state ::fake-column-pages
                     (fn [pages]
                       (into pages
@@ -109,6 +121,16 @@
                                           #(remove (comp (set page-ids) :id) %))))
         (js/console.error (str "[DocumentColumnSource] Failed to get document " document-id)
                           {:document-id document-id}))))
+  ColumnDropTarget
+  (accepts-drop? [_ state]
+    true)
+  (accept-drop! [_ state new-pages]
+    (go
+      (println "dropping" (pr-str new-pages) "on document" document-id)
+      (let [document (om/value (get-in state [:documents document-id]))]
+        (<! (api/update-document! (update document :pages
+                                          #(into % new-pages))))
+        (println "Saved!"))))
   om/IWillMount
   (will-mount [_]
     (assert (number? document-id))
