@@ -272,9 +272,11 @@
             (db/update! conn :documents
                         props
                         ["id = ?" id])
-            (when (and (seq pages)
+            (when (and (sequential? pages)
                        (not= (mapv :id (document-pages db id))
                              (vec pages)))
+              (when (empty? pages)
+                (log/warn db "Updating document with empty list of pages:" id))
               (set-pages*! db id (vec pages)))))
         (db/notify! conn :documents/updated {:id id}))
       (throw (ex-info (str "Couldn't find document with id " id)
