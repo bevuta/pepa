@@ -25,8 +25,6 @@
   application."
   [state route]
   (go
-    ;; Inbox initial data
-    (om/update! state :workflow/inbox inbox/initial-data)
     (<! (api/fetch-tags! state))))
 
 (defn ^:private transition-to! [state route query-params]
