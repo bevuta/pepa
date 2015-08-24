@@ -30,24 +30,6 @@
   (accepts-drop? [_ state])     ;can't get data in drag-over
   (accept-drop!  [_ state pages]))
 
-(comment
-  (defprotocol PageUpdateHandler
-    (-update-pages [_ state pages]
-      "Function called to notify a column of page updates. `pages' is a
-    list of updated pages. There is no guarantee that `pages' only
-    contains pages relevant for the implementor. Implementations
-    should do the necessary updates on themselves and return the
-    updated versions."))
-
-  (defn update-pages!
-  "Notify columns in Inbox that pages in `pages' were updated on the server."
-  [state pages]
-  (om/transact! state [:inbox :columns]
-                (fn [columns]
-                  (->> columns
-                       (map #(-update-pages % state pages))
-                       (into (empty columns)))))))
-
 (defrecord InboxColumnSource [id]
   ColumnSource
   (column-title [_ _]
