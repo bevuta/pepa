@@ -72,5 +72,12 @@
     (assoc component
            :processor nil)))
 
+(defn ^:private rerender-all! [component]
+  (db/with-transaction [db (:db component)]
+    (db/delete! db :page_images [])
+    (db/update! db :pages {:render_status :processing-status/pending} [])
+    (db/notify! db :pages/updated)
+    (db/notify! db :pages/new)))
+
 (defn make-component []
   (map->PageRenderer {}))
