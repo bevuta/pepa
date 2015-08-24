@@ -27,7 +27,6 @@
   (remove-pages! [_ state page-ids]))
 
 (defprotocol ColumnDropTarget
-  (accepts-drop? [_ state])     ;can't get data in drag-over
   (accept-drop!  [_ state pages]))
 
 (defrecord InboxColumnSource [id]
@@ -49,13 +48,13 @@
                               (remove #(contains? page-ids (:id %)))
                               pages))))))
   ColumnDropTarget
-  (accepts-drop? [_ state]
-    true)
   ;; TODO: Make immutable?
   (accept-drop! [_ state new-pages]
     (go
       (println "dropping" (pr-str new-pages) "on inbox")
-      (<! (api/add-to-inbox! (map :id new-pages)))))
+      (<! (api/add-to-inbox! (map :id new-pages)))
+      ;; Return true, indicating successful drop
+      true))
   om/IWillMount
   (will-mount [_]
     (api/fetch-inbox!)))
@@ -76,15 +75,15 @@
         (js/console.error (str "[DocumentColumnSource] Failed to get document " document-id)
                           {:document-id document-id}))))
   ColumnDropTarget
-  (accepts-drop? [_ state]
-    true)
   (accept-drop! [_ state new-pages]
     (go
       (println "dropping" (pr-str new-pages) "on document" document-id)
       (let [document (om/value (get-in state [:documents document-id]))]
         (<! (api/update-document! (update document :pages
                                           #(into % new-pages))))
-        (println "Saved!"))))
+        (println "Saved!")
+        ;; indicate successful drop
+        true)))
   om/IWillMount
   (will-mount [_]
     (assert (number? document-id))
@@ -165,14 +164,14 @@
                        (selection/make-selection new-pages)))))
   (render-state [_ {:keys [selection handle-drop!]}]
     ;; NOTE: `column' needs to be a value OR we need to extend cursors
-    [:.column {:on-drag-over (when (satisfies? ColumnDropTarget (om/value column))
-                               (fn [e]
-                                 (when (accepts-drop? column state)
-                                   (.preventDefault e))))
+    [:.column {:on-drag-over (fn [e]
+                               (when (satisfies? ColumnDropTarget (om/value column))
+                                 (.preventDefault e)))
                :on-drag-start (partial column-drag-start state column owner)
                :on-drag-end (fn [_]
                               (println "on-drag-end"))
                :on-drop (fn [e]
+                          (println "on-drop")
                           (let [page-cache (::page-cache column)
                                 source-column (get-transfer-data e "application/x-pepa-column")
                                 page-ids (get-transfer-data e "application/x-pepa-pages")]
@@ -189,7 +188,6 @@
                      :fn (partial mark-page-selected (:selected selection))})]]))
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids]
-  ;; Call `accepts-drop!' in `target'
   (let [columns (om/get-state owner :columns)
         target (get columns target)
         source (get columns source)
@@ -201,13 +199,16 @@
                           (map om/value))
                     page-ids)]
     (if-not (seq pages)
+      ;; TODO: Should we do that in the columns itself?
       (js/console.warn "Ignoring drop consisting only of duplicate pages:"
                        (pr-str page-ids))
       (go
-        (<! (accept-drop! target state pages))
-        (println "Target saved. Removing from source...")
-        (<! (remove-pages! source state page-ids))
-        (println "Drop saved!")))))
+        (if (<! (accept-drop! target state pages))
+          (do
+            (println "Target saved. Removing from source...")
+            (<! (remove-pages! source state page-ids))
+            (println "Drop saved!"))
+          (js/console.warn "`accept-drop!' returned non-truthy value. Aborting drop."))))))
 
 (defn ^:private make-page-cache [state columns]
   (into {}
