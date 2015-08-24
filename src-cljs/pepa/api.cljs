@@ -199,8 +199,6 @@
   state (whether DOCUMENT is a cursor or not)."
   [document]
   {:pre [(:id document)]}
-  (prn document)
-  (prn (type document))
   (go
     (println "saving document" (:id document))
     ;; TODO: Stop fetching the document here

@@ -8,7 +8,6 @@
             [pepa.search :as search]
             [pepa.components.sidebar :refer [sidebar-component]]
             [pepa.components.draggable :as draggable]
-            [pepa.workflows.inbox :as inbox]
             [pepa.workflows.inbox2 :as inbox2]
             [pepa.workflows.dashboard :as dashboard]
             [pepa.workflows.document :as document]
@@ -90,9 +89,7 @@
         (match [(om/value route)]
           [:dashboard]  (om/build dashboard/dashboard state)
           [[:search _]] (om/build dashboard/dashboard state)
-          ;; [:inbox] (when-let [c (:workflow/inbox state)]
-          ;;            (om/build inbox/group-pages-workflow c))
-          [:inbox] (om/build inbox2/inbox state)
+          [:inbox]      (om/build inbox2/inbox state)
           [[:document id]] (when-let [d (get-in state [:documents id])]
                              (let [page (some-> (:page query-params)
                                                 (js/parseInt 10)
