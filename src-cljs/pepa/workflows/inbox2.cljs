@@ -27,7 +27,7 @@
   (remove-pages! [_ state page-ids]))
 
 (defprotocol ColumnDropTarget
-  (accept-drop!  [_ state pages]))
+  (accept-drop!  [_ state pages target-idx]))
 
 (defrecord InboxColumnSource [id]
   ColumnSource
@@ -48,11 +48,12 @@
                               (remove #(contains? page-ids (:id %)))
                               pages))))))
   ColumnDropTarget
-  ;; TODO: Make immutable?
-  (accept-drop! [_ state new-pages]
+  (accept-drop! [_ state new-pages target-idx]
     (go
-      (println "dropping" (pr-str new-pages) "on inbox")
-      (<! (api/add-to-inbox! (map :id new-pages)))
+      (let [page-ids (map :id new-pages)]
+        (println "dropping" (pr-str page-ids) "on inbox (at index" target-idx ")")
+        ;; TODO: Error-Handling
+        (<! (api/add-to-inbox! page-ids)))
       ;; Return true, indicating successful drop
       true))
   om/IWillMount
@@ -75,9 +76,10 @@
         (js/console.error (str "[DocumentColumnSource] Failed to get document " document-id)
                           {:document-id document-id}))))
   ColumnDropTarget
-  (accept-drop! [_ state new-pages]
+  (accept-drop! [_ state new-pages target-idx]
     (go
-      (println "dropping" (pr-str new-pages) "on document" document-id)
+      (println "dropping" (pr-str (map :id new-pages)) "on document" document-id
+               (str "(at index " target-idx ")"))
       (let [document (om/value (get-in state [:documents document-id]))]
         (<! (api/update-document! (update document :pages
                                           #(into % new-pages))))
@@ -93,14 +95,16 @@
 ;;; `inbox-column-page' (the latter to handle selection-updates when
 ;;; dragging). We bubble it from `inbox-column-page', adding its own
 ;;; `:id' and use that id to update the selection information.
-(ui/defcomponent inbox-column-page [page owner {:keys [page-click!]}]
+(ui/defcomponent inbox-column-page [page owner {:keys [page-click! store-idx!]}]
   (render [_]
     [:li.page {:draggable true
                :class [(when (:selected? page) "selected")]
                :on-drag-start (fn [e]
                                 (println "inbox-column-page")
-                                (doto e.dataTransfer
-                                  (.setData "application/x-pepa-page" (:id page))))
+                                (.setData e.dataTransfer "application/x-pepa-page" (:id page)))
+               :on-drag-enter (fn [e]
+                                (println "[inbox-column-page] drag-enter")
+                                (store-idx! (:idx page)))
                :on-click (fn [e]
                            (page-click!
                             (selection/event->click (:id page) e))
@@ -109,9 +113,10 @@
                {:opts {:enable-rotate? true}})]))
 
 (defn ^:private get-transfer-data [e key]
-  (some-> e.dataTransfer
-          (.getData (name key))
-          (read-string)))
+  (or (some-> e.dataTransfer
+              (.getData (name key))
+              (read-string))
+      (js/console.warn "Couldn't read transfer-data for key:" (pr-str key))))
 
 (defn ^:private column-drag-start
   "Called from `inbox-column' when `dragstart' event is fired. Manages
@@ -140,7 +145,7 @@
 (defn ^:private mark-page-selected
   "Assocs {:selected? true} to `page' if `selected-pages'
   contains (:id page). Used in `index-column'."
-  [selected-pages page]
+  [page selected-pages]
   (assoc page :selected? (contains? (set selected-pages) (:id page))))
 
 (ui/defcomponent inbox-column [[state column] owner opts]
@@ -159,7 +164,7 @@
                   (om/value new-pages))
         (om/set-state! owner :selection
                        (selection/make-selection new-pages)))))
-  (render-state [_ {:keys [selection handle-drop!]}]
+  (render-state [_ {:keys [selection handle-drop! drop-idx]}]
     ;; NOTE: `column' needs to be a value OR we need to extend cursors
     [:.column {:on-drag-over (fn [e]
                                (when (satisfies? ColumnDropTarget (om/value column))
@@ -174,32 +179,44 @@
                             ;; Delegate to `inbox'
                             (handle-drop! (:id column)
                                           source-column
-                                          page-ids)))}
+                                          page-ids
+                                          drop-idx)))}
      [:header (column-title column state)]
      [:ul.pages
-      (om/build-all inbox-column-page (column-pages column state)
-                    {:opts {:page-click! (fn [click] 
-                                           (om/update-state! owner :selection
-                                                             #(selection/click % click)))}
-                     :fn (partial mark-page-selected (:selected selection))})]]))
+      (let [pages (map-indexed (fn [idx page] (assoc page :idx idx))
+                               (column-pages column state))]
+        (om/build-all inbox-column-page pages
+                      {:opts {:page-click! (fn [click]
+                                             (om/update-state! owner :selection
+                                                               #(selection/click % click)))
+                              :store-idx! (fn [idx]
+                                            (om/set-state! owner :drop-idx idx))}
+                       :fn (fn [page]
+                             (mark-page-selected page (:selected selection)))}))]]))
 
-(defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids]
+(defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx]
   (let [columns (om/get-state owner :columns)
         target (get columns target)
         source (get columns source)
         ;; Remove page-ids already in `target'
-        target-pages (mapv :id (column-pages target state))
+        existing-pages (mapv :id (column-pages target state))
         pages (into []
-                    (comp (remove (set target-pages))
+                    (comp (remove (set existing-pages))
                           (map page-cache)
                           (map om/value))
                     page-ids)]
+    ;; TODO: Assert?
+    (when-not (<= 0 target-idx (dec (count existing-pages)))
+      (throw (ex-info (str "Got invalid target-idx:" target-idx)
+                      {:idx target-idx
+                       :column-pages existing-pages
+                       :pages pages})))
     (if-not (seq pages)
       ;; TODO: Should we do that in the columns itself?
       (js/console.warn "Ignoring drop consisting only of duplicate pages:"
                        (pr-str page-ids))
       (go
-        (if (<! (accept-drop! target state pages))
+        (if (<! (accept-drop! target state pages target-idx))
           (do
             (println "Target saved. Removing from source...")
             (<! (remove-pages! source state page-ids))
