@@ -95,11 +95,8 @@
 ;;; `:id' and use that id to update the selection information.
 (ui/defcomponent inbox-column-page [page owner {:keys [page-click!]}]
   (render [_]
-    [:li.page {:draggable true          ;TODO: only `:draggable' when
-                                        ;`(not :unsaved?)'
-               :class [(when (:selected? page) "selected")
-                       ;; TODO: `:unsaved?'
-                       (when (:working? page)  "working")]
+    [:li.page {:draggable true
+               :class [(when (:selected? page) "selected")]
                :on-drag-start (fn [e]
                                 (println "inbox-column-page")
                                 (doto e.dataTransfer
@@ -168,8 +165,7 @@
                                (when (satisfies? ColumnDropTarget (om/value column))
                                  (.preventDefault e)))
                :on-drag-start (partial column-drag-start state column owner)
-               :on-drag-end (fn [_]
-                              (println "on-drag-end"))
+               :on-drag-end (fn [_] (println "on-drag-end"))
                :on-drop (fn [e]
                           (println "on-drop")
                           (let [page-cache (::page-cache column)
