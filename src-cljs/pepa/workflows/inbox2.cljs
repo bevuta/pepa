@@ -47,6 +47,7 @@
                         (into (empty pages)
                               (remove #(contains? page-ids (:id %)))
                               pages))))))
+  ;; TODO: Handle TARGET-IDX
   ColumnDropTarget
   (accept-drop! [_ state new-pages target-idx]
     (go
@@ -82,7 +83,10 @@
                (str "(at index " target-idx ")"))
       (let [document (om/value (get-in state [:documents document-id]))]
         (<! (api/update-document! (update document :pages
-                                          #(into % new-pages))))
+                                          (fn [pages]
+                                            (data/insert-pages pages
+                                                               new-pages
+                                                               target-idx)))))
         (println "Saved!")
         ;; indicate successful drop
         true)))
