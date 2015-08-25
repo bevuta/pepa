@@ -96,15 +96,19 @@
 ;;; dragging). We bubble it from `inbox-column-page', adding its own
 ;;; `:id' and use that id to update the selection information.
 (ui/defcomponent inbox-column-page [page owner {:keys [page-click! store-idx!]}]
-  (render [_]
+  (render-state [_ {:keys [dragover?]}]
     [:li.page {:draggable true
-               :class [(when (:selected? page) "selected")]
+               :class (let [selected? (:selected? page)]
+                        [(when selected? "selected")
+                         (when (and (not selected?) dragover?) "dragover")])
                :on-drag-start (fn [e]
                                 (println "inbox-column-page")
                                 (.setData e.dataTransfer "application/x-pepa-page" (:id page)))
-               :on-drag-enter (fn [e]
-                                (println "[inbox-column-page] drag-enter")
-                                (store-idx! (:idx page)))
+               :on-drag-over (fn [e]
+                                (store-idx! (:idx page))
+                                (om/set-state! owner :dragover? true))
+               :on-drag-leave #(om/set-state! owner :dragover? false)
+               :on-drop #(om/set-state! owner :dragover? false)
                :on-click (fn [e]
                            (page-click!
                             (selection/event->click (:id page) e))
@@ -173,8 +177,7 @@
                :on-drag-end (fn [_] (println "on-drag-end"))
                :on-drop (fn [e]
                           (println "on-drop")
-                          (let [page-cache (::page-cache column)
-                                source-column (get-transfer-data e "application/x-pepa-column")
+                          (let [source-column (get-transfer-data e "application/x-pepa-column")
                                 page-ids (get-transfer-data e "application/x-pepa-pages")]
                             ;; Delegate to `inbox'
                             (handle-drop! (:id column)

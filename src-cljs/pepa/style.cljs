@@ -315,8 +315,18 @@
      [:li {:width "100%"
            :display :flex
            :justify-content :space-around}
-      [:&.selected {:background-color "red"}]
       [:&.selected {:background-color "green"}]
+      [:&.dragover {:position :relative}
+       (let [drop-indicator-height 4]
+         [:&:before {:content (pr-str " ")
+                     :position :absolute
+                     :top (px (- (/ drop-indicator-height 2)))
+                     :left 0
+                     :width "100%"
+                     :height (px drop-indicator-height)
+                     :z-index 50
+                     :background-color "black"
+                     :opacity 0.4}])]
       [:.thumbnail {:width "80%"}]
       page-css
       [:img {:max-width "100%"
