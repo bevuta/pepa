@@ -20,6 +20,7 @@ CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox', 'tags');
        origin TEXT NOT NULL,
        name TEXT,
        report TEXT CHECK ((report IS NULL) = (status = 'pending'))"
+     :after "ALTER TABLE files ALTER COLUMN data SET STORAGE EXTERNAL;"
      :state-seq? true
      :track-deletions? true}]
 

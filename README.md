@@ -132,7 +132,8 @@ Next, compile the ClojureScript:
     nix/lein cljsbuild once
 
 If you intend to hack on the frontend code, you might want to run
-`nix/lein cljsbuild auto` instead. Finally, start the REPL:
+`nix/lein cljsbuild auto` or `nix/lein figwheel` instead. Finally,
+start the REPL:
 
     nix/lein repl
 
@@ -183,7 +184,8 @@ Next, compile the ClojureScript:
     lein cljsbuild once
 
 If you intend to hack on the frontend code, you might want to run
-`lein cljsbuild auto` instead. Finally, start the REPL:
+`lein cljsbuild auto` or `lein figwheel` instead. Finally, start the
+REPL:
 
     lein repl
 
