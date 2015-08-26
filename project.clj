@@ -8,20 +8,20 @@
                  [org.clojure/tools.namespace "0.2.10"]
 
                  ;; DB
-                 [org.clojure/java.jdbc "0.3.7"]
+                 [org.clojure/java.jdbc "0.4.1"]
                  [com.mchange/c3p0 "0.9.5"]
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
 
                  ;; Web
-                 [ring/ring-core "1.3.2"]
-                 [ring/ring-json "0.3.1"]
+                 [ring/ring-core "1.4.0"]
+                 [ring/ring-json "0.4.0"]
                  
-                 [org.immutant/web "2.0.1"]
+                 [org.immutant/web "2.0.2"]
                  [liberator "0.13"]
-                 [compojure "1.3.4"]
+                 [compojure "1.4.0"]
                  [hiccup "1.0.5"]
                  
-                 [com.cognitect/transit-clj "0.8.271"]
+                 [com.cognitect/transit-clj "0.8.281"]
                  [io.clojure/liberator-transit "0.3.0"]
                  [org.clojure/data.json "0.2.6"]
 
@@ -65,7 +65,7 @@
   :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.0"]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
-             :dev {:dependencies [[lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
+             :dev {:dependencies [[lein-figwheel "0.3.7" :exclusions [cider/cider-nrepl]]]
                    :plugins [[lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
                    :cljsbuild {:builds {:pepa {:source-paths ["dev"]
                                                :figwheel {:on-jsload "pepa.core/on-js-reload"}
@@ -73,13 +73,13 @@
                                                           :optimizations :none
                                                           :pretty-print true}}}}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "0.0-3297"]
-                                       [com.cognitect/transit-cljs "0.8.215"]
-                                       [org.omcljs/om "0.8.8"]
+             :provided {:dependencies [[org.clojure/clojurescript "1.7.107"]
+                                       [com.cognitect/transit-cljs "0.8.220"]
+                                       [org.omcljs/om "0.9.0"]
                                        [org.clojars.the-kenny/nom "0.1.1"]
                                        [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"
                                         :exclusions [org.clojure/tools.reader]]
-                                       [sablono "0.3.4" :exclusions [cljsjs/react]]
+                                       [sablono "0.3.6" :exclusions [cljsjs/react]]
                                        [secretary "1.2.3"]
                                        [the/parsatron "0.0.7"]]}
              ;; Advanced Cljs Compilation
