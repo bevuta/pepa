@@ -102,3 +102,47 @@ REPL:
 Start the server by calling the `(go)` function in the `user`
 namespace. Alternatively, if you don't need a REPL, you can just use
 `lein run` to start the server.
+
+### Debian Jessie
+
+Install [Leiningen](https://github.com/technomancy/leiningen/) on your
+system (see instructions on their website). All other dependencies are
+available via `apt-get`.
+
+    sudo apt-get update
+    sudo apt-get install openjdk-7-jre-headless pdftk postgresql poppler-utils cuneiform tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu
+
+Next,
+gure PostgreSQL according to the instructions in the Debian wiki](https://wiki.debian.org/PostgreSql).
+Don't forget creating a `pepa` system account under which Pepa will
+run.  Follow the remaining instructions logged in as this user,
+e.g. `sudo -u pepa -s`.
+
+Create a role and database for Pepa:
+
+    sudo -u postgres psql -c "CREATE USER pepa"
+    sudo -u postgres psql -c "CREATE DATABASE pepa OWNER pepa"
+
+Using that new role, import the database schema:
+
+    psql -h localhost -U pepa pepa < resources/schema.sql
+
+Create a config file (`pepa` is the default role and database name so
+we only need to set the hostname):
+
+    sed "s,<db-host>,localhost," resources/config.sample.clj > config.clj
+
+Next, compile the ClojureScript:
+
+    lein cljsbuild once
+
+If you intend to hack on the frontend code, you might want to run
+`lein cljsbuild auto` or `lein figwheel` instead. Finally, start the
+REPL:
+
+    lein repl
+
+Start the server by calling the `(go)` function in the `user`
+namespace. Alternatively, if you don't need a REPL, you can just use
+`lein run` to start the server.
+
