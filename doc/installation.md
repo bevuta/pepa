@@ -1,3 +1,10 @@
+## Overview
+
+- [./installation-arch.md](installation-arch.md)
+- [./installation-debian.md](installation-debian.md)
+- [./installation-nix.md](installation-nix.md)
+- [./installation-pepa.md](installation-pepa.md)
+
 ## Build instructions
 
 To build and run Pepa on your system, you'll need Java (at least
