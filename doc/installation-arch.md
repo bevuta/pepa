@@ -15,3 +15,8 @@ and add a line to the `pg_hba.conf` for the `pepa` user, e.g.:
 Now (re-)start the server:
 
     sudo systemctl restart postgresql
+
+Create a role and database for Pepa:
+
+    sudo -u postgres psql -c "CREATE USER pepa"
+    sudo -u postgres psql -c "CREATE DATABASE pepa OWNER pepa"

@@ -1,9 +1,8 @@
 ## Pepa
 
-Create a role and database for Pepa:
+Using the pepa user role, import the database schema:
 
-    sudo -u postgres psql -c "CREATE USER pepa"
-    sudo -u postgres psql -c "CREATE DATABASE pepa OWNER pepa"
+    lein pepa schema | psql -U pepa pepa
 
 Create a config file by copying the sample config file into the proper
 place:
