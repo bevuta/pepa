@@ -22,9 +22,4 @@ Obtain the source via `git` like this:
 Install the dependencies, configure PostgreSQL and edit the config
 file as described in either of `installation-arch.md`,
 `installation-debian.md` or `installation-nix.md`.  Proceed with
-`installation-pepa.md` for OS-independent instructions.  It is assumed
-that the current working directory is the project root, so:
-
-    cd pepa
-
-And you are good to go.
+`installation-pepa.md` for OS-independent instructions.
