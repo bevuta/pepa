@@ -64,6 +64,8 @@ CREATE TRIGGER insert_files_state_seq_trigger
   FOR EACH ROW
   EXECUTE PROCEDURE update_files_state_seq_func();
 
+ALTER TABLE files ALTER COLUMN data SET STORAGE EXTERNAL;
+
 
 CREATE OR REPLACE FUNCTION delete_files_track_func() RETURNS TRIGGER AS $$
        BEGIN
