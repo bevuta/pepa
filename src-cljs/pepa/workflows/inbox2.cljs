@@ -27,7 +27,7 @@
   (remove-pages! [_ state page-ids]))
 
 (defprotocol ColumnDropTarget
-  (accept-drop!  [_ state pages target-idx]))
+  (accept-drop! [_ state pages target-idx]))
 
 (defrecord InboxColumnSource [id]
   ColumnSource
@@ -95,24 +95,32 @@
     (assert (number? document-id))
     (api/fetch-documents! [document-id])))
 
+(defn- inbox-page-drag-over [page owner store-idx! e]
+  ;; Calculcate the center position for this image and set idx to the
+  ;; current page or the page after, respectively
+  (let [rect (.getBoundingClientRect (.-currentTarget e))
+        top (.-top rect)
+        height (.-height rect)
+        local (Math/abs (- (.-clientY e) top))
+        idx (if (>= (/ height 2) local)
+              (:idx page)
+              (inc (:idx page)))]
+    (store-idx! idx)))
+
 ;;; NOTE: We need on-drag-start in `inbox-column' and in
 ;;; `inbox-column-page' (the latter to handle selection-updates when
 ;;; dragging). We bubble it from `inbox-column-page', adding its own
 ;;; `:id' and use that id to update the selection information.
 (ui/defcomponent inbox-column-page [page owner {:keys [page-click! store-idx!]}]
-  (render-state [_ {:keys [dragover?]}]
+  (render [_]
     [:li.page {:draggable true
                :class (let [selected? (:selected? page)]
                         [(when selected? "selected")
-                         (when (and (not selected?) dragover?) "dragover")])
+                         (when (and (not selected?) (:dragover? page)) "dragover")])
                :on-drag-start (fn [e]
                                 (println "inbox-column-page")
                                 (.setData e.dataTransfer "application/x-pepa-page" (:id page)))
-               :on-drag-over (fn [e]
-                                (store-idx! (:idx page))
-                                (om/set-state! owner :dragover? true))
-               :on-drag-leave #(om/set-state! owner :dragover? false)
-               :on-drop #(om/set-state! owner :dragover? false)
+               :on-drag-over (partial inbox-page-drag-over page owner store-idx!)
                :on-click (fn [e]
                            (page-click!
                             (selection/event->click (:id page) e))
@@ -179,6 +187,8 @@
                                  (.preventDefault e)))
                :on-drag-start (partial column-drag-start state column owner)
                :on-drag-end (fn [_] (println "on-drag-end"))
+               ;; Reset this columns drop-idx to clear the marker
+               :on-drag-leave (fn [_] (om/set-state! owner :drop-idx nil))
                :on-drop (fn [e]
                           (println "on-drop")
                           (let [source-column (get-transfer-data e "application/x-pepa-column")
@@ -187,7 +197,9 @@
                             (handle-drop! (:id column)
                                           source-column
                                           page-ids
-                                          drop-idx)))}
+                                          drop-idx))
+                          ;; Remove drop-target
+                          (om/set-state! owner :drop-idx nil))}
      [:header (column-title column state)]
      [:ul.pages
       (let [pages (map-indexed (fn [idx page] (assoc page :idx idx))
@@ -199,7 +211,9 @@
                               :store-idx! (fn [idx]
                                             (om/set-state! owner :drop-idx idx))}
                        :fn (fn [page]
-                             (mark-page-selected page (:selected selection)))}))]]))
+                             (-> page
+                                 (assoc :dragover? (= drop-idx (:idx page) ))
+                                 (mark-page-selected (:selected selection))))}))]]))
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx]
   (let [columns (om/get-state owner :columns)
@@ -213,7 +227,8 @@
                           (map om/value))
                     page-ids)]
     ;; TODO: Assert?
-    (when-not (<= 0 target-idx (dec (count existing-pages)))
+    ;; NOTE: We need to handle (= idx page-count) to be able to insert pages at the end
+    (when-not (<= 0 target-idx (count existing-pages))
       (throw (ex-info (str "Got invalid target-idx:" target-idx)
                       {:idx target-idx
                        :column-pages existing-pages
