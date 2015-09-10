@@ -61,39 +61,62 @@
   (will-mount [_]
     (api/fetch-inbox!)))
 
+(defn- document-accept-drop!
+  ([document-id state new-pages target-idx]
+   (go
+     (println "dropping" (pr-str (map :id new-pages)) "on document" document-id
+              (str "(at index " target-idx ")"))
+     (let [document (om/value (get-in state [:documents document-id]))]
+       (<! (api/update-document! (update document :pages
+                                         (fn [pages]
+                                           (data/insert-pages pages
+                                                              new-pages
+                                                              target-idx)))))
+       (println "Saved!")
+       ;; indicate successful drop
+       true)))
+  ([state new-pages target-idx]
+   (go
+     (println "Dropping pages on unsaved document...")
+     (let [document (<! (api/save-new-document! {:title "Unsaved Document"
+                                                 :pages new-pages}
+                                                "inbox"))]
+       ;; TODO: We need to be able to change our own ID
+       (if document
+         true
+         false)))))
+
 (defrecord DocumentColumnSource [id document-id]
   ColumnSource
   (column-title [_ state]
-    (get-in state [:documents document-id :title]
-            "Untitled Document"))
+    (if document-id
+      (get-in state [:documents document-id :title]
+              "Untitled Document")
+      "Unsaved Document"))
   (column-pages [_ state]
-    (get-in state [:documents document-id :pages]))
+    (get-in state
+            [:documents document-id :pages]
+            []))
   (remove-pages! [_ state page-ids]
     (go
-      (if-let [document (om/value (get-in state [:documents document-id]))]
-        (<! (api/update-document! (update document
-                                          :pages
-                                          #(remove (comp (set page-ids) :id) %))))
-        (js/console.error (str "[DocumentColumnSource] Failed to get document " document-id)
-                          {:document-id document-id}))))
+      (when document-id
+        (if-let [document (om/value (get-in state [:documents document-id]))]
+          (<! (api/update-document! (update document
+                                            :pages
+                                            #(remove (comp (set page-ids) :id) %))))
+          (js/console.error (str "[DocumentColumnSource] Failed to get document " document-id)
+                            {:document-id document-id})))))
   ColumnDropTarget
   (accept-drop! [_ state new-pages target-idx]
-    (go
-      (println "dropping" (pr-str (map :id new-pages)) "on document" document-id
-               (str "(at index " target-idx ")"))
-      (let [document (om/value (get-in state [:documents document-id]))]
-        (<! (api/update-document! (update document :pages
-                                          (fn [pages]
-                                            (data/insert-pages pages
-                                                               new-pages
-                                                               target-idx)))))
-        (println "Saved!")
-        ;; indicate successful drop
-        true)))
+    (if-not document-id
+      (document-accept-drop! state new-pages target-idx)
+      (document-accept-drop! document-id state new-pages target-idx)))
   om/IWillMount
   (will-mount [_]
-    (assert (number? document-id))
-    (api/fetch-documents! [document-id])))
+    (assert (or (nil? document-id)
+                (number? document-id)))
+    (when document-id
+      (api/fetch-documents! [document-id]))))
 
 (defn- inbox-page-drag-over [page owner store-idx! e]
   ;; Calculcate the center position for this image and set idx to the
@@ -217,8 +240,8 @@
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx]
   (let [columns (om/get-state owner :columns)
-        target (get columns target)
-        source (get columns source)
+        target  (first (filter #(= (:id %) target) columns))
+        source  (first (filter #(= (:id %) source) columns))
         ;; Remove page-ids already in `target'
         existing-pages (mapv :id (column-pages target state))
         pages (into []
@@ -248,8 +271,8 @@
 (defn ^:private make-page-cache [state columns]
   (into {}
         ;; Transducerpower
-        (comp (mapcat #(column-pages (val %) state))
-              #_(map om/value)
+        (comp (mapcat #(column-pages % state))
+              (map om/value)
               (map (juxt :id identity)))
         columns))
 
@@ -258,14 +281,13 @@
     (let [gen (IdGenerator.getInstance)
           columns [(->InboxColumnSource (.getNextUniqueId gen))
                    (->DocumentColumnSource (.getNextUniqueId gen) 1)
-                   (->DocumentColumnSource (.getNextUniqueId gen) 2)]]
-      {:columns (into {}
-                      (map (juxt :id identity))
-                      columns)}))
+                   (->DocumentColumnSource (.getNextUniqueId gen) 2)
+                   (->DocumentColumnSource (.getNextUniqueId gen) nil)]]
+      {:columns columns}))
   (will-mount [_]
     ;; HACK: Use om/IWillMount to fetch additional data needed by each
     ;; column
-    (doseq [[_ column] (om/get-state owner :columns)]
+    (doseq [column (om/get-state owner :columns)]
       (when (satisfies? om/IWillMount column)
         (om/will-mount column))))
   (render-state [_ {:keys [columns]}]
@@ -275,6 +297,6 @@
     (let [page-cache (make-page-cache state columns)]
       [:.workflow.inbox
        (om/build-all inbox-column columns
-                     {:fn (fn [[_ column]]
+                     {:fn (fn [column]
                             [state (assoc column ::page-cache page-cache)])
                       :state {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}})])))
