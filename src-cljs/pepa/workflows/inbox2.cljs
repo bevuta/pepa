@@ -22,6 +22,7 @@
 
 (defprotocol ColumnSource
   (column-title [_ state])
+  (column-header-url [_])
   (column-pages  [_ state])
   ;; TODO: Handle immutable column sources
   ;; TODO: How do we handle removal of the last page for documents?
@@ -34,6 +35,8 @@
   ColumnSource
   (column-title [_ _]
     "Inbox")
+  (column-header-url [_]
+    nil)
   (column-pages [_ state]
     (get-in state [:inbox :pages]))
   (remove-pages! [_ state page-ids]
@@ -96,6 +99,9 @@
       (get-in state [:documents document-id :title]
               "Untitled Document")
       "Unsaved Document"))
+  (column-header-url [_]
+    (when document-id
+      (nav/document-route {:id document-id})))
   (column-pages [_ state]
     (get-in state
             [:documents document-id :pages]
@@ -226,7 +232,10 @@
                                           drop-idx))
                           ;; Remove drop-target
                           (om/set-state! owner :drop-idx nil))}
-     [:header (column-title column state)]
+     [:header
+      (column-title column state)
+      (when-let [url (column-header-url column)]
+        [:a.show {:href url} "Show"])]
      [:ul.pages
       (let [pages (map-indexed (fn [idx page] (assoc page :idx idx))
                                (column-pages column state))]

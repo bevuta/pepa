@@ -305,10 +305,12 @@
     [:header {:display :flex
               :flex-flow [[:row :wrap]]
               :align-items :center
-              :justify-content :space-between
               :overflow :hidden
               :text-overflow :ellipsis
-              :white-space :nowrap}]
+              :white-space :nowrap}
+     [:a.show {:font-size (pt 8)
+               :padding (px 12)
+               :text-decoration :underline}]]
     [:ul.pages {:list-style-type :none
                 :margin 0, :padding 0
                 :overflow-y :auto}
