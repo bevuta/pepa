@@ -179,6 +179,8 @@
   "Saves DOCUMENT. Returns a channel. Channel will contain the saved
   document in case of success, nil in case of error."
   ([document origin]
+   {:pre [(every? :id (:pages document))
+          (string? (:title document))]}
    (go
      (when-let [res (<! (xhr-request! "/documents" :post
                                       (assoc (document->api-document document)
