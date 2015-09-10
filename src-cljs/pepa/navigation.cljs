@@ -32,8 +32,9 @@
 (defn dashboard-route [& [query-params]]
   (secretary/render-route "/" {:query-params query-params}))
 
-(defn workflow-route [workflow]
-  (secretary/render-route (str "/" (name workflow))))
+(defn workflow-route [workflow & [query-params]]
+  (secretary/render-route (str "/" (name workflow))
+                          {:query-params query-params}))
 
 (secretary/defroute document-route "/document/:id" [id query-params]
   (om/update! (navigation-ref)

@@ -10,6 +10,7 @@
             [pepa.api :as api]
             [pepa.data :as data]
             [pepa.selection :as selection]
+            [pepa.navigation :as nav]
 
             [pepa.components.page :as page]
 
@@ -61,6 +62,8 @@
   (will-mount [_]
     (api/fetch-inbox!)))
 
+(declare add-column! current-columns)
+
 (defn- document-accept-drop!
   ([document-id state new-pages target-idx]
    (go
@@ -78,13 +81,13 @@
   ([state new-pages target-idx]
    (go
      (println "Dropping pages on unsaved document...")
-     (let [document (<! (api/save-new-document! {:title "Unsaved Document"
+     (let [document (<! (api/save-new-document! {:title "New Document"
                                                  :pages new-pages}
                                                 "inbox"))]
        ;; TODO: We need to be able to change our own ID
-       (if document
-         true
-         false)))))
+       (when document
+         (add-column! (current-columns state) [:document (:id document)])
+         true)))))
 
 (defrecord DocumentColumnSource [id document-id]
   ColumnSource
@@ -276,20 +279,72 @@
               (map (juxt :id identity)))
         columns))
 
-(ui/defcomponent inbox [state owner opts]
-  (init-state [_]
-    (let [gen (IdGenerator.getInstance)
-          columns [(->InboxColumnSource (.getNextUniqueId gen))
-                   (->DocumentColumnSource (.getNextUniqueId gen) 1)
-                   (->DocumentColumnSource (.getNextUniqueId gen) 2)
-                   (->DocumentColumnSource (.getNextUniqueId gen) nil)]]
-      {:columns columns}))
-  (will-mount [_]
-    ;; HACK: Use om/IWillMount to fetch additional data needed by each
-    ;; column
-    (doseq [column (om/get-state owner :columns)]
+(defn- parse-column-param [param]
+  (let [entries (s/split param #",")
+        pairs (mapv #(s/split % #":") entries)]
+    (for [[k v] pairs]
+      (let [key (case k
+                  "d" :document
+                  "f" :file
+                  "i" :inbox)
+            value (try (let [n (js/parseInt v 10)] (when (integer? n) n)) (catch js/Error e nil))]
+        [key value]))))
+
+(defn- serialize-column-param [columns]
+  (s/join "," (for [column columns]
+                (match [column]
+                  [[:document id]] (str "d:" id)
+                  [[:inbox _]] "i"))))
+
+(defn- current-columns [props]
+  (-> (or (get-in props [:navigation :query-params :columns])
+          "i,d:")
+      (parse-column-param)))
+
+(defn- add-column! [columns column]
+  {:pre [(vector? column)
+         (keyword? (first column))
+         (= 2 (count column))]}
+  (nav/navigate! (nav/workflow-route
+                  :inbox
+                  (let [
+                        ;; Special case: If last column is 'new
+                        ;; document', insert before it
+                        last-column (last columns)
+                        to-add (if (= [:document nil] last-column)
+                                 [column last-column]
+                                 [column])
+                        columns (butlast columns)]
+                    {:columns (-> columns
+                                  (vec)
+                                  (into to-add)
+                                  (serialize-column-param))}))))
+
+(defn- make-columns [props state owner]
+  (let [columns (current-columns props)]
+    (println "columns: " (pr-str columns))
+    (when-not (= columns (::column-spec state))
+      (om/set-state! owner ::column-spec columns)
+      (let [gen (IdGenerator.getInstance)
+            columns (for [column columns]
+                      (match [column]
+                        [[:document id]] (->DocumentColumnSource (.getNextUniqueId gen) id)
+                        [[:inbox _]]     (->InboxColumnSource (.getNextUniqueId gen))))]
+        (filterv identity columns)))))
+
+(defn- prepare-columns! [props state owner]
+  ;; Be careful when running `set-state!' as it easily leads to loops
+  (when-let [columns (make-columns props state owner)]
+    (om/set-state! owner :columns columns)
+    (doseq [column columns]
       (when (satisfies? om/IWillMount column)
-        (om/will-mount column))))
+        (om/will-mount column)))))
+
+(ui/defcomponent inbox [state owner opts]
+  (will-mount [_]
+    (prepare-columns! state (om/get-state owner) owner))
+  (will-update [_ next-props next-state]
+    (prepare-columns! next-props next-state owner))
   (render-state [_ {:keys [columns]}]
     ;; We generate a lookup table from all known pages so `on-drop' in
     ;; `inbox-column' can access it (as the drop `dataTransfer' only
