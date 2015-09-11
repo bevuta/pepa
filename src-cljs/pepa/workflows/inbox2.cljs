@@ -28,6 +28,12 @@
   ;; TODO: How do we handle removal of the last page for documents?
   (remove-pages! [_ state page-ids]))
 
+(defprotocol SpecialColumn
+  (special-column-ui [_]))
+
+(defn special-column? [x]
+  (satisfies? SpecialColumn x))
+
 (defprotocol ColumnDropTarget
   (accept-drop! [_ state pages target-idx]))
 
@@ -105,7 +111,11 @@
     (assert (number? document-id))
     (api/fetch-documents! [document-id])))
 
+(declare new-document-ui)
+
 (defrecord NewDocumentColumnSource [id]
+  SpecialColumn
+  (special-column-ui [_] new-document-ui)
   ColumnSource
   (column-title [_ _]
     "Create New Document")
@@ -193,7 +203,7 @@
   [page selected-pages]
   (assoc page :selected? (contains? (set selected-pages) (:id page))))
 
-(ui/defcomponent inbox-column [[state column] owner opts]
+(ui/defcomponent inbox-column [[state column] owner]
   (init-state [_]
     {:selection (->> (column-pages column state)
                      (map :id)
@@ -246,6 +256,27 @@
                              (-> page
                                  (assoc :dragover? (= drop-idx (:idx page) ))
                                  (mark-page-selected (:selected selection))))}))]]))
+
+(ui/defcomponent new-document-ui [[state column] owner]
+  (render-state [_ {:keys [handle-drop!]}]
+    [:.column {:on-drag-over (fn [e] (.preventDefault e))
+               :on-drop (fn [e]
+                          (println "[new-document-ui] on-drop")
+                          (let [source-column (get-transfer-data e "application/x-pepa-column")
+                                page-ids (get-transfer-data e "application/x-pepa-pages")]
+                            ;; Delegate to `inbox'
+                            (handle-drop! (:id column)
+                                          source-column
+                                          page-ids
+                                          0)))}
+     [:header
+      (column-title column state)]
+     [:.center
+      "Drag pages here or press \"Open to open a file or document"
+      [:button {:on-click (fn [e]
+                            (ui/cancel-event e)
+                            (add-column! (current-columns state) [:document 1]))}
+       "Open"]]]))
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx]
   (let [columns (om/get-state owner :columns)
@@ -359,7 +390,13 @@
     ;; contains IDs)
     (let [page-cache (make-page-cache state columns)]
       [:.workflow.inbox
-       (om/build-all inbox-column columns
-                     {:fn (fn [column]
-                            [state (assoc column ::page-cache page-cache)])
-                      :state {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}})])))
+       (map (fn [x i]
+              (om/build (if (special-column? x)
+                          (special-column-ui x)
+                          inbox-column)
+                        (assoc x :om.fake/index i)
+                        {:fn (fn [column]
+                               [state (assoc column ::page-cache page-cache)])
+                         :state {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}}))
+            columns
+            (range))])))
