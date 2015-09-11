@@ -67,65 +67,62 @@
 
 (declare add-column! current-columns)
 
-(defn- document-accept-drop!
-  ([document-id state new-pages target-idx]
-   (go
-     (println "dropping" (pr-str (map :id new-pages)) "on document" document-id
-              (str "(at index " target-idx ")"))
-     (let [document (om/value (get-in state [:documents document-id]))]
-       (<! (api/update-document! (update document :pages
-                                         (fn [pages]
-                                           (data/insert-pages pages
-                                                              new-pages
-                                                              target-idx)))))
-       (println "Saved!")
-       ;; indicate successful drop
-       true)))
-  ([state new-pages target-idx]
-   (go
-     (println "Dropping pages on unsaved document...")
-     (let [document (<! (api/save-new-document! {:title "New Document"
-                                                 :pages new-pages}
-                                                "inbox"))]
-       ;; TODO: We need to be able to change our own ID
-       (when document
-         (add-column! (current-columns state) [:document (:id document)])
-         true)))))
-
 (defrecord DocumentColumnSource [id document-id]
   ColumnSource
   (column-title [_ state]
-    (if document-id
-      (get-in state [:documents document-id :title]
-              "Untitled Document")
-      "Unsaved Document"))
+    (get-in state [:documents document-id :title]
+            "Untitled Document"))
   (column-header-url [_]
-    (when document-id
-      (nav/document-route {:id document-id})))
+    (nav/document-route {:id document-id}))
   (column-pages [_ state]
     (get-in state
             [:documents document-id :pages]
             []))
   (remove-pages! [_ state page-ids]
     (go
-      (when document-id
-        (if-let [document (om/value (get-in state [:documents document-id]))]
-          (<! (api/update-document! (update document
-                                            :pages
-                                            #(remove (comp (set page-ids) :id) %))))
-          (js/console.error (str "[DocumentColumnSource] Failed to get document " document-id)
-                            {:document-id document-id})))))
+      (if-let [document (om/value (get-in state [:documents document-id]))]
+        (<! (api/update-document! (update document
+                                          :pages
+                                          #(remove (comp (set page-ids) :id) %))))
+        (js/console.error (str "[DocumentColumnSource] Failed to get document " document-id)
+                          {:document-id document-id}))))
   ColumnDropTarget
   (accept-drop! [_ state new-pages target-idx]
-    (if-not document-id
-      (document-accept-drop! state new-pages target-idx)
-      (document-accept-drop! document-id state new-pages target-idx)))
+    (go
+      (println "dropping" (pr-str (map :id new-pages)) "on document" document-id
+               (str "(at index " target-idx ")"))
+      (let [document (om/value (get-in state [:documents document-id]))]
+        (<! (api/update-document! (update document :pages
+                                          (fn [pages]
+                                            (data/insert-pages pages
+                                                               new-pages
+                                                               target-idx)))))
+        (println "Saved!")
+        ;; indicate successful drop
+        true)))
   om/IWillMount
   (will-mount [_]
-    (assert (or (nil? document-id)
-                (number? document-id)))
-    (when document-id
-      (api/fetch-documents! [document-id]))))
+    (assert (number? document-id))
+    (api/fetch-documents! [document-id])))
+
+(defrecord NewDocumentColumnSource [id]
+  ColumnSource
+  (column-title [_ _]
+    "Create New Document")
+  (column-header-url [_] nil)
+  (column-pages [_ _] [])
+  (remove-pages! [_ state page-ids]
+    (assert false "Can't remove pages from NewDocumentColumnSource"))
+  ColumnDropTarget
+  (accept-drop! [_ state new-pages _]
+    (go
+      (println "Dropping pages on unsaved document...")
+      (let [document (<! (api/save-new-document! {:title "New Document"
+                                                  :pages new-pages}
+                                                 "inbox"))]
+        (when document
+          (add-column! (current-columns state) [:document (:id document)])
+          true)))))
 
 (defn- inbox-page-drag-over [page owner store-idx! e]
   ;; Calculcate the center position for this image and set idx to the
@@ -295,7 +292,8 @@
       (let [key (case k
                   "d" :document
                   "f" :file
-                  "i" :inbox)
+                  "i" :inbox
+                  "n" :new-document)
             value (try (let [n (js/parseInt v 10)] (when (integer? n) n)) (catch js/Error e nil))]
         [key value]))))
 
@@ -303,11 +301,12 @@
   (s/join "," (for [column columns]
                 (match [column]
                   [[:document id]] (str "d:" id)
-                  [[:inbox _]] "i"))))
+                  [[:inbox _]] "i"
+                  [[:new-document _]] "n"))))
 
 (defn- current-columns [props]
   (-> (or (get-in props [:navigation :query-params :columns])
-          "i,d:")
+          "i,n")
       (parse-column-param)))
 
 (defn- add-column! [columns column]
@@ -316,13 +315,12 @@
          (= 2 (count column))]}
   (nav/navigate! (nav/workflow-route
                   :inbox
-                  (let [
-                        ;; Special case: If last column is 'new
+                  (let [;; Special case: If last column is 'new
                         ;; document', insert before it
                         last-column (last columns)
-                        to-add (if (= [:document nil] last-column)
+                        to-add (if (= [:new-document nil] last-column)
                                  [column last-column]
-                                 [column])
+                                 [last-column column])
                         columns (butlast columns)]
                     {:columns (-> columns
                                   (vec)
@@ -338,7 +336,8 @@
             columns (for [column columns]
                       (match [column]
                         [[:document id]] (->DocumentColumnSource (.getNextUniqueId gen) id)
-                        [[:inbox _]]     (->InboxColumnSource (.getNextUniqueId gen))))]
+                        [[:inbox _]]     (->InboxColumnSource (.getNextUniqueId gen))
+                        [[:new-document _]]     (->NewDocumentColumnSource (.getNextUniqueId gen))))]
         (filterv identity columns)))))
 
 (defn- prepare-columns! [props state owner]
