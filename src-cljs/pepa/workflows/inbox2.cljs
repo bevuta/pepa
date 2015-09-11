@@ -11,6 +11,8 @@
             [pepa.data :as data]
             [pepa.selection :as selection]
             [pepa.navigation :as nav]
+            [pepa.search :as search]
+            [pepa.components.document :as document]
 
             [pepa.components.page :as page]
 
@@ -126,6 +128,12 @@
         (when document
           (add-column! (current-columns state) [:document (:id document)])
           true)))))
+
+(declare search-ui)
+
+(defrecord SearchColumn [id]
+  SpecialColumn
+  (special-column-ui [_] search-ui))
 
 (defn- inbox-page-drag-over [page owner store-idx! e]
   ;; Calculcate the center position for this image and set idx to the
@@ -270,6 +278,41 @@
                             (add-column! (current-columns state) [:document 1]))}
        "Open"]]]))
 
+(ui/defcomponent search-result-row [document]
+  (render [_]
+    [:li
+     (om/build page/thumbnail (first (:pages document)))
+     [:.meta
+      [:.title (:title document)]
+      (when-let [modified  (:created document)]
+        [:.created (document/format-datetime modified)])]]))
+
+(ui/defcomponent search-ui [[state column] owner]
+  (init-state [_]
+    {:documents [64 17 62 20 60 25 45 14 35 63 47 48 61 4 42 44 59 83 84 57 88 56 74 23 76 15 6 34 9 96 37 3 36 58 100 10 7 33 99 27 86 46 12 21 32 13 31 38 26 66 5 22 87 85 1 40 24 28 43 41 65 18 30 11 19 8 29 16 2]})
+  (will-update [_ next-props next-state]
+    (when-let [documents (:documents next-state)]
+      (when-not (= documents  (om/get-render-state owner :documents))
+        (api/fetch-documents! documents))))
+  (render-state [_ {:keys [documents]}]
+    [:.column
+     [:header
+      [:form {:on-submit (fn [e]
+                           (ui/cancel-event e)
+                           (let [text (.-value (om/get-node owner "search"))
+                                 query (search/parse-query-string text)]
+                             (when query
+                               (async/take! (api/search-documents query)
+                                            (fn [documents]
+                                              (println "Found documents:" documents)
+                                              (om/set-state! owner :documents documents))))))}
+       [:input.search {:type "text"
+                       :ref "search"}]
+       [:button {:type "submit"}
+        "Search"]]]
+     [:ul.search-results
+      (om/build-all search-result-row (map #(get-in state [:documents %]) documents))]]))
+
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx]
   (let [columns (om/get-state owner :columns)
         target  (first (filter #(= (:id %) target) columns))
@@ -318,7 +361,8 @@
                   "d" :document
                   "f" :file
                   "i" :inbox
-                  "n" :new-document)
+                  "n" :new-document
+                  "s" :search)
             value (try (let [n (js/parseInt v 10)] (when (integer? n) n)) (catch js/Error e nil))]
         [key value]))))
 
@@ -327,7 +371,8 @@
                 (match [column]
                   [[:document id]] (str "d:" id)
                   [[:inbox _]] "i"
-                  [[:new-document _]] "n"))))
+                  [[:new-document _]] "n"
+                  [[:search _]] "s"))))
 
 (defn- current-columns [props]
   (-> (or (get-in props [:navigation :query-params :columns])
@@ -362,7 +407,8 @@
                       (match [column]
                         [[:document id]]    (->DocumentColumnSource (.getNextUniqueId gen) id)
                         [[:inbox _]]        (->InboxColumnSource (.getNextUniqueId gen))
-                        [[:new-document _]] (->NewDocumentColumn (.getNextUniqueId gen))))]
+                        [[:new-document _]] (->NewDocumentColumn (.getNextUniqueId gen))
+                        [[:search _]]       (->SearchColumn (.getNextUniqueId gen))))]
         (filterv identity columns)))))
 
 (defn- prepare-columns! [props state owner]

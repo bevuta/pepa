@@ -311,9 +311,11 @@
      [:a.show {:font-size (pt 8)
                :padding (px 12)
                :text-decoration :underline}]]
-    [:ul.pages {:list-style-type :none
-                :margin 0, :padding 0
-                :overflow-y :auto}
+    [:ul {:list-style-type :none
+          :margin 0, :padding 0
+          :overflow-y :auto}
+
+     
      [:li {:width "100%"
            :display :flex
            :justify-content :space-around}
@@ -333,7 +335,20 @@
       page-css
       [:img {:max-width "100%"
              :max-height "100%"}]
-      ]]]
+      ]
+     (let [result-height 100]
+      [:&.search-results
+       [:li {:height (px result-height)
+             :display :flex
+             :flex-direction :row}
+        [:.thumbnail {:width (px (/ result-height (/ 4 3)))}]
+        [:.meta {:display :flex
+                 :flex-direction :column
+                 :font-size (pt 10)
+                 :flex-shrink 10
+                 :overflow :hidden
+                 :text-overflow :ellipsis}]]])
+     ]]
    ;; Create Document Column
    ;; [:.create-document {:align-items :center
    ;;                     :justify-content :space-around}
