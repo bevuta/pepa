@@ -113,16 +113,9 @@
 
 (declare new-document-ui)
 
-(defrecord NewDocumentColumnSource [id]
+(defrecord NewDocumentColumn [id]
   SpecialColumn
   (special-column-ui [_] new-document-ui)
-  ColumnSource
-  (column-title [_ _]
-    "Create New Document")
-  (column-header-url [_] nil)
-  (column-pages [_ _] [])
-  (remove-pages! [_ state page-ids]
-    (assert false "Can't remove pages from NewDocumentColumnSource"))
   ColumnDropTarget
   (accept-drop! [_ state new-pages _]
     (go
@@ -269,8 +262,7 @@
                                           source-column
                                           page-ids
                                           0)))}
-     [:header
-      (column-title column state)]
+     [:header nil]
      [:.center
       "Drag pages here or press \"Open to open a file or document"
       [:button {:on-click (fn [e]
@@ -283,7 +275,9 @@
         target  (first (filter #(= (:id %) target) columns))
         source  (first (filter #(= (:id %) source) columns))
         ;; Remove page-ids already in `target'
-        existing-pages (mapv :id (column-pages target state))
+        existing-pages (mapv :id (if (satisfies? ColumnSource target)
+                                   (column-pages target state)
+                                   []))
         pages (into []
                     (comp (remove (set existing-pages))
                           (map page-cache)
@@ -311,7 +305,7 @@
 (defn ^:private make-page-cache [state columns]
   (into {}
         ;; Transducerpower
-        (comp (mapcat #(column-pages % state))
+        (comp (mapcat #(when (satisfies? ColumnSource %) (column-pages % state)))
               (map om/value)
               (map (juxt :id identity)))
         columns))
@@ -366,9 +360,9 @@
       (let [gen (IdGenerator.getInstance)
             columns (for [column columns]
                       (match [column]
-                        [[:document id]] (->DocumentColumnSource (.getNextUniqueId gen) id)
-                        [[:inbox _]]     (->InboxColumnSource (.getNextUniqueId gen))
-                        [[:new-document _]]     (->NewDocumentColumnSource (.getNextUniqueId gen))))]
+                        [[:document id]]    (->DocumentColumnSource (.getNextUniqueId gen) id)
+                        [[:inbox _]]        (->InboxColumnSource (.getNextUniqueId gen))
+                        [[:new-document _]] (->NewDocumentColumn (.getNextUniqueId gen))))]
         (filterv identity columns)))))
 
 (defn- prepare-columns! [props state owner]
