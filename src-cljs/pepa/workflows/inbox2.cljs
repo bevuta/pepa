@@ -97,8 +97,8 @@
   ColumnDropTarget
   (accept-drop! [_ state new-pages target-idx]
     (go
-      (println "dropping" (pr-str (map :id new-pages)) "on document" document-id
-               (str "(at index " target-idx ")"))
+      (println "dropping" (pr-str (map :id new-pages)) "on document" (pr-str document-id)
+               (str "(at index " (pr-str target-idx) ")"))
       (let [document (om/value (get-in state [:documents document-id]))]
         (<! (api/update-document! (update document :pages
                                           (fn [pages]
@@ -330,10 +330,12 @@
                     (comp (remove (set existing-pages))
                           (map page-cache)
                           (map om/value))
-                    page-ids)]
-    ;; TODO: Assert?
+                    page-ids)
+        page-count (count existing-pages)
+        ;; Handle `target-idx' being nil (by setting it to the page-count)
+        target-idx (or target-idx page-count)]
     ;; NOTE: We need to handle (= idx page-count) to be able to insert pages at the end
-    (when-not (<= 0 target-idx (count existing-pages))
+    (when-not (<= 0 target-idx page-count)
       (throw (ex-info (str "Got invalid target-idx:" target-idx)
                       {:idx target-idx
                        :column-pages existing-pages
