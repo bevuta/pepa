@@ -303,11 +303,11 @@
               :flex-direction :column
               :flex-grow 1}
     [:header {:display :flex
-              :flex-flow [[:row :wrap]]
-              :align-items :center
-              :overflow :hidden
-              :text-overflow :ellipsis
-              :white-space :nowrap}
+              :flex-direction :row
+              :align-items :center}
+     [:span {:overflow :hidden
+             :text-overflow :ellipsis
+             :white-space :nowrap}]
      [:a.show {:font-size (pt 8)
                :padding (px 12)
                :text-decoration :underline}]]
