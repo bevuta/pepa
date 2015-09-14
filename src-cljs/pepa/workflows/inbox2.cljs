@@ -280,9 +280,9 @@
                                 (add-column! current-columns [:search nil]))))}
        "Open"]]]))
 
-(ui/defcomponent search-result-row [document]
+(ui/defcomponent search-result-row [document owner {:keys [on-click]}]
   (render [_]
-    [:li
+    [:li {:on-click (fn [e] (on-click (om/value document)))}
      (om/build page/thumbnail (first (:pages document)))
      [:.meta
       [:.title (:title document)]
@@ -312,7 +312,11 @@
        [:button {:type "submit"}
         "Search"]]]
      [:ul.search-results
-      (om/build-all search-result-row (map #(get-in state [:documents %]) documents))]]))
+      (om/build-all search-result-row (map #(get-in state [:documents %]) documents)
+                    {:opts {:on-click (fn [document]
+                                        (let [columns (->> (current-columns state)
+                                                           (remove #(= % [:search nil])))]
+                                          (add-column! columns [:document (:id document)])))}})]]))
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx]
   (let [columns (om/get-state owner :columns)
