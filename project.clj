@@ -16,7 +16,7 @@
                  [ring/ring-core "1.4.0"]
                  [ring/ring-json "0.4.0"]
                  
-                 [org.immutant/web "2.0.2"]
+                 [org.immutant/web "2.1.0"]
                  [liberator "0.13"]
                  [compojure "1.4.0"]
                  [hiccup "1.0.5"]
@@ -51,7 +51,7 @@
                log4j/log4j
                org.clojure/tools.reader]
   :plugins [[lein-cljsbuild "1.0.5"]
-            [lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
+            [lein-figwheel "0.3.9" :exclusions [cider/cider-nrepl]]]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
   :cljsbuild {:builds {:pepa {:source-paths ["src" "src-cljs"]
@@ -60,19 +60,18 @@
                                          :asset-path "out"
                                          :main pepa.core
                                          :cache-analysis true}}}}
-  :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.0"]]
+  :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.1"]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
-             :dev {:dependencies [[lein-figwheel "0.3.7" :exclusions [cider/cider-nrepl]]]
-                   :plugins [[lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
+             :dev {:dependencies [[lein-figwheel "0.3.9" :exclusions [cider/cider-nrepl]]]
                    :cljsbuild {:builds {:pepa {:source-paths ["dev"]
                                                :figwheel {:on-jsload "pepa.core/on-js-reload"}
                                                :compiler {:source-map "resources/public/pepa.js.map"
                                                           :optimizations :none
                                                           :pretty-print true}}}}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "1.7.107"]
-                                       [com.cognitect/transit-cljs "0.8.220"]
+             :provided {:dependencies [[org.clojure/clojurescript "1.7.122"]
+                                       [com.cognitect/transit-cljs "0.8.225"]
                                        [org.omcljs/om "0.9.0"]
                                        [org.clojars.the-kenny/nom "0.1.1"]
                                        [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"
