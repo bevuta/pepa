@@ -337,18 +337,27 @@
              :max-height "100%"}]
       ]
      (let [result-height 100]
-      [:&.search-results
-       [:li {:height (px result-height)
-             :display :flex
-             :flex-direction :row}
-        [:.thumbnail {:width (px (/ result-height (/ 4 3)))}]
-        [:.meta {:display :flex
-                 :flex-direction :column
-                 :font-size (pt 10)
-                 :flex-shrink 10
-                 :overflow :hidden
-                 :text-overflow :ellipsis}]]])
-     ]]
+       [:&.search-results
+        [:li {:height (px result-height)
+              :display :flex
+              :flex-direction :row}
+         [:.thumbnail {:width (px (/ result-height (/ 4 3)))}]
+         [:.meta {:display :flex
+                  :flex-direction :column
+                  :font-size (pt 10)
+                  :flex-shrink 10
+                  :overflow :hidden
+                  :text-overflow :ellipsis}]]])]
+    [:&.search {:height "100%"}]
+    [:&.new
+     [:.center {:height "100%"
+                :display :flex
+                :flex-direction :column
+                :justify-content :center
+                :align-items :center
+
+                :text-align :center}
+      [:button {:margin (px 15)}]]]]
    ;; Create Document Column
    ;; [:.create-document {:align-items :center
    ;;                     :justify-content :space-around}

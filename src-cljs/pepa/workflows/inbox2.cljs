@@ -260,19 +260,19 @@
 
 (ui/defcomponent new-document-ui [[state column] owner]
   (render-state [_ {:keys [handle-drop!]}]
-    [:.column {:on-drag-over (fn [e] (.preventDefault e))
-               :on-drop (fn [e]
-                          (println "[new-document-ui] on-drop")
-                          (let [source-column (get-transfer-data e "application/x-pepa-column")
-                                page-ids (get-transfer-data e "application/x-pepa-pages")]
-                            ;; Delegate to `inbox'
-                            (handle-drop! (:id column)
-                                          source-column
-                                          page-ids
-                                          0)))}
+    [:.column.new {:on-drag-over (fn [e] (.preventDefault e))
+                   :on-drop (fn [e]
+                              (println "[new-document-ui] on-drop")
+                              (let [source-column (get-transfer-data e "application/x-pepa-column")
+                                    page-ids (get-transfer-data e "application/x-pepa-pages")]
+                                ;; Delegate to `inbox'
+                                (handle-drop! (:id column)
+                                              source-column
+                                              page-ids
+                                              0)))}
      [:header nil]
      [:.center
-      "Drag pages here or press \"Open\" to open a file or document"
+      "Drag pages here or press \"Open\" to open a document"
       [:button {:on-click (fn [e]
                             (ui/cancel-event e)
                             (let [current-columns (current-columns state)]
@@ -295,7 +295,7 @@
       (when-not (= documents  (om/get-render-state owner :documents))
         (api/fetch-documents! documents))))
   (render-state [_ {:keys [documents]}]
-    [:.column
+    [:.column.search
      [:header
       [:form {:on-submit (fn [e]
                            (ui/cancel-event e)
