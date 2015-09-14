@@ -17,7 +17,8 @@
 
             [pepa.components.page :as page]
 
-            [cljs.reader :refer [read-string]])
+            [cljs.reader :refer [read-string]]
+            [goog.string :as gstring])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]])
   (:import [cljs.core.ExceptionInfo]
@@ -132,7 +133,7 @@
 
 (declare search-ui)
 
-(defrecord SearchColumn [id]
+(defrecord SearchColumn [id search]
   SpecialColumn
   (special-column-ui [_] search-ui))
 
@@ -277,7 +278,7 @@
       [:button {:on-click (fn [e]
                             (ui/cancel-event e)
                             (let [current-columns (current-columns state)]
-                              (when-not (some #(= :search (first %)) current-columns)
+                              (when-not (some (fn [[k _]] (= :search k)) current-columns)
                                 (add-column! current-columns [:search nil]))))}
        "Open"]]]))
 
@@ -291,10 +292,32 @@
         [:.created (document/format-datetime modified)])
       (om/build tags/tags-list (:tags document))]]))
 
+(defn- run-search! [search owner]
+  (if-let [query (search/parse-query-string search)]
+    (async/take! (api/search-documents query)
+                 (fn [documents]
+                   (println "Found documents:" documents)
+                   (om/set-state! owner :documents documents)))
+    (om/set-state! owner :documents nil))
+  ;; Set the node's value to the right string
+  (when-let [node (om/get-node owner "search")]
+    (set! (.-value node) search)))
+
 (ui/defcomponent search-ui [[state column] owner]
-  (will-update [_ next-props next-state]
+  (will-mount [_]
+    ;; Run search (if we have a search string in the url)
+    (when-let [search (:search column)]
+      (run-search! search owner)))
+  (will-update [_ [next-props next-column] next-state]
+    ;; Run search if the search-string changes (note that an empty or
+    ;; nil search-string is fine and will just clear the results)
+    (let [search (:search next-column)]
+      (when-not (= search (:search column))
+        (run-search! search owner)))
+    ;; Fetch documents after the results of the search arrive
     (when-let [documents (:documents next-state)]
-      (when-not (= documents  (om/get-render-state owner :documents))
+      (when-not (= documents (om/get-render-state owner :documents))
+        ;; TODO: Only fetch documents we don't have locally
         (api/fetch-documents! documents))))
   (render-state [_ {:keys [documents]}]
     [:.column.search
@@ -302,23 +325,20 @@
       [:form {:on-submit (fn [e]
                            (ui/cancel-event e)
                            (let [text (.-value (om/get-node owner "search"))
-                                 query (search/parse-query-string text)]
-                             (if query
-                               (async/take! (api/search-documents query)
-                                            (fn [documents]
-                                              (println "Found documents:" documents)
-                                              (om/set-state! owner :documents documents)))
-                               (om/set-state! owner :documents nil))))}
+                                 columns (->> (current-columns state)
+                                              (remove #(= % [:search (:search column)])))]
+                             (add-column! columns [:search text])))}
        [:input.search {:type "text"
                        :ref "search"
-                       :placeholder "Search Documents"}]
+                       :placeholder "Search Documents"
+                       :default-value (or (:search column) "")}]
        [:button {:type "submit"}
         "Search"]]]
      [:ul.search-results
       (om/build-all search-result-row (map #(get-in state [:documents %]) documents)
                     {:opts {:on-click (fn [document]
                                         (let [columns (->> (current-columns state)
-                                                           (remove #(= % [:search nil])))]
+                                                           (remove (fn [[k _]] (= k :search))))]
                                           (add-column! columns [:document (:id document)])))}})]]))
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx]
@@ -367,14 +387,20 @@
   (let [entries (s/split param #",")
         pairs (mapv #(s/split % #":") entries)]
     (for [[k v] pairs]
-      (let [key (case k
-                  "d" :document
-                  "f" :file
-                  "i" :inbox
-                  "n" :new-document
-                  "s" :search)
-            value (try (let [n (js/parseInt v 10)] (when (integer? n) n)) (catch js/Error e nil))]
-        [key value]))))
+      (if-let [key (case k
+                       "d" :document
+                       "f" :file
+                       "i" :inbox
+                       "n" :new-document
+                       "s" :search
+                       nil)]
+        (let [value (if (= :search key)
+                      (if v (gstring/urlDecode v) "")
+                      (try (let [n (js/parseInt v 10)]
+                             (when (integer? n) n))
+                           (catch js/Error e nil)))]
+          [key value])
+        (js/console.warn "Invalid column-spec: " (str k))))))
 
 (defn- serialize-column-param [columns]
   (s/join "," (for [column columns]
@@ -382,12 +408,13 @@
                   [[:document id]] (str "d:" id)
                   [[:inbox _]] "i"
                   [[:new-document _]] "n"
-                  [[:search _]] "s"))))
+                  [[:search s]] (str "s:" (gstring/urlEncode (or s "")))))))
 
 (defn- current-columns [props]
-  (-> (or (get-in props [:navigation :query-params :columns])
-          "i,n")
-      (parse-column-param)))
+  (->> (or (get-in props [:navigation :query-params :columns])
+           "i,n")
+       (parse-column-param)
+       (remove nil?)))
 
 (defn- add-column! [columns column]
   {:pre [(vector? column)
@@ -418,7 +445,7 @@
                         [[:document id]]    (->DocumentColumnSource (.getNextUniqueId gen) id)
                         [[:inbox _]]        (->InboxColumnSource (.getNextUniqueId gen))
                         [[:new-document _]] (->NewDocumentColumn (.getNextUniqueId gen))
-                        [[:search _]]       (->SearchColumn (.getNextUniqueId gen))))]
+                        [[:search s]]       (->SearchColumn (.getNextUniqueId gen) s)))]
         (filterv identity columns)))))
 
 (defn- prepare-columns! [props state owner]
