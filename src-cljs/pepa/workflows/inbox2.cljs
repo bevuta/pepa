@@ -13,6 +13,7 @@
             [pepa.navigation :as nav]
             [pepa.search :as search]
             [pepa.components.document :as document]
+            [pepa.components.tags :as tags]
 
             [pepa.components.page :as page]
 
@@ -286,8 +287,9 @@
      (om/build page/thumbnail (first (:pages document)))
      [:.meta
       [:.title (:title document)]
-      (when-let [modified  (:created document)]
-        [:.created (document/format-datetime modified)])]]))
+      (when-let [modified (:created document)]
+        [:.created (document/format-datetime modified)])
+      (om/build tags/tags-list (:tags document))]]))
 
 (ui/defcomponent search-ui [[state column] owner]
   (will-update [_ next-props next-state]
@@ -308,7 +310,8 @@
                                               (om/set-state! owner :documents documents)))
                                (om/set-state! owner :documents nil))))}
        [:input.search {:type "text"
-                       :ref "search"}]
+                       :ref "search"
+                       :placeholder "Search Documents"}]
        [:button {:type "submit"}
         "Search"]]]
      [:ul.search-results

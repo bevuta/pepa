@@ -311,14 +311,13 @@
      [:a.show {:font-size (pt 8)
                :padding (px 12)
                :text-decoration :underline}]]
-    [:ul {:list-style-type :none
-          :margin 0, :padding 0
-          :overflow-y :auto}
-
-     
-     [:li {:width "100%"
-           :display :flex
-           :justify-content :space-around}
+    [:>ul {:list-style-type :none
+           :margin 0, :padding 0
+           :overflow-y :auto
+           :height "100%"}
+     [:>li {:width "100%"
+            :display :flex
+            :justify-content :space-around}
       [:&.selected {:background-color "green"}]
       [:&.dragover {:position :relative}
        (let [drop-indicator-height 4]
@@ -334,30 +333,47 @@
       [:.thumbnail {:width "80%"}]
       page-css
       [:img {:max-width "100%"
-             :max-height "100%"}]
-      ]
+             :max-height "100%"}]]]
+    [:&.search
+     [:header>form {:display :flex
+                    :max-width "100%"
+                    :overflow :hidden}
+      [:input {:min-width (px 1)}]
+      [:button {:flex-shrink 1}]]
      (let [result-height 100]
-       [:&.search-results
-        [:li {:height (px result-height)
-              :display :flex
-              :flex-direction :row}
-         [:.thumbnail {:width (px (/ result-height (/ 4 3)))}]
+       [:ul.search-results
+        [:>li {:height (px result-height)
+               :overflow :hidden
+               :display :flex
+               :flex-direction :row
+               :justify-content :space-between
+               :cursor :pointer}
+         [:.thumbnail {:width (px (/ result-height (/ 4 3)))
+                       :height (px result-height)
+                       ;; Exact dimensions
+                       :flex-shrink 0
+                       :flex-grow 0}]
          [:.meta {:display :flex
                   :flex-direction :column
+                  :justify-content :center
                   :font-size (pt 10)
-                  :flex-shrink 10
-                  :overflow :hidden
-                  :text-overflow :ellipsis}]]])]
-    [:&.search {:height "100%"}]
+                  :flex-grow 10
+                  :overflow :hidden 
+                  :margin {:left (px 10)
+                           :right (px 10)}}
+          [:>.title :>.created {:white-space :nowrap
+                                :text-overflow :ellipsis
+                                :overflow :hidden}]
+          [:>.title {:font-size (pt 11)}]
+          [:>.created {:color text-color-disabled}]]]])]
     [:&.new
-     [:.center {:height "100%"
-                :display :flex
-                :flex-direction :column
-                :justify-content :center
-                :align-items :center
-
-                :text-align :center}
-      [:button {:margin (px 15)}]]]]
+     [:>.center {:height "100%"
+                 :display :flex
+                 :flex-direction :column
+                 :justify-content :center
+                 :align-items :center
+                 :text-align :center}
+      [:>button {:margin (px 15)}]]]]
    ;; Create Document Column
    ;; [:.create-document {:align-items :center
    ;;                     :justify-content :space-around}
