@@ -272,10 +272,12 @@
                                           0)))}
      [:header nil]
      [:.center
-      "Drag pages here or press \"Open to open a file or document"
+      "Drag pages here or press \"Open\" to open a file or document"
       [:button {:on-click (fn [e]
                             (ui/cancel-event e)
-                            (add-column! (current-columns state) [:document 1]))}
+                            (let [current-columns (current-columns state)]
+                              (when-not (some #(= :search (first %)) current-columns)
+                                (add-column! current-columns [:search nil]))))}
        "Open"]]]))
 
 (ui/defcomponent search-result-row [document]
@@ -288,8 +290,6 @@
         [:.created (document/format-datetime modified)])]]))
 
 (ui/defcomponent search-ui [[state column] owner]
-  (init-state [_]
-    {:documents [64 17 62 20 60 25 45 14 35 63 47 48 61 4 42 44 59 83 84 57 88 56 74 23 76 15 6 34 9 96 37 3 36 58 100 10 7 33 99 27 86 46 12 21 32 13 31 38 26 66 5 22 87 85 1 40 24 28 43 41 65 18 30 11 19 8 29 16 2]})
   (will-update [_ next-props next-state]
     (when-let [documents (:documents next-state)]
       (when-not (= documents  (om/get-render-state owner :documents))
@@ -301,11 +301,12 @@
                            (ui/cancel-event e)
                            (let [text (.-value (om/get-node owner "search"))
                                  query (search/parse-query-string text)]
-                             (when query
+                             (if query
                                (async/take! (api/search-documents query)
                                             (fn [documents]
                                               (println "Found documents:" documents)
-                                              (om/set-state! owner :documents documents))))))}
+                                              (om/set-state! owner :documents documents)))
+                               (om/set-state! owner :documents nil))))}
        [:input.search {:type "text"
                        :ref "search"}]
        [:button {:type "submit"}
