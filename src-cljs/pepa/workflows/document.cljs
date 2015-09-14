@@ -205,8 +205,10 @@
           tag-changes (:tag-changes state)
           date-changes (:date-changes state)
           sidebars (om/observe owner (data/ui-sidebars))
-          current-page (nth (:pages (om/value document))
-                            (dec (or page-number 1)))]
+          current-page (let [pages (:pages (om/value document))
+                             pagenum (dec (or page-number 1))]
+                         (when (< pagenum (count pages))
+                           (nth pages pagenum)))]
       [:.workflow.document
        ;; Left (thunbmail) pane
        (let [width (get sidebars ::thumbnails
