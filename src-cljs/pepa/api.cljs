@@ -213,9 +213,12 @@
                  (:document-date document))
           tags {:added   (remove (set (:tags server))   (:tags document))
                 :removed (remove (set (:tags document)) (:tags server))}
-          pages (when-not (= (:pages document)
-                             (:pages server))
-                  (:pages document))]
+          pages (if-not (= (:pages document)
+                           (:pages server))
+                  (:pages document)
+                  (:pages server))]
+      (when (empty? (:pages document))
+        (js/console.warn "Setting (:pages document) to an empty list!"))
       (when-not server
         (throw (ex-info (str "Couldn't find document with id " (:id document))
                         {:document document
