@@ -314,6 +314,7 @@
   (->> (db/query db ["SELECT t.name, COUNT(dt.document)
                       FROM tags AS t
                       JOIN document_tags AS dt ON dt.tag = t.id
+                      WHERE (SELECT COUNT(*) FROM document_pages WHERE document = dt.document) > 0
                       GROUP BY t.name"])
        (map (juxt :name :count))
        (into {})))
@@ -322,7 +323,7 @@
   (->> (db/query db ["SELECT dt.document
                       FROM document_tags AS dt
                       JOIN tags AS t ON dt.tag = t.id
-                      WHERE t.name = ?
+                      WHERE t.name = ? AND (SELECT COUNT(*) FROM document_pages WHERE document = dt.document) > 0
                       GROUP BY dt.document"
                      tag])
        (mapv :document)))
