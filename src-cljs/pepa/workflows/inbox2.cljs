@@ -75,7 +75,7 @@
   (will-mount [_]
     (api/fetch-inbox!)))
 
-(declare add-column! current-columns)
+(declare add-column! replace-column! current-columns)
 
 (defrecord DocumentColumnSource [id document-id]
   ColumnSource
@@ -324,10 +324,9 @@
      [:header
       [:form {:on-submit (fn [e]
                            (ui/cancel-event e)
-                           (let [text (.-value (om/get-node owner "search"))
-                                 columns (->> (current-columns state)
-                                              (remove #(= % [:search (:search column)])))]
-                             (add-column! columns [:search text])))}
+                           (let [text (.-value (om/get-node owner "search"))]
+                             (replace-column! (current-columns state)
+                                              [:search (:search column)] [:search text])))}
        [:input.search {:type "text"
                        :ref "search"
                        :placeholder "Search Documents"
@@ -337,9 +336,9 @@
      [:ul.search-results
       (om/build-all search-result-row (map #(get-in state [:documents %]) documents)
                     {:opts {:on-click (fn [document]
-                                        (let [columns (->> (current-columns state)
-                                                           (remove (fn [[k _]] (= k :search))))]
-                                          (add-column! columns [:document (:id document)])))}})]]))
+                                        (replace-column! (current-columns state)
+                                                         [:search (:search column)]
+                                                         [:document (:id document)]))}})]]))
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx]
   (let [columns (om/get-state owner :columns)
@@ -415,6 +414,15 @@
            "i,n")
        (parse-column-param)
        (remove nil?)))
+
+(defn- replace-column! [columns old new]
+  {:pre [(vector? old) (vector? new)]}
+  (nav/navigate! (nav/workflow-route
+                  :inbox
+                  {:columns (->> columns
+                                (map #(if (= old %) new %))
+                                (vec)
+                                (serialize-column-param))})))
 
 (defn- add-column! [columns column]
   {:pre [(vector? column)
