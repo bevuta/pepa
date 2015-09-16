@@ -52,6 +52,13 @@
    (str "/search/" (gstring/urlEncode query))
    (secretary/render-route {:query-params query-params})))
 
+(defn edit-document-route [document]
+  {:pre [(:id document)]}
+  (->>
+   ;; TODO: This strings needs to be generated from pepa.inbox2
+   {:columns (str "i,d:" (:id document) ",s")}
+   (workflow-route :inbox)))
+
 (defn nav->route [navigation]
   (let [{:keys [route query-params]} (om/value navigation)]
    (match [route]
