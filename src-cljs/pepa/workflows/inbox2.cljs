@@ -182,20 +182,28 @@
 
 (ui/defcomponent action-bar [[column state selected-pages]]
   (render [_]
-    [:.action-bar
-     [:.rotate
-      [:.left { ;; :on-click (partial rotate-clicked page (- rotation 90))
-               :title "Rotate Counterclockwise"
-               :key "left"}]
-      [:.right { ;; :on-click (partial rotate-clicked page (+ rotation 90))
-                :title "Rotate Clockwise"
-                :key "right"}]]
+    (let [rotate (fn [rotation]
+                   (go
+                     (let [all-pages (column-pages column state)]
+                       ;; TODO: Rotating multiple pages is *very* expensive
+                       (doseq [page-id selected-pages]
+                         (let [page (some #(when (= (:id %) page-id) %) all-pages)
+                               rotation (+ rotation (:rotation page))]
+                           (<! (api/rotate-page! page rotation)))))))]
+      [:.action-bar
+       [:.rotate
+        [:.left {:on-click (partial rotate 90)
+                 :title "Rotate Counterclockwise"
+                 :key "left"}]
+        [:.right {:on-click (partial rotate 90)
+                  :title "Rotate Clockwise"
+                  :key "right"}]]
 
-     [:.delete {:title "Delete Pages"
-                :on-click (fn [e]
-                            (ui/cancel-event e)
-                            (when (seq selected-pages)
-                              (remove-pages! column state selected-pages)))}]]))
+       [:.delete {:title "Delete Pages"
+                  :on-click (fn [e]
+                              (ui/cancel-event e)
+                              (when (seq selected-pages)
+                                (remove-pages! column state selected-pages)))}]])))
 
 (defn ^:private column-drag-start
   "Called from `inbox-column' when `dragstart' event is fired. Manages
