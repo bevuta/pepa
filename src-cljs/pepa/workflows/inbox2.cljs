@@ -348,6 +348,8 @@
     ;; Run search (if we have a search string in the url)
     (when-let [search (:search column)]
       (run-search! search owner)))
+  (did-mount [_]
+    (some-> (om/get-node owner "search") (.focus)))
   (will-update [_ [next-props next-column] next-state]
     ;; Run search if the search-string changes (note that an empty or
     ;; nil search-string is fine and will just clear the results)
