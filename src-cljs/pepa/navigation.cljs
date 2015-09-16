@@ -56,7 +56,7 @@
   {:pre [(:id document)]}
   (->>
    ;; TODO: This strings needs to be generated from pepa.inbox2
-   {:columns (str "i,d:" (:id document) ",s")}
+   {:columns (str "i,d:" (:id document) ",n")}
    (workflow-route :inbox)))
 
 (defn nav->route [navigation]
