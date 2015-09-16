@@ -169,7 +169,7 @@
                             (selection/event->click (:id page) e))
                            (ui/cancel-event e))}
      (om/build page/thumbnail page
-               {:opts {:enable-rotate? true}})]))
+               {:opts {:enable-rotate? false}})]))
 
 (defn ^:private get-transfer-data [e key]
   (or (some-> e.dataTransfer
@@ -179,6 +179,23 @@
 
 (defn- drag-copy? [e]
   e.ctrlKey)
+
+(ui/defcomponent action-bar [[column state selected-pages]]
+  (render [_]
+    [:.action-bar
+     [:.rotate
+      [:.left { ;; :on-click (partial rotate-clicked page (- rotation 90))
+               :title "Rotate Counterclockwise"
+               :key "left"}]
+      [:.right { ;; :on-click (partial rotate-clicked page (+ rotation 90))
+                :title "Rotate Clockwise"
+                :key "right"}]]
+
+     [:.delete {:title "Delete Pages"
+                :on-click (fn [e]
+                            (ui/cancel-event e)
+                            (when (seq selected-pages)
+                              (remove-pages! column state selected-pages)))}]]))
 
 (defn ^:private column-drag-start
   "Called from `inbox-column' when `dragstart' event is fired. Manages
@@ -251,7 +268,12 @@
      [:header
       (column-title column state)
       (when-let [url (column-header-url column)]
-        [:a.show {:href url} "Show"])]
+        [:a.show {:href url} "Show"])
+      ;; [:button.action-bar {:class [(when action-bar? "pressed")]
+      ;;                      :on-click (fn [e]
+      ;;                                  (ui/cancel-event e)
+      ;;                                  (om/update-state! owner :action-bar? not))}]
+      ]
      [:ul.pages
       (let [pages (map-indexed (fn [idx page] (assoc page :idx idx))
                                (column-pages column state))]
@@ -264,7 +286,9 @@
                        :fn (fn [page]
                              (-> page
                                  (assoc :dragover? (= drop-idx (:idx page) ))
-                                 (mark-page-selected (:selected selection))))}))]]))
+                                 (mark-page-selected (:selected selection))))}))]
+     (when-let [selected-pages (seq (:selected selection))]
+       (om/build action-bar [column state selected-pages]))]))
 
 (ui/defcomponent new-document-ui [[state column] owner]
   (render-state [_ {:keys [handle-drop!]}]

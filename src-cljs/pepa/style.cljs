@@ -270,18 +270,17 @@
                 :background-color "rgba(255, 255, 255, 0.8)"
                 :margin (px 5)
                 :border-radius (px 4)}
-      [:.left :.right {:float :right
-                       :width (px rotate-height)
-                       :height (px rotate-height)
-                       :line-height (px rotate-height)
-                       :text-align :center
-                       :cursor :pointer
-                       :opacity 0.3
-                       :user-select :none}
+      [:>.left :>.right {:float :right
+                         :width (px rotate-height)
+                         :height (px rotate-height)
+                         :line-height (px rotate-height)
+                         :text-align :center
+                         :cursor :pointer
+                         :opacity 0.3
+                         :user-select :none}
        ;; Give buttons full opacity when hovered
        [:&:hover {:opacity 1}]
        [:&.right {:background-image (image-url "material/page-rotate-right.svg")}]
-       [:&.flip.vertical {:background-image (image-url "material/page-flip-vertical.svg")}]
        [:&.left {:background-image (image-url "material/page-rotate-left.svg")}]]])])
 
 ;; [:&.inbox {:background
@@ -304,13 +303,48 @@
               :flex-grow 1}
     [:header {:display :flex
               :flex-direction :row
-              :align-items :center}
-     [:span {:overflow :hidden
-             :text-overflow :ellipsis
-             :white-space :nowrap}]
-     [:a.show {:font-size (pt 8)
-               :padding (px 12)
-               :text-decoration :underline}]]
+              :align-items :center
+              :justify-content :space-between}
+     [:>span {:overflow :hidden
+              :text-overflow :ellipsis
+              :white-space :nowrap}]
+     [:>a.show {:font-size (pt 8)
+                :padding (px 12)
+                :text-decoration :underline}]
+     (let [size 32]
+       [:>button.action-bar {:background {:image (image-url "material/more-vertical.svg")
+                                          :size [(px 28) (px 28)]
+                                          :position :center}
+                             :min-width (px size)
+                             :min-height (px size)}
+        [:&:hover {}]
+        [:&.pressed {}]])]
+    (let [button-height 32
+          padding 20]
+      [:>.action-bar {:display :flex
+                      :flex-direction :row
+                      :justify-content :space-between
+
+                      :background header-color
+                      :width "100%"}
+       [:.delete {:background {:image (image-url "material/delete.svg")
+                               :size (px (/ button-height 1.5))
+                               :position :center}
+                  :padding-right (px padding)}]
+       [:.rotate {:display :flex
+                  :padding-left (px padding)}]
+       [:.left :.right :.delete {:width (px button-height)
+                                :height (px button-height)
+                                :text-align :center
+                                :cursor :pointer
+                                :opacity 0.3
+                                :user-select :none
+                                :background {:repeat :no-repeat
+                                             :position :center}}
+        ;; Give buttons full opacity when hovered
+        [:&:hover {:opacity 1}]
+        [:&.right {:background-image (image-url "material/page-rotate-right.svg")}]
+        [:&.left {:background-image (image-url "material/page-rotate-left.svg")}]]])
     [:>ul {:list-style-type :none
            :margin 0, :padding 0
            :overflow-y :auto
@@ -711,8 +745,10 @@
                 :right padding}
       :border-radius (px 2)}
      [:&:hover {:background "linear-gradient(to bottom, #f5f5f5 0%,#e5e5e5 100%)"}]
-     [:&:active {:box-shadow "inset 0 0 3px #000000;"}]
-     [:&:disabled :&.disabled {:opacity .5}]]))
+     [:&:active {:box-shadow "inset 0 0 3px #000000"}]
+     [:&:disabled :&.disabled {:opacity .5}]
+     [:&.pressed {:box-shadow "inset 0 0 2px #000000"
+                  :background-color "#efefef"}]]))
 
 
 (def dropdown-css
