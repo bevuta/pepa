@@ -192,7 +192,7 @@
                            (<! (api/rotate-page! page rotation)))))))]
       [:.action-bar
        [:.rotate
-        [:.left {:on-click (partial rotate 90)
+        [:.left {:on-click (partial rotate -90)
                  :title "Rotate Counterclockwise"
                  :key "left"}]
         [:.right {:on-click (partial rotate 90)
