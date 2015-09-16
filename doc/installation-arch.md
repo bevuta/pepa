@@ -1,22 +1,64 @@
 ## Arch Linux
 
-Install [Leiningen](https://github.com/technomancy/leiningen/) on your
-system (see instructions on their website). All other dependencies are
-available via `pacman`.
+Install some packages via pacman as root:
 
-    sudo pacman -S jdk8-openjdk pdftk postgresql poppler cuneiform tesseract tesseract-data-eng tesseract-data-deu
+    pacman -S jdk8-openjdk postgresql poppler cuneiform tesseract tesseract-data-eng tesseract-data-deu git
 
-Next,
-[configure PostgreSQL according to the instructions in the Arch Linux wiki](https://wiki.archlinux.org/index.php/PostgreSQL)
-and add a line to the `pg_hba.conf` for the `pepa` user, e.g.:
+# pdftk-installation
 
-    sudo sh -c 'echo host pepa pepa 127.0.0.1/32 trust >> /var/lib/postgres/data/pg_hba.conf'
+Install pdf-tk (or pdftk-bin) from AUR. If you don't know how, here are the instructions:
 
-Now (re-)start the server:
+As root:
 
-    sudo systemctl restart postgresql
+    pacman -S --needed base-devel
 
-Create a role and database for Pepa:
+as a user which is allowed to install packages via sudo:
 
-    sudo -u postgres psql -c "CREATE USER pepa"
-    sudo -u postgres psql -c "CREATE DATABASE pepa OWNER pepa"
+    mkdir /tmp/pdftk-build
+    cd /tmp/pdftk-build
+    git clone https://aur.archlinux.org/libgcj.git
+    cd libgcj
+    makepkg -sri
+    cd ..
+    rm -rf libgcj
+    git clone https://aur.archlinux.org/pdftk-bin.git
+    cd pdftk-bin
+    makepkg -sri
+    cd ..
+    rm -rf pdftk-bin
+    cd ..
+    rmdir pdftk-build
+    cd
+
+# PostgreSQL initialization
+
+If you are unexperienced with postgresql and have it freshly installed, run
+
+    initdb --locale en_US.UTF-8 -E UTF8 -D '/var/lib/postgres/data'
+
+as user postgres. Then run (as root):
+
+    systemctl enable postgresql.service
+
+# PostgreSQL configuration
+
+If postgresql isn't running, start it with
+
+    systemctl start postgresql.service
+
+as root. Now, to have a pepa user and database in your postgresql database, run
+
+    psql -c "CREATE USER pepa"
+    psql -c "CREATE DATABASE pepa OWNER pepa"
+
+as user postgres.
+
+Now, as root again, run
+
+    echo host pepa pepa 127.0.0.1/32 trust >> /var/lib/postgres/data/pg_hba.conf
+
+Now, restart postgres (as root):
+
+    systemctl restart postgresql.service
+
+Now, you can follow the installation-pepa.md for further instructions.

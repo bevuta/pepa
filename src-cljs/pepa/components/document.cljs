@@ -97,10 +97,10 @@
           document-date (:document-date document)
           str-value (when document-date (format-date document-date))]
       (if-not editing?
-        [:span.value {:key "value", :title (str str-value)
-                      :on-click (fn [e]
-                                  (when supported?
-                                    (om/set-state! owner :editing? true)))}
+        [:span.value.editable {:key "value", :title (str value)
+                               :on-click (fn [e]
+                                           (when supported?
+                                             (om/set-state! owner :editing? true)))}
          (or str-value
              (when supported? "Click to set"))]
         (let [on-submit! (fn [e]
@@ -139,7 +139,7 @@
     (let [single? (= 1 (count documents))
           document (when single? (first documents))]
       [:ul.meta
-       (for [prop [:title :created :modified :document-date :creator :size]]
+       (for [prop [:title :created :modified :document-date ]] ;:creator :size
          (if single?
            (om/build meta-item [prop document])
            (om/build multi-meta-item prop)))])))

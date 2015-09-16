@@ -33,9 +33,12 @@
 (def tags-selected-background light-blue-background)
 (def tags-border "#e8e8e8")
 
+
 (def border-light "#f0f0f0")
 (def border-dark "#cbcbcb")
 (def border-buttons "#a2a2a2")
+
+(def editable-background tags-border)
 
 (def dashboard-page-count-color "#aaaaaa")
 (def dashboard-selection-color "#bedbff")
@@ -594,6 +597,22 @@
                :font-style :italic}]
      (draggable-css :left)]]])
 
+(def generic-editable-css
+  (let [edit-icon-size (px 16)]
+    [".editable:not(.editing)" {:position :relative}
+     [:&:hover
+      [:&:after {:content (pr-str " ")
+                 :display :block
+                 :position :absolute
+                 :right (px 5)
+                 :opacity .66
+                 :top "50%"
+                 :transform "translateY( -50%)"
+                 :height edit-icon-size
+                 :width edit-icon-size
+                 :background {:image (image-url "edit.svg")
+                              :size (px 16)}}]]]))
+
 (def generic-input-css
   (let [padding (px 5)
         height (px 14)
@@ -618,6 +637,8 @@
                :line-height (pt 15)
                :padding 0
                :list-style "none"}
+     [:.document-date
+      [:form {:display :inline-block}]]
      [:span {:display :inline-block}
       [:&.title {:font-weight 500
                  :height "1em"
@@ -651,6 +672,7 @@
             :height "100%"}]
    generic-header-css
    generic-sidebar-css
+   generic-editable-css
    
    dashboard-css
    document-css
@@ -668,7 +690,7 @@
                :white-space :nowrap
                :min-height (px tags-min-height)
                :line-height (px (+ 2 tags-min-height))}
-     [:&.editable (list
+     [:&.tag-box (list
                    {:padding {:left (px tag-icon-box)
                               :top (px 6)}
                     :border (str "1px solid " border-dark)

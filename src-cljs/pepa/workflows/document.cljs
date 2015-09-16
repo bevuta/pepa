@@ -116,7 +116,7 @@
      (om/build document/document-sidebar [document])]))
 
 (defn ^:private next-page [pages page]
-  (->> pages 
+  (->> pages
        (drop-while #(not= % page))
        (second)))
 
@@ -153,7 +153,7 @@
           (condp = port
             pages
             (handle-page-click! @document owner event)
-            
+
             tag-changes
             (let [[op tag] event]
               ;; Deref to get the 'actual' value (might be stale)
@@ -171,7 +171,7 @@
                   (assoc :document-date date)
                   (api/update-document!))))
           (recur)))))
-  (render-state [_ state] 
+  (render-state [_ state]
     (let [{:keys [page-number]} state
           page-events (:pages state)
           tag-changes (:tag-changes state)

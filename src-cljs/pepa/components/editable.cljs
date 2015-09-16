@@ -13,6 +13,7 @@
   (render-state [_ {:keys [editable? save-button? callback]}]
     [:.editable {:on-click #(when-not editable?
                               (om/set-state! owner :editable? true))
+                 :class [(when editable? "editing")]
                  :title value}
      (if editable?
        [:form {:on-submit (fn [e]
