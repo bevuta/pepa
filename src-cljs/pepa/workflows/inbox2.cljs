@@ -18,7 +18,8 @@
             [pepa.components.page :as page]
 
             [cljs.reader :refer [read-string]]
-            [goog.string :as gstring])
+            [goog.string :as gstring]
+            goog.events.KeyCodes)
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]])
   (:import [cljs.core.ExceptionInfo]
@@ -176,6 +177,9 @@
               (read-string))
       (js/console.warn "Couldn't read transfer-data for key:" (pr-str key))))
 
+(defn- drag-copy? [e]
+  e.ctrlKey)
+
 (defn ^:private column-drag-start
   "Called from `inbox-column' when `dragstart' event is fired. Manages
   selection-updates and sets the drag-data in the event."
@@ -234,12 +238,14 @@
                :on-drop (fn [e]
                           (println "on-drop")
                           (let [source-column (get-transfer-data e "application/x-pepa-column")
-                                page-ids (get-transfer-data e "application/x-pepa-pages")]
+                                page-ids (get-transfer-data e "application/x-pepa-pages")
+                                copy? (drag-copy? e)]
                             ;; Delegate to `inbox'
                             (handle-drop! (:id column)
                                           source-column
                                           page-ids
-                                          drop-idx))
+                                          drop-idx
+                                          copy?))
                           ;; Remove drop-target
                           (om/set-state! owner :drop-idx nil))}
      [:header
@@ -266,12 +272,14 @@
                    :on-drop (fn [e]
                               (println "[new-document-ui] on-drop")
                               (let [source-column (get-transfer-data e "application/x-pepa-column")
-                                    page-ids (get-transfer-data e "application/x-pepa-pages")]
+                                    page-ids (get-transfer-data e "application/x-pepa-pages")
+                                    copy? (drag-copy? e)]
                                 ;; Delegate to `inbox'
                                 (handle-drop! (:id column)
                                               source-column
                                               page-ids
-                                              0)))}
+                                              0
+                                              copy?)))}
      [:header nil]
      [:.center
       "Drag pages here or press \"Open\" to open a document"
@@ -340,7 +348,7 @@
                                                          [:search (:search column)]
                                                          [:document (:id document)]))}})]]))
 
-(defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx]
+(defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx copy?]
   (let [columns (om/get-state owner :columns)
         target  (first (filter #(= (:id %) target) columns))
         source  (first (filter #(= (:id %) source) columns))
@@ -369,8 +377,11 @@
       (go
         (if (<! (accept-drop! target state pages target-idx))
           (do
-            (println "Target saved. Removing from source...")
-            (<! (remove-pages! source state page-ids))
+            ;; TODO: Handle copy instead of move
+            (println "Target saved.")
+            (when-not copy?
+              (println "Removing from source...")
+              (<! (remove-pages! source state page-ids)))
             (println "Drop saved!"))
           (js/console.warn "`accept-drop!' returned non-truthy value. Aborting drop."))))))
 
