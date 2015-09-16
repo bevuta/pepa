@@ -424,6 +424,8 @@
                   :width "100%"
                   :background-color dark-background
                   :position :relative}
+       [:header {:text-align :center
+                 :font-style :italic}]
        (draggable-css :left)]]]))
 
 ;; Single Document
