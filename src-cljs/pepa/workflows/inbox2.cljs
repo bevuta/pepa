@@ -314,7 +314,7 @@
                                               copy?)))}
      [:header nil]
      [:.center
-      "Drag pages here or press \"Open\" to open a document"
+      "Drag pages here or press \"Open\" to open an existing document"
       [:button {:on-click (fn [e]
                             (ui/cancel-event e)
                             (let [current-columns (current-columns state)]
