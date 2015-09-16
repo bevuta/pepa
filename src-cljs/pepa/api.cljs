@@ -208,9 +208,7 @@
           title (when-not (= (:title document)
                              (:title server))
                   (:title document))
-          date (when-not (= (:document-date document)
-                            (:document-date server))
-                 (:document-date document))
+          date (:document-date document)
           tags {:added   (remove (set (:tags server))   (:tags document))
                 :removed (remove (set (:tags document)) (:tags server))}
           pages (if-not (= (:pages document)
