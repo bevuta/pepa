@@ -537,15 +537,7 @@
    [:header {:overflow-x :hidden
              :vertical-align :top
              :white-space :nowrap
-             :text-overflow :ellipsis}
-    [:form {:display :inline-flex
-            :align-items :center
-            :justify-content :space-between
-            :width "100%"
-            :height "100%"}
-     [:input {:flex-grow 999
-              :min-width 0
-              :margin-right (px 10)}]]]
+             :text-overflow :ellipsis}]
    [:.pane
     [:&>div {:height "100%"
              :display :flex
@@ -559,7 +551,6 @@
               :border (str "1px solid " border-light)}]]]]
     ;; Page Thumbnails
     [:.thumbnails {:position :relative} ; :relative for `draggable-css'
-     [:header {:cursor :pointer}]
      (draggable-css :right)
      ;; Counter implementation
      [:ul.pages {:counter-reset "page-counter"}
@@ -599,19 +590,31 @@
 
 (def generic-editable-css
   (let [edit-icon-size (px 16)]
-    [".editable:not(.editing)" {:position :relative}
-     [:&:hover
-      [:&:after {:content (pr-str " ")
-                 :display :block
-                 :position :absolute
-                 :right (px 5)
-                 :opacity .66
-                 :top "50%"
-                 :transform "translateY( -50%)"
-                 :height edit-icon-size
-                 :width edit-icon-size
-                 :background {:image (image-url "edit.svg")
-                              :size (px 16)}}]]]))
+    [:.editable {:overflow :hidden
+                 :white-space :nowrap
+                 :text-overflow :ellipsis}
+     ["&:not(.editing)" {:position :relative
+                         :cursor :pointer}
+      [:&:hover
+       [:&:after {:content (pr-str " ")
+                  :display :block
+                  :position :absolute
+                  :right (px 5)
+                  :opacity .66
+                  :top "50%"
+                  :transform "translateY( -50%)"
+                  :height edit-icon-size
+                  :width edit-icon-size
+                  :background {:image (image-url "edit.svg")
+                               :size (px 16)}}]]]
+     [:form {:display :inline-flex
+             :align-items :center
+             :justify-content :space-between
+             :width "100%"
+             :height "100%"}
+      [:input {:flex-grow 999
+               :min-width 0
+               :margin-right (px 10)}]]]))
 
 (def generic-input-css
   (let [padding (px 5)

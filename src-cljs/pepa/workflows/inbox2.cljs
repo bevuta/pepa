@@ -14,7 +14,7 @@
             [pepa.search :as search]
             [pepa.components.document :as document]
             [pepa.components.tags :as tags]
-
+            [pepa.components.editable :as editable]
             [pepa.components.page :as page]
 
             [cljs.reader :refer [read-string]]
@@ -41,6 +41,9 @@
 
 (defprotocol ColumnDropTarget
   (accept-drop! [_ state pages target-idx]))
+
+(defprotocol EditableTitle
+  (set-title! [_ state title]))
 
 (defrecord InboxColumnSource [id]
   ColumnSource
@@ -111,6 +114,13 @@
         (println "Saved!")
         ;; indicate successful drop
         true)))
+  EditableTitle
+  (set-title! [_ state title]
+    (some-> state
+            (get-in [:documents document-id])
+            (om/value)
+            (assoc :title title)
+            (api/update-document!)))
   om/IWillMount
   (will-mount [_]
     (assert (number? document-id))
@@ -274,14 +284,12 @@
                           ;; Remove drop-target
                           (om/set-state! owner :drop-idx nil))}
      [:header
-      (column-title column state)
+      (let [title (column-title column state)]
+        (if (satisfies? EditableTitle column)
+          (editable/editable-title title (partial set-title! column state))
+          [:.title title]))
       (when-let [url (column-header-url column)]
-        [:a.show {:href url} "Show"])
-      ;; [:button.action-bar {:class [(when action-bar? "pressed")]
-      ;;                      :on-click (fn [e]
-      ;;                                  (ui/cancel-event e)
-      ;;                                  (om/update-state! owner :action-bar? not))}]
-      ]
+        [:a.show {:href url} "Show"])]
      [:ul.pages
       (let [pages (map-indexed (fn [idx page] (assoc page :idx idx))
                                (column-pages column state))]
