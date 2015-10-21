@@ -14,8 +14,7 @@
     (let [spec (:db config)
           cpds (doto (ComboPooledDataSource.)
                  (.setDriverClass "org.postgresql.Driver")
-                 ;; TOOD: Proper URL encoding of host and dbname
-                 (.setJdbcUrl (str "jdbc:postgresql://" (:host spec) "/" (:dbname spec)))
+                 (.setJdbcUrl (.toASCIIString (java.net.URI. "jdbc:postgresql" (:host spec) (str "/" (:dbname spec)) nil)))
                  (.setUser (:user spec))
                  (.setPassword (:password spec))
                  ;; TODO: Make configurable
