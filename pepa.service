@@ -1,0 +1,14 @@
+[Unit]
+Description=Pepa DMS
+
+[Service]
+Type=notify
+Environment='PEPA_CONFIG=<config.clj-path>'
+ExecStart=/usr/bin/java -jar <jarpath>
+User=<user>
+NotifyAccess=all
+Restart=always
+WatchdogSec=300
+
+[Install]
+WantedBy=multi-user.target
