@@ -16,7 +16,9 @@
                  [ring/ring-core "1.4.0"]
                  [ring/ring-json "0.4.0"]
                  
-                 [org.immutant/web "2.0.2"]
+                 [org.immutant/web "2.1.0"]
+                 [org.immutant/scheduling "2.1.0"]
+
                  [liberator "0.13"]
                  [compojure "1.4.0"]
                  [hiccup "1.0.5"]
