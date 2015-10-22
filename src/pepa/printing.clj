@@ -78,18 +78,18 @@
   component/Lifecycle
   (start [lpd]
     (let [lpd-config (get-in config [:printing :lpd])]
-      (if (:enable lpd-config)
+      (if-not (:enable lpd-config)
+        lpd
         (do
           (assert (< 0 (:port lpd-config) 65535))
           (log/info lpd "Starting LPD Server")
           (let [server (-> (lpd-server lpd lpd-config)
                            (lpd/start-server))]
             (assoc lpd
-                   :server server)))
-        lpd)))
+                   :server server))))))
   (stop [lpd]
-    (log/info lpd "Stopping LPD Server")
     (when-let [server (:server lpd)]
+      (log/info lpd "Stopping LPD Server")
       (lpd/stop-server server))
     (assoc lpd
            :mdns nil

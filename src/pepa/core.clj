@@ -10,6 +10,7 @@
             [pepa.processor.page-renderer :as page-renderer]
             [pepa.printing :as printing]
             [pepa.zeroconf :as zeroconf]
+            [pepa.systemd :as systemd]
             [pepa.init :as init]
 
             [pepa.log :refer [wrap-logging]]
@@ -44,7 +45,8 @@
              [:config :db])
        :zeroconf (component/using
                   (zeroconf/make-component)
-                  [:config]))
+                  [:config])
+       :systemd (systemd/make-component))
       (wrap-logging)))
 
 (defn -main [& args]

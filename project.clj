@@ -4,11 +4,11 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0-RC1"]
-                 [com.stuartsierra/component "0.2.3"]
+                 [com.stuartsierra/component "0.3.0"]
                  [org.clojure/tools.namespace "0.2.10"]
 
                  ;; DB
-                 [org.clojure/java.jdbc "0.4.1"]
+                 [org.clojure/java.jdbc "0.4.2"]
                  [com.mchange/c3p0 "0.9.5"]
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
 
@@ -17,11 +17,13 @@
                  [ring/ring-json "0.4.0"]
                  
                  [org.immutant/web "2.1.0"]
+                 [org.immutant/scheduling "2.1.0"]
+
                  [liberator "0.13"]
                  [compojure "1.4.0"]
                  [hiccup "1.0.5"]
                  
-                 [com.cognitect/transit-clj "0.8.281"]
+                 [com.cognitect/transit-clj "0.8.283"]
                  [io.clojure/liberator-transit "0.3.0"]
                  [org.clojure/data.json "0.2.6"]
 
@@ -32,7 +34,7 @@
                  ;; HACK: Include tools.reader as we're excluding it
                  ;; globally to prevent libraries pulling in old
                  ;; versions of it
-                 [org.clojure/tools.reader "0.9.2"]
+                 [org.clojure/tools.reader "0.10.0"]
 
                  ;; Logging
                  [org.clojure/tools.logging "0.3.1"]
@@ -63,14 +65,15 @@
   :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.1"]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
-             :dev {:dependencies [[lein-figwheel "0.3.9" :exclusions [cider/cider-nrepl]]]
+             :dev {:dependencies [[lein-figwheel "0.4.1" :exclusions [cider/cider-nrepl]]]
+                   :plugins [[lein-figwheel "0.3.3" :exclusions [cider/cider-nrepl]]]
                    :cljsbuild {:builds {:pepa {:source-paths ["dev"]
                                                :figwheel {:on-jsload "pepa.core/on-js-reload"}
                                                :compiler {:source-map "resources/public/pepa.js.map"
                                                           :optimizations :none
                                                           :pretty-print true}}}}}
              ;; We store the cljs-deps here so they won't get added to the uberjar
-             :provided {:dependencies [[org.clojure/clojurescript "1.7.122"]
+             :provided {:dependencies [[org.clojure/clojurescript "1.7.145"]
                                        [com.cognitect/transit-cljs "0.8.225"]
                                        [org.omcljs/om "0.9.0"]
                                        [org.clojars.the-kenny/nom "0.1.1"]

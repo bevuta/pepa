@@ -13,3 +13,4 @@ pom.xml.asc
 /.repl/
 /result
 /resources/public/pepa.js.map
+/figwheel_server.log
