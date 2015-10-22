@@ -29,7 +29,8 @@
 (defrecord Zeroconf [config mdns]
   component/Lifecycle
   (start [component]
-    (if (get-in config [:zeroconf :enable])
+    (if-not (get-in config [:zeroconf :enable])
+      component
       (do
         (log/info component "Starting Zeroconf Announcements")
         (let [ip (if-let [ip (get-in config [:zeroconf :ip-address])]
@@ -39,8 +40,7 @@
           (doseq [service (service-infos component)]
             (log/info component "Announcing service:" (.getType service))
             (.registerService jmdns service))
-          (assoc component :mdns jmdns)))
-      component))
+          (assoc component :mdns jmdns)))))
   (stop [component]
     (log/info component "Stopping Zeroconf Announcement Service")
     (when-let [mdns (:mdns component)]

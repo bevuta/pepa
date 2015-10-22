@@ -27,12 +27,14 @@
 (defrecord SystemdNotify [thread]
   component/Lifecycle
   (start [component]
-    (when (systemd? component)
-      (log/info component "Notifying systemd about startup")
-      ;; HACK: Try notifying every few seconds as it isn't reliable
-      (let [sched (sched/schedule #(system-ready! component)
-                                  (sched/every 5 :seconds))]
-        (assoc component :sched sched))))
+    (if-not (systemd? component)
+      component
+      (do
+        (log/info component "Notifying systemd about startup")
+        ;; HACK: Try notifying every few seconds as it isn't reliable
+        (let [sched (sched/schedule #(system-ready! component)
+                                    (sched/every 5 :seconds))]
+          (assoc component :sched sched)))))
   (stop [component]
     (when-let [s (:sched component)]
       (log/info component "Shutting down systemd-notify thread")
