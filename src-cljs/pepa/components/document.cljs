@@ -97,7 +97,7 @@
           document-date (:document-date document)
           str-value (when document-date (format-date document-date))]
       (if-not editing?
-        [:span.value.editable {:key "value", :title (str value)
+        [:span.value.editable {:key "value", :title str-value
                                :on-click (fn [e]
                                            (when supported?
                                              (om/set-state! owner :editing? true)))}
