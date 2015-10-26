@@ -45,7 +45,7 @@
             ;; For every linked document, add all pages
             (doseq [document (m/file-documents db id)]
               (log/info component "Adding pages from file" id "to document" document)
-              (m/link-file! db document id))
+              (m/process-file-link! db document))
             ;; Move to inbox if the file's origin dictates that
             (when (m/inbox-origin? config origin)
               (log/info component "Moving pages from file" id "to inbox")
