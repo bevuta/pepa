@@ -6,7 +6,9 @@
        :log-requests? false
        :default-page-dpi 150
        ;; 30s Long-Polling timeout
-       :poll {:timeout 30}}
+       :poll {:timeout 30}
+       ;; Display full exception traces for 500 Internal Server Error?
+       :exception-traces? true}
  :rendering {:png {:dpi #{50 150}}}
  :smtp {:enable true
         :port 2525
