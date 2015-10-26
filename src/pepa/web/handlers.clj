@@ -17,7 +17,7 @@
             [ring.middleware.params :refer [wrap-params]]
             [ring.util.response :refer [redirect-after-post]]
             [ring.middleware.json :refer [wrap-json-body]]
-            
+
             [liberator.core :refer [defresource]]
             [liberator.representation :refer [as-response]]
             io.clojure.liberator-transit
@@ -304,7 +304,7 @@
   :handle-ok (fn [ctx]
                {:documents (m/tag-documents (get-in ctx [:request :pepa/db]) (str t))}))
 
-(defresource documents-bulk 
+(defresource documents-bulk
   :allowed-methods #{:post}
   :available-media-types ["application/json"
                           "application/transit+json"]
@@ -377,6 +377,21 @@
       (pprint req))
     (handler req)))
 
+(defn wrap-exceptions [handler]
+  (fn [req]
+    (try
+      (handler req)
+      (catch Exception e
+        (let [trace? (get-in req [:pepa/config :web :exception-traces?])]
+          {:status 500
+           :body (html5
+                  [:p "Exception caught: "]
+                  [:pre
+                   (if-not trace?
+                     e
+                     (with-out-str
+                       (.printStackTrace e (java.io.PrintWriter. *out*))))])})))))
+
 (defn wrap-component [handler {:keys [config db bus] :as web}]
   (fn [req]
     (handler (assoc req
@@ -391,4 +406,5 @@
       (wrap-transit-body)
       (wrap-params)
       (wrap-request-logging)
+      (wrap-exceptions)
       (wrap-component web-component)))

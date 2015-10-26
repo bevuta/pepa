@@ -9,7 +9,8 @@
             [clojure.string :as s]
             [clojure.set :as set]
             [clojure.java.io :as io])
-  (:import [java.sql Date SQLException]))
+  (:import [java.sql Date SQLException]
+           [java.io IOException]))
 
 ;;; File Handling
 
@@ -447,30 +448,35 @@
   [db document-id]
   (log/info db "Generating PDF for" document-id)
   ;; If the document has an associated file we can short-circuit the split&merge path
-  (let [pages (document-pages db document-id)]
-    (assert (seq pages))
-    (let [files (db/query db (db/sql+placeholders "SELECT f.id, f.data FROM files as f WHERE f.id in (%s)"
-                                                  (into #{} (map :file pages))))
-          files (zipmap (map :id files) files)
-          ;; file-id -> (page-number -> pdf-file)
-          page-files (into {}
-                           ;; Group pages by file so we don't create two temp files if we
-                           ;; want two pages from the same document
-                           (for [[file-id pages] (group-by :file pages)]
-                             [file-id
-                              (let [data (get-in files [file-id :data])]
-                                (pdf/split-pdf data (map :number pages)))]))
-          pages (map #(assoc % :pdf-file (get-in page-files [(:file %) (:number %)])) pages)]
-      (let [page-files (map :pdf-file pages)]
-        (try
-          ;; Rotate the pages if necessary
-          (let [page-files (for [page pages]
-                             (let [original (:pdf-file page)]
-                               (pdf/rotate-pdf-file original (:rotation page))))]
-            (pdf/merge-pages page-files))
-          (finally
-            (doseq [file page-files]
-              (.delete file))))))))
+  (try
+    (let [pages (document-pages db document-id)]
+      (assert (seq pages))
+      (let [files (db/query db (db/sql+placeholders "SELECT f.id, f.data FROM files as f WHERE f.id in (%s)"
+                                                    (into #{} (map :file pages))))
+            files (zipmap (map :id files) files)
+            ;; file-id -> (page-number -> pdf-file)
+            page-files (into {}
+                             ;; Group pages by file so we don't create two temp files if we
+                             ;; want two pages from the same document
+                             (for [[file-id pages] (group-by :file pages)]
+                               [file-id
+                                (let [data (get-in files [file-id :data])]
+                                  (pdf/split-pdf data (map :number pages)))]))
+            pages (map #(assoc % :pdf-file (get-in page-files [(:file %) (:number %)])) pages)]
+        (let [page-files (map :pdf-file pages)]
+          (try
+            ;; Rotate the pages if necessary
+            (let [page-files (for [page pages]
+                               (let [original (:pdf-file page)]
+                                 (pdf/rotate-pdf-file original (:rotation page))))]
+              (pdf/merge-pages page-files))
+            (finally
+              (doseq [file page-files]
+                (.delete file)))))))
+    (catch IOException e
+      (log/error db e "Couldn't generate PDF")
+      ;; Rethrow
+      (throw e))))
 
 (defn mime-message->files [input]
   (->> (mime/message-parts input)
