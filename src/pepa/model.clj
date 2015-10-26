@@ -183,17 +183,37 @@
     (add-pages*! db document page-ids)
     (db/notify! db :documents/updated {:id document})))
 
+(defn set-pages*! [db document page-ids]
+  (db/with-transaction [db db]
+    (db/delete! db :document_pages ["document = ?" document])
+    (add-pages*! db document page-ids)))
+
+(defn set-pages! [db document page-ids]
+  (log/info db "Replacing pages for document" (str document ":") page-ids)
+  (db/with-transaction [db db]
+    (set-pages*! db document page-ids)
+    (db/notify! db :documents/updated {:id document})))
+
+(defn process-file-link! [db document]
+  (db/with-transaction [db db]
+    (let [file (document-file db document)]
+      (assert file)
+      (assert (= :processing-status/processed (processing-status db file)))
+      (add-pages*! db document (page-ids db file))
+      (db/update! db :documents {:file nil} ["id = ?" document]))))
+
 (defn ^:private link-file*!
   "Sets a db-attribute to tell the processor to link all pages from
   FILE to DOCUMENT. Also handles already processed files."
   [db document file]
-  (db/with-transaction [conn db]
-    (db/update! conn :documents {:file file} ["id = ?" document])
-    ;; Link pages if file is already processed
-    (when (= :processing-status/processed (processing-status conn file))
-      (add-pages*! conn document (page-ids conn file)))))
+  (db/with-transaction [db db]
+    (if (= :processing-status/processed (processing-status db file))
+      ;; Link pages if file is already processed
+      (process-file-link! db document)
+      (db/update! db :documents {:file file} ["id = ?" document]))))
 
-(defn link-file! [db document file]  (log/info db "Linking document" document "to file" file)
+(defn link-file! [db document file]
+  (log/info db "Linking document" document "to file" file)
   (db/with-transaction [db db]
     (link-file*! db document file)
     (db/notify! db :documents/updated {:id document})))
@@ -419,6 +439,7 @@
 
 ;;; TODO(mu): We need to cache this stuff.
 ;;; TODO: Handle render-status here
+;;; TODO: Move to pepa.pdf
 (defn document-pdf
   "Generates a pdf-file for DOCUMENT-ID. Returns a file-object
   pointing to the (temporary) file. Caller must make sure to delete
@@ -428,43 +449,28 @@
   ;; If the document has an associated file we can short-circuit the split&merge path
   (let [pages (document-pages db document-id)]
     (assert (seq pages))
-    (if-let [document-file (and (every? #(zero? (:rotation %)) pages)
-                                (document-file db document-id))]
-      (do
-        (log/debug db
-                   "[document-pdf] short-circuiting because document"
-                   document-id
-                   "has associated file"
-                   document-file)
-        (let [f (java.io.File/createTempFile "pepa" ".pdf")
-              data (-> (db/query db ["SELECT data FROM files WHERE id = ?" document-file]) first :data)]
-          (with-open [out (io/output-stream f)]
-            (io/copy data out)
-            (.flush out))
-          f))
-      ;; ...if not: Split all source PDFs and merge the pages together
-      (let [files (db/query db (db/sql+placeholders "SELECT f.id, f.data FROM files as f WHERE f.id in (%s)"
-                                                    (into #{} (map :file pages))))
-            files (zipmap (map :id files) files)
-            ;; file-id -> (page-number -> pdf-file)
-            page-files (into {}
-                             ;; Group pages by file so we don't create two temp files if we
-                             ;; want two pages from the same document
-                             (for [[file-id pages] (group-by :file pages)]
-                               [file-id
-                                (let [data (get-in files [file-id :data])]
-                                  (pdf/split-pdf data (map :number pages)))]))
-            pages (map #(assoc % :pdf-file (get-in page-files [(:file %) (:number %)])) pages)]
-        (let [page-files (map :pdf-file pages)]
-          (try
-            ;; Rotate the pages if necessary
-            (let [page-files (for [page pages]
-                               (let [original (:pdf-file page)]
-                                 (pdf/rotate-pdf-file original (:rotation page))))]
-              (pdf/merge-pages page-files))
-            (finally
-              (doseq [file page-files]
-                (.delete file)))))))))
+    (let [files (db/query db (db/sql+placeholders "SELECT f.id, f.data FROM files as f WHERE f.id in (%s)"
+                                                  (into #{} (map :file pages))))
+          files (zipmap (map :id files) files)
+          ;; file-id -> (page-number -> pdf-file)
+          page-files (into {}
+                           ;; Group pages by file so we don't create two temp files if we
+                           ;; want two pages from the same document
+                           (for [[file-id pages] (group-by :file pages)]
+                             [file-id
+                              (let [data (get-in files [file-id :data])]
+                                (pdf/split-pdf data (map :number pages)))]))
+          pages (map #(assoc % :pdf-file (get-in page-files [(:file %) (:number %)])) pages)]
+      (let [page-files (map :pdf-file pages)]
+        (try
+          ;; Rotate the pages if necessary
+          (let [page-files (for [page pages]
+                             (let [original (:pdf-file page)]
+                               (pdf/rotate-pdf-file original (:rotation page))))]
+            (pdf/merge-pages page-files))
+          (finally
+            (doseq [file page-files]
+              (.delete file))))))))
 
 (defn mime-message->files [input]
   (->> (mime/message-parts input)

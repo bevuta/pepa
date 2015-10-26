@@ -32,7 +32,10 @@ CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox', 'tags');
        document_date DATE,
        created TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
        notes TEXT,
-       -- If set, this document correspondents exactly to file
+       -- If set, this document correspondents exactly to file. This
+          is used by the page_renderer to set the pages for this
+          document. It will clear that flag when rendering is
+          complete.
        -- TODO: Add check to make sure all pages in document_pages are from document.file if NOT NULL
        file INT REFERENCES files"
      :state-seq? true
