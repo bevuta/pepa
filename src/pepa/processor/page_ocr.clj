@@ -37,7 +37,7 @@
                   (io/copy result-file result)
                   (.write result "\n")
                   (catch Exception e
-                    (prn e)))))))
+                    (log/error ocr e "OCR Process Failed")))))))
         (if (zero? (.length (str result)))
           [:processing-status/failed]
           [:processing-status/processed (str result)])))))
