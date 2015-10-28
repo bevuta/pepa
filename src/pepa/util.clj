@@ -35,18 +35,21 @@
   (let [process (-> (into-array (map str (cons command args)))
                     (ProcessBuilder.)
                     (.redirectError java.lang.ProcessBuilder$Redirect/INHERIT)
-                    (.start))
-        ;; TODO: We can use the new (.setTimeout process timeout unit)
-        ;; soon
-        fut (future (.waitFor process))
-        exit-code (if (and timeout (number? timeout))
-                    (deref fut timeout ::timeout)
-                    @fut)]
-    (if (and (not= ::timeout exit-code)
-             (zero? exit-code))
-      process
-      (throw (ex-info (str (pr-str command) " didn't terminate correctly")
-                      (assoc ex-data
-                             :exit-code exit-code
-                             :args args
-                             ::timeout timeout))))))
+                    (.start))]
+    (try
+      (let [fut (future (.waitFor process))
+            exit-code (if (and timeout (number? timeout))
+                        ;; TODO: We can use the new (.setTimeout
+                        ;; process timeout unit) soon
+                        (deref fut timeout ::timeout)
+                        @fut)]
+        (if (and (not= ::timeout exit-code)xg
+                 (zero? exit-code))
+          process
+          (throw (ex-info (str (pr-str command) " didn't terminate correctly")
+                          (assoc ex-data
+                                 :exit-code exit-code
+                                 :args args
+                                 ::timeout timeout)))))
+      (finally
+        (.destroy process)))))
