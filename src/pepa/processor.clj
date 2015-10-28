@@ -1,7 +1,8 @@
 (ns pepa.processor
   (:require [clojure.core.async :as async :refer [<!!]]
             [pepa.db :as db]
-            [pepa.bus :as bus]))
+            [pepa.bus :as bus]
+            [pepa.log :as log]))
 
 (defrecord Processor [notify-topic notify-chan control-chan worker])
 
@@ -17,7 +18,10 @@
 (defn ^:private process-next [component processor]
   (let [{:keys [notify-chan control-chan]} processor]
     (if-let [item (next-item* component processor)]
-      (do (process-item component item)
+      (do (try
+            (process-item component item)
+            (catch Exception e
+              (log/error component e "Processor caught exception")))
           (async/alts!! [control-chan] :default :continue))
       (async/alts!! [notify-chan control-chan]))))
 
