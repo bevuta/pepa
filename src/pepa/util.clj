@@ -43,7 +43,7 @@
                         ;; process timeout unit) soon
                         (deref fut timeout ::timeout)
                         @fut)]
-        (if (and (not= ::timeout exit-code)xg
+        (if (and (not= ::timeout exit-code)
                  (zero? exit-code))
           process
           (throw (ex-info (str (pr-str command) " didn't terminate correctly")
