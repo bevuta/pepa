@@ -1,13 +1,12 @@
 (ns leiningen.pepa.schema
   (:require [clojure.string :as s]))
 
-(def prologue
-  "
-DROP TYPE IF EXISTS PROCESSING_STATUS;
-DROP TYPE IF EXISTS ENTITY;
+(def prologue "
+  DROP TYPE IF EXISTS PROCESSING_STATUS;
+  DROP TYPE IF EXISTS ENTITY;
 
-CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
-CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox', 'tags');
+  CREATE TYPE PROCESSING_STATUS AS ENUM ('pending', 'failed', 'processed');
+  CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox', 'tags');
 ")
 
 (def tables
@@ -33,9 +32,10 @@ CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox', 'tags');
        created TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
        notes TEXT,
        -- If set, this document correspondents exactly to file. This
-          is used by the page_renderer to set the pages for this
-          document. It will clear that flag when rendering is
-          complete.
+       -- is used by the page_renderer to set the pages for this
+       -- document. It will clear that flag when rendering is
+       -- complete.
+       --
        -- TODO: Add check to make sure all pages in document_pages are from document.file if NOT NULL
        file INT REFERENCES files"
      :state-seq? true
@@ -100,67 +100,66 @@ CREATE TYPE ENTITY AS ENUM ('files', 'documents', 'pages', 'inbox', 'tags');
        entity ENTITY NOT NULL"
      :state-seq? true}]])
 
-(def epilogue
-  "
-CREATE OR REPLACE FUNCTION utc_now() RETURNS TIMESTAMP AS $$
+(def epilogue "
+  CREATE OR REPLACE FUNCTION utc_now() RETURNS TIMESTAMP AS $$
        SELECT (NOW() AT TIME ZONE 'UTC');
-$$ LANGUAGE SQL;
+  $$ LANGUAGE SQL;
 
 
--- Triggers used to update the 'modified' property of documents
+  -- Triggers used to update the 'modified' property of documents
 
-CREATE OR REPLACE FUNCTION touch_document_func() RETURNS TRIGGER AS $$
+  CREATE OR REPLACE FUNCTION touch_document_func() RETURNS TRIGGER AS $$
        BEGIN
          NEW.modified := UTC_NOW();
          RETURN NEW;
        END;
-$$ LANGUAGE PLPGSQL;
+  $$ LANGUAGE PLPGSQL;
 
-CREATE TRIGGER touch_document
+  CREATE TRIGGER touch_document
   BEFORE UPDATE
   ON documents
   FOR EACH ROW
   EXECUTE PROCEDURE touch_document_func();
 
-CREATE OR REPLACE FUNCTION touch_document_tags_insert_func() RETURNS TRIGGER AS $$
+  CREATE OR REPLACE FUNCTION touch_document_tags_insert_func() RETURNS TRIGGER AS $$
        BEGIN
          UPDATE documents SET modified = UTC_NOW() WHERE id = NEW.document;
          RETURN NEW;
        END;
-$$ LANGUAGE PLPGSQL;
+  $$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE FUNCTION touch_document_tags_delete_func() RETURNS TRIGGER AS $$
+  CREATE OR REPLACE FUNCTION touch_document_tags_delete_func() RETURNS TRIGGER AS $$
        BEGIN
          UPDATE documents SET modified = UTC_NOW() WHERE id = OLD.document;
          RETURN OLD;
        END;
-$$ LANGUAGE PLPGSQL;
+  $$ LANGUAGE PLPGSQL;
 
-CREATE TRIGGER touch_document_tags_insert
+  CREATE TRIGGER touch_document_tags_insert
   AFTER insert
   ON document_tags
   FOR EACH ROW
   EXECUTE PROCEDURE touch_document_tags_insert_func();
 
-CREATE TRIGGER touch_document_tags_delete
+  CREATE TRIGGER touch_document_tags_delete
   AFTER DELETE
   ON document_tags
   FOR EACH ROW
   EXECUTE PROCEDURE touch_document_tags_delete_func();
 
 
--- Full Text Search
+  -- Full Text Search
 
-CREATE INDEX pages_fulltext_idx ON pages
+  CREATE INDEX pages_fulltext_idx ON pages
     USING gin(to_tsvector('simple', coalesce(text, '') || ' ' || coalesce(ocr_text, '')));
 
-CREATE OR REPLACE FUNCTION pages_fulltext(val text) RETURNS setof pages AS $$
+  CREATE OR REPLACE FUNCTION pages_fulltext(val text) RETURNS setof pages AS $$
   BEGIN
     RETURN QUERY (SELECT *
                   FROM pages
                   WHERE (to_tsvector('simple', coalesce(text, '') || ' ' || coalesce(ocr_text, '')) @@ to_tsquery('simple', val)));
   END;
-$$  LANGUAGE PLPGSQL;
+  $$  LANGUAGE PLPGSQL;
 ")
 
 (defn drop-table [name & [{:keys [state-seq?]}]]
@@ -238,13 +237,13 @@ CREATE TRIGGER delete_%1$s_track_trigger
   (doseq [[table spec] tables]
     (create-table table (:columns spec))
     (when (:state-seq? spec)
-      (add-state-seq table)) 
+      (add-state-seq table))
     (maybe-println (:after spec))
     (when-let [track-deletions (:track-deletions? spec)]
       (let [entity (if (string? track-deletions)
                      track-deletions
                      table)]
-       (add-deletion-trigger table entity (or (:entity-id-field spec) "id"))))
+        (add-deletion-trigger table entity (or (:entity-id-field spec) "id"))))
     (newline))
   (println epilogue)
   (println "COMMIT;")
