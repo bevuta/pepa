@@ -10,11 +10,11 @@
        ;; Display full exception traces for 500 Internal Server Error?
        :exception-traces? true}
  :rendering {:png {:dpi #{50 150}}}
- :smtp {:enable true
+ :smtp {:enable false
         :port 2525
         :host "localhost"}
  ;; Virtual Network Printer
- :printing {:lpd {:enable true
+ :printing {:lpd {:enable false
                   :host "0.0.0.0"
                   :port 6332}}
  ;; Zeroconf announces services offered by Pepa in the network
@@ -29,7 +29,7 @@
        :cuneiform {:enable true
                    :timeout (* 40 1000)
                    :languages #{"eng" "ger"}}
-       :tesseract {:enable true
+       :tesseract {:enable false
                    :timeout (* 40 1000)
                    :languages #{"eng"}}}
  :tagging {
