@@ -286,9 +286,6 @@
        [:&.right {:background-image (image-url "material/page-rotate-right.svg")}]
        [:&.left {:background-image (image-url "material/page-rotate-left.svg")}]]])])
 
-;; [:&.inbox {:background
-;; [:&.active {:background-color blue-background}
-;;         [:&.inbox {:background {:image (image-url "menu-icons/inbox-active.svg")}}]]
 ;;; Workflows
 
 (def document-width 250)
@@ -308,9 +305,10 @@
               :flex-direction :row
               :align-items :center
               :justify-content :space-between}
-     [:>span {:overflow :hidden
-              :text-overflow :ellipsis
-              :white-space :nowrap}]
+     [:.title :.editable {:flex-grow 2}]
+     [:span {:overflow :hidden
+             :text-overflow :ellipsis
+             :white-space :nowrap}]
      [:>a.show {:font-size (pt 8)
                 :padding (px 12)
                 :text-decoration :underline}]
@@ -337,13 +335,13 @@
        [:.rotate {:display :flex
                   :padding-left (px padding)}]
        [:.left :.right :.delete {:width (px button-height)
-                                :height (px button-height)
-                                :text-align :center
-                                :cursor :pointer
-                                :opacity 0.3
-                                :user-select :none
-                                :background {:repeat :no-repeat
-                                             :position :center}}
+                                 :height (px button-height)
+                                 :text-align :center
+                                 :cursor :pointer
+                                 :opacity 0.3
+                                 :user-select :none
+                                 :background {:repeat :no-repeat
+                                              :position :center}}
         ;; Give buttons full opacity when hovered
         [:&:hover {:opacity 1}]
         [:&.right {:background-image (image-url "material/page-rotate-right.svg")}]
@@ -410,48 +408,7 @@
                  :justify-content :center
                  :align-items :center
                  :text-align :center}
-      [:>button {:margin (px 15)}]]]]
-   ;; Create Document Column
-   ;; [:.create-document {:align-items :center
-   ;;                     :justify-content :space-around}
-   ;;  [:.note
-   ;;   [:.arrow {:background {:image (image-url "drop-arrow.svg")
-   ;;                          :repeat :no-repeat
-   ;;                          :position :center
-   ;;                          :size (px 72)}
-   ;;             :height (px 72)}]]]
-   ;; A 'Document' (with pages inside)
-   ;; [:.document
-   ;;  [:header {:max-height :initial}
-   ;;   [:.tags {:margin-bottom (px 5)}]]
-    
-   ;;  [:ul.pages {:margin 0, :padding 0
-   ;;              :overflow-y :auto
-   ;;              :flex-shrink 999}
-   ;;   [:li.page {:width "100%"
-   ;;              :list-style-type :none
-   ;;              :user-select :none}
-   ;;    ;; TODO: Move this into a generic css rule
-   ;;    [:&.selected
-   ;;     [:.thumbnail {:position :relative}
-   ;;      [:&:before {:content (pr-str " ")
-   ;;                  :display :block
-   ;;                  :width "100%", :height "100%"
-   ;;                  :position :absolute
-   ;;                  :top 0 :left 0
-   ;;                  :background-color "rgba(0,0,1,0.5)"
-   ;;                  :z-index 10}]]]
-   ;;    page-css
-   ;;    [:img {:max-width "100%"
-   ;;           :max-height "100%"}]]]
-   ;;  [:barter {:min-height (px 40)
-   ;;            :max-height (px 40)
-   ;;            :display :flex
-   ;;            :flex-direction :row
-   ;;            :justify-content :space-around
-   ;;            :align-items :center
-   ;;            :background-color header-color}]]
-   ])
+      [:>button {:margin (px 15)}]]]]])
 
 ;;; Dashboard
 (def dashboard-css
