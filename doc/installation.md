@@ -1,25 +1,72 @@
-## Overview
+# Installation Instructions
+
+## Prerequisites
+
+This part of the installation guide assumes you have a working
+PostgreSQL installation as well as the necessary applications
+installed.
+
+- Java (at least version 7)
+- [Leinigen](https://github.com/technomancy/leiningen/)
+- [PostgreSQL](http://www.postgresql.org/)
+- [Poppler](http://poppler.freedesktop.org/)
+- [PDFtk](http://www.pdfhacks.com/pdftk)
+
+### Optionally (for OCR):
+
+- [CuneiForm](https://launchpad.net/cuneiform-linux)
+- [Tesseract-OCR](https://code.google.com/p/tesseract-ocr/).
+
+You can follow the instructions in the following documents to set up
+the necessary dependencies as well as PostgreSQL:
 
 - [./installation-arch.md](installation-arch.md)
 - [./installation-debian.md](installation-debian.md)
-- [./installation-nix.md](installation-nix.md)
-- [./installation-pepa.md](installation-pepa.md)
 
-## Build instructions
+## Installation
 
-To build and run Pepa on your system, you'll need Java (at least
-version 7), [Leinigen](https://github.com/technomancy/leiningen/),
-[PostgreSQL](http://www.postgresql.org/),
-[Poppler](http://poppler.freedesktop.org/),
-[PDFtk](http://www.pdfhacks.com/pdftk). For OCR you'll need
-[CuneiForm](https://launchpad.net/cuneiform-linux) and/or
-[Tesseract-OCR](https://code.google.com/p/tesseract-ocr/).
+### Schema Import
 
-Obtain the source via `git` like this:
+After starting PostgreSQL, you have to import the database schema. If
+the postgres-user is called `pepa`, you can run the following:
 
-    git clone git@github.com:bevuta/pepa.git
+    lein pepa schema | psql -U pepa pepa
 
-Install the dependencies, configure PostgreSQL and edit the config
-file as described in either of `installation-arch.md`,
-`installation-debian.md` or `installation-nix.md`.  Proceed with
-`installation-pepa.md` for OS-independent instructions.
+### Configuration
+
+Create a file called `config.clj` by copying the sample config file
+into the proper location:
+
+    cp resources/config.sample.clj config.clj
+
+Adapt the configuration file to your needs. One necessary change is to
+add the correct database host (by replacing the `<dbhost>`
+placeholder).
+
+Other interesting config options include the port the application
+should listen on (default `4035`) and if you want to enable various
+features like the `LPD` print server or the SMTP server.
+
+### Generating Javascript
+
+For the web client you have to generate javascript code:
+
+    lein cljsbuild once
+
+### Generating a JAR file
+
+Now you can generate a runnable JAR file:
+
+    lein uberjar
+
+The result is in `target/uberjar/pepa-<version>-standalone.jar`. It
+contains everything necessary to run Pepa, and you can copy it
+whereever you will. Just make sure to copy the configuration file to
+the same folder.
+
+### Running the JAR
+
+With the jar generated and `config.clj` in the current folder, you can
+run it just as any other JAR file:
+
+    java -jar pepa-<version>-standalone.jar
