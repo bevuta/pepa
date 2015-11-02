@@ -47,8 +47,10 @@
 
 (defrecord InboxColumnSource [id]
   ColumnSource
-  (column-title [_ _]
-    "Inbox")
+  (column-title [inbox state]
+    (str "Inbox "
+         (when-let [ps (seq (column-pages inbox state))]
+           (str "(" (count ps) ")"))))
   (column-header-url [_]
     nil)
   (column-pages [_ state]
@@ -394,12 +396,11 @@
   (let [columns (om/get-state owner :columns)
         target  (first (filter #(= (:id %) target) columns))
         source  (first (filter #(= (:id %) source) columns))
-        ;; Remove page-ids already in `target'
         existing-pages (mapv :id (if (satisfies? ColumnSource target)
                                    (column-pages target state)
                                    []))
         pages (into []
-                    (comp (remove (set existing-pages))
+                    (comp (remove (set existing-pages)) ; remove page-ids already in `target'
                           (map page-cache)
                           (map om/value))
                     page-ids)
