@@ -52,9 +52,7 @@
 (defrecord InboxColumnSource [id]
   ColumnSource
   (column-title [inbox state]
-    (str "Inbox "
-         (when-let [ps (seq (column-pages inbox state))]
-           (str "(" (count ps) ")"))))
+    (str "Inbox (" (count (column-pages inbox state)) ")"))
   (column-header-url [_]
     nil)
   (column-pages [_ state]
