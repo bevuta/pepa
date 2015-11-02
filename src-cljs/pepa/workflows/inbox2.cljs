@@ -34,6 +34,9 @@
   ;; TODO: How do we handle removal of the last page for documents?
   (remove-pages! [_ state page-ids]))
 
+;;; Marker protocol to hide the close button
+(defprotocol ClosableColumn)
+
 (defprotocol SpecialColumn
   (special-column-ui [_]))
 
@@ -83,6 +86,7 @@
     (api/fetch-inbox!)))
 
 (defrecord DocumentColumnSource [id document-id]
+  ClosableColumn
   ColumnSource
   (column-title [_ state]
     (get-in state [:documents document-id :title]
@@ -294,13 +298,14 @@
       [:.actions
        (when-let [url (column-header-url column)]
          [:a.show {:href url}])
-       (when-let [url (column-header-url column)]
+       (when (and (satisfies? col/ColumnSpec column)
+                  (satisfies? ClosableColumn column))
          [:a.close {:href "#"
                     :on-click (fn [e]
                                 (ui/cancel-event e)
-                                ;; (let [current-columns (current-columns state)]
-                                ;;   (remove-column! current-columns [:document (:id document)]))
-                                )}])]]
+                                (-> (col/current-columns state)
+                                    (col/remove-column (col/column-spec column))
+                                    (col/show-columns!)))}])]]
      [:ul.pages
       (let [pages (map-indexed (fn [idx page] (assoc page :idx idx))
                                (column-pages column state))]
@@ -460,6 +465,20 @@
                         [[:new-document _]] (->NewDocumentColumn (.getNextUniqueId gen))
                         [[:search s]]       (->SearchColumn (.getNextUniqueId gen) s)))]
         (filterv identity columns)))))
+
+(extend-protocol col/ColumnSpec
+  DocumentColumnSource
+  (column-spec [col]
+    [:document (:document-id col)])
+  InboxColumnSource
+  (column-spec [_]
+    [:inbox nil])
+  NewDocumentColumn
+  (column-spec [col]
+    [:new-document nil])
+  SearchColumn
+  (column-spec [col]
+    [:search (:search col)]))
 
 (defn- prepare-columns! [props state owner]
   ;; Be careful when running `set-state!' as it easily leads to loops

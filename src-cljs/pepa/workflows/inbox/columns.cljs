@@ -5,6 +5,9 @@
             [pepa.navigation :as nav])
   (:require-macros [cljs.core.match.macros :refer [match]]))
 
+(defprotocol ColumnSpec
+  (column-spec [col]))
+
 (defn- parse-column-param [param]
   {:post [(every? vector? %)]}
   (let [entries (s/split param #",")
@@ -81,3 +84,7 @@
   (if-not (some (fn [[k _]] (= :search k)) columns)
     (add-column columns [:search nil])
     columns))
+
+(defn inbox-column->column [col]
+  {:pre [(satisfies? ColumnSpec col)]}
+  (column-spec col))
