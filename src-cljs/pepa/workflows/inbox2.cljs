@@ -16,6 +16,7 @@
             [pepa.components.tags :as tags]
             [pepa.components.editable :as editable]
             [pepa.components.page :as page]
+            [pepa.workflows.inbox.columns :as col]
 
             [cljs.reader :refer [read-string]]
             [goog.string :as gstring]
@@ -81,8 +82,6 @@
   (will-mount [_]
     (api/fetch-inbox!)))
 
-(declare add-column! replace-column! remove-column! current-columns)
-
 (defrecord DocumentColumnSource [id document-id]
   ColumnSource
   (column-title [_ state]
@@ -141,7 +140,9 @@
                                                   :pages new-pages}
                                                  "inbox"))]
         (when document
-          (add-column! (current-columns state) [:document (:id document)])
+          (-> (col/current-columns state)
+              (col/add-column [:document (:id document)])
+              (col/show-columns!))
           true)))))
 
 (declare search-ui)
@@ -335,9 +336,9 @@
       "Drag pages here or press \"Open\" to open an existing document"
       [:button {:on-click (fn [e]
                             (ui/cancel-event e)
-                            (let [current-columns (current-columns state)]
-                              (when-not (some (fn [[k _]] (= :search k)) current-columns)
-                                (add-column! current-columns [:search nil]))))}
+                            (-> (col/current-columns state)
+                                (col/add-search-column)
+                                (col/show-columns!)))}
        "Open"]]]))
 
 (ui/defcomponent search-result-row [document owner {:keys [on-click]}]
@@ -385,8 +386,9 @@
       [:form {:on-submit (fn [e]
                            (ui/cancel-event e)
                            (let [text (.-value (om/get-node owner "search"))]
-                             (replace-column! (current-columns state)
-                                              [:search (:search column)] [:search text])))}
+                             (-> (col/current-columns state)
+                                 (col/replace-column [:search (:search column)] [:search text])
+                                 (col/show-columns!))))}
        [:input.search {:type "text"
                        :ref "search"
                        :placeholder "Search Documents"
@@ -396,9 +398,10 @@
      [:ul.search-results
       (om/build-all search-result-row (map #(get-in state [:documents %]) documents)
                     {:opts {:on-click (fn [document]
-                                        (replace-column! (current-columns state)
-                                                         [:search (:search column)]
-                                                         [:document (:id document)]))}})]]))
+                                        (-> (col/current-columns state)
+                                            (col/replace-column [:search (:search column)]
+                                                                [:document (:id document)])
+                                            (col/show-columns!)))}})]]))
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx copy?]
   (let [columns (om/get-state owner :columns)
@@ -444,76 +447,8 @@
               (map (juxt :id identity)))
         columns))
 
-(defn- parse-column-param [param]
-  (let [entries (s/split param #",")
-        pairs (mapv #(s/split % #":") entries)]
-    (for [[k v] pairs]
-      (if-let [key (case k
-                       "d" :document
-                       "f" :file
-                       "i" :inbox
-                       "n" :new-document
-                       "s" :search
-                       nil)]
-        (let [value (if (= :search key)
-                      (if v (gstring/urlDecode v) "")
-                      (try (let [n (js/parseInt v 10)]
-                             (when (integer? n) n))
-                           (catch js/Error e nil)))]
-          [key value])
-        (js/console.warn "Invalid column-spec: " (str k))))))
-
-(defn- serialize-column-param [columns]
-  (s/join "," (for [column columns]
-                (match [column]
-                  [[:document id]] (str "d:" id)
-                  [[:inbox _]] "i"
-                  [[:new-document _]] "n"
-                  [[:search s]] (str "s:" (gstring/urlEncode (or s "")))))))
-
-(defn- current-columns [props]
-  (->> (or (get-in props [:navigation :query-params :columns])
-           "i,n")
-       (parse-column-param)
-       (remove nil?)))
-
-(defn- remove-column! [columns column]
-  {:pre [(vector? column)]}
-  (println "removing column" (pr-str column))
-  (nav/navigate! (nav/workflow-route
-                  :inbox
-                  {:columns (->> columns
-                                 (remove #(= column %))
-                                 (vec)
-                                 (serialize-column-param))})))
-
-(defn- replace-column! [columns old new]
-  {:pre [(vector? old) (vector? new)]}
-  (nav/navigate! (nav/workflow-route
-                  :inbox
-                  {:columns (->> columns
-                                 (mapv #(if (= old %) new %))
-                                 (serialize-column-param))})))
-
-(defn- add-column! [columns column]
-  {:pre [(vector? column)
-         (keyword? (first column))
-         (= 2 (count column))]}
-  (nav/navigate! (nav/workflow-route
-                  :inbox
-                  (let [;; Special case: If last column is 'new
-                        ;; document', insert before it
-                        last-column (last columns)
-                        to-add (if (= [:new-document nil] last-column)
-                                 [column last-column]
-                                 [last-column column])
-                        columns (butlast columns)]
-                    {:columns (-> (vec columns)
-                                  (into to-add)
-                                  (serialize-column-param))}))))
-
 (defn- make-columns [props state owner]
-  (let [columns (current-columns props)]
+  (let [columns (col/current-columns props)]
     (println "columns: " (pr-str columns))
     (when-not (= columns (::column-spec state))
       (om/set-state! owner ::column-spec columns)
