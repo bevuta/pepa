@@ -133,14 +133,14 @@
 
 (defn ^:private parse-document-post [ctx]
   (when (= :post (get-in ctx [:request :request-method]))
-   (let [params (get-in ctx [:request :body])
-         attrs (->> (select-keys params [:title :document-date :pages])
-                    (sanitize-attrs (get-in ctx [:request :pepa/web])))
-         tags (:tags params)]
-     (when-not (every? string? (mapcat val tags))
-       (throw (ex-info "Tags must be strings" {:tags tags})))
-     {::tags tags
-      ::attrs attrs})))
+    (let [params (get-in ctx [:request :body])
+          attrs (->> (select-keys params [:title :document-date :pages])
+                     (sanitize-attrs (get-in ctx [:request :pepa/web])))
+          tags (:tags params)]
+      (when-not (every? string? (mapcat val tags))
+        (throw (ex-info "Tags must be strings" {:tags tags})))
+      {::tags tags
+       ::attrs attrs})))
 
 (defresource document [id]
   :allowed-methods #{:get :post}
