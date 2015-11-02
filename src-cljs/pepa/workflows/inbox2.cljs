@@ -81,7 +81,7 @@
   (will-mount [_]
     (api/fetch-inbox!)))
 
-(declare add-column! replace-column! current-columns)
+(declare add-column! replace-column! remove-column! current-columns)
 
 (defrecord DocumentColumnSource [id document-id]
   ColumnSource
@@ -290,8 +290,16 @@
         (if (satisfies? EditableTitle column)
           (editable/editable-title title (partial set-title! column state))
           [:.title title]))
-      (when-let [url (column-header-url column)]
-        [:a.show {:href url} "Show"])]
+      [:.actions
+       (when-let [url (column-header-url column)]
+         [:a.show {:href url}])
+       (when-let [url (column-header-url column)]
+         [:a.close {:href "#"
+                    :on-click (fn [e]
+                                (ui/cancel-event e)
+                                ;; (let [current-columns (current-columns state)]
+                                ;;   (remove-column! current-columns [:document (:id document)]))
+                                )}])]]
      [:ul.pages
       (let [pages (map-indexed (fn [idx page] (assoc page :idx idx))
                                (column-pages column state))]
@@ -469,14 +477,23 @@
        (parse-column-param)
        (remove nil?)))
 
+(defn- remove-column! [columns column]
+  {:pre [(vector? column)]}
+  (println "removing column" (pr-str column))
+  (nav/navigate! (nav/workflow-route
+                  :inbox
+                  {:columns (->> columns
+                                 (remove #(= column %))
+                                 (vec)
+                                 (serialize-column-param))})))
+
 (defn- replace-column! [columns old new]
   {:pre [(vector? old) (vector? new)]}
   (nav/navigate! (nav/workflow-route
                   :inbox
                   {:columns (->> columns
-                                (map #(if (= old %) new %))
-                                (vec)
-                                (serialize-column-param))})))
+                                 (mapv #(if (= old %) new %))
+                                 (serialize-column-param))})))
 
 (defn- add-column! [columns column]
   {:pre [(vector? column)
@@ -491,8 +508,7 @@
                                  [column last-column]
                                  [last-column column])
                         columns (butlast columns)]
-                    {:columns (-> columns
-                                  (vec)
+                    {:columns (-> (vec columns)
                                   (into to-add)
                                   (serialize-column-param))}))))
 

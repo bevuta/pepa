@@ -309,17 +309,24 @@
      [:span {:overflow :hidden
              :text-overflow :ellipsis
              :white-space :nowrap}]
-     [:>a.show {:font-size (pt 8)
-                :padding (px 12)
-                :text-decoration :underline}]
-     (let [size 32]
-       [:>button.action-bar {:background {:image (image-url "material/more-vertical.svg")
-                                          :size [(px 28) (px 28)]
-                                          :position :center}
-                             :min-width (px size)
-                             :min-height (px size)}
-        [:&:hover {}]
-        [:&.pressed {}]])]
+     ;; Icons
+     (let [button-height 20]
+       [:.actions {:height button-height
+                   :display :flex
+                   :flex-direction :row}
+        [:a {:width (px button-height)
+             :height (px button-height)
+             :display :block
+             :cursor :pointer
+             :opacity 0.3
+             :user-select :none
+             :background {:repeat :no-repeat
+                          :position :center
+                          :size (px button-height)}}
+         ;; Give buttons full opacity when hovered
+         [:&:hover {:opacity 1}]
+         [:&.show {:background-image (image-url "material/show.svg")}]
+         [:&.close {:background-image (image-url "material/close.svg")}]]])]
     (let [button-height 32
           padding 20]
       [:>.action-bar {:display :flex
