@@ -45,9 +45,10 @@ Now you can generate a runnable JAR file:
 
     lein uberjar
 
-The result is in `target/uberjar/pepa-<version>-standalone.jar`. It
-contains everything necessary to run Pepa, and you can copy it
-whereever you will
+The result is in `target/uberjar/pepa-<version>-standalone.jar`. You
+are free to move this file around. You can also copy it to a different
+system and run it there, as long as the `Prerequisites` and
+`config.clj` (see next sections) are available there.
 
 ### Configuration
 
