@@ -68,6 +68,11 @@
 (defloglevel error)
 (defloglevel fatal)
 
+(defrecord ^:private UNKNOWN [])
+
+(def unsafe-logger
+  (map->UNKNOWN {::logger (make-ctl-logger)}))
+
 ;;; Extend Logger 
 
 (defn ^:private component-name [c]
