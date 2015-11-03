@@ -82,7 +82,13 @@
   ILogger
   (-log
     ([logger component level throwable message]
-     (clojure.tools.logging/log (component-name component) level throwable message))
+     (let [message (if-let [data (ex-data throwable)]
+                     (str message "\n" (pr-str data))
+                     message)]
+       (clojure.tools.logging/log (component-name component)
+                                  level
+                                  throwable
+                                  message)))
     ([logger component level message]
      (-log logger component level nil message))))
 

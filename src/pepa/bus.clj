@@ -12,7 +12,7 @@
   "Returns a channel with that will receive a value when `notify!' is
   called for that topic." 
   ([bus topic buf]
-   (log/debug bus "subscribe" {:topic topic :buf buf})
+   (log/debug bus "subscribe" {:topic topic :buf/class (class buf)})
    (let [chan (async/chan buf)]
      (async/sub (:output bus) topic chan)
      chan))
@@ -29,7 +29,7 @@
 (defn subscribe-all
   "Returns a channel receiving all messages sent over the bus."
   ([bus buf]
-   (log/debug bus "subscribe-all" {:buf buf})
+   (log/debug bus "subscribe-all" {:buf/class (class buf)})
    (let [ch (async/chan buf)]
      (async/tap (:mult bus) ch)))
   ([bus]

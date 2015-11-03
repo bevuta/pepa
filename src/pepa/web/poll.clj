@@ -48,6 +48,7 @@
         send! (send-fn content-type)
         timeout (async/timeout (* 1000 (:timeout config)))
         bus-changes (bus/subscribe-all bus (async/sliding-buffer 1))]
+    (log/debug web "Starting poll with remote" (:remote-addr (async-web/originating-request ch)))
     (go-loop []
       (if-let [changed (m/changed-entities db seqs)]
         (do
@@ -68,7 +69,7 @@
             ;; Hit a timeout or channel is closed
             (or (= port timeout) (not (async-web/open? ch)))
             (when (async-web/open? ch)
-              (log/debug web "closing poll channel" ch)
+              (log/debug web "Closing poll channel to remote" (:remote-addr (async-web/originating-request ch)))
               (async-web/close ch))))))))
 
 (defn ^:private poll-handler* [req]
