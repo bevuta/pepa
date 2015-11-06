@@ -2,7 +2,7 @@
     (:require [garden.core :refer [css]]
               [garden.units :as u :refer [px em pt]]
               [garden.stylesheet :refer [at-keyframes cssfn]]
-              
+
               [nom.ui :as ui]
               [pepa.navigation :refer [navigation-elements]]
 
@@ -101,10 +101,10 @@
 
 (def generic-header-css
   ;; TODO(mu): Position header buttons here
-  (let [header-height (- header-height 2)] ;handle border
-    [:header {:min-height (px header-height)
-              :max-height (px header-height)
-              :line-height (px header-height)
+  (let [header-height (px (- header-height 2))] ;handle border
+    [:header {:min-height header-height
+              :max-height header-height
+              :line-height header-height
               :z-index 110
               :background-color header-color
               :padding {:left (px header-padding)
@@ -136,36 +136,28 @@
              :font-size (em 1.2)
              :display :flex
              :justify-content :flex-start
-             :flex-direction :row}
-    ;; Logo
-    ;; (let [logo-height 48
-    ;;           logo-width 211]
-    ;;       [:.logo {:width (px logo-width)
-    ;;                :height (px logo-height)}])
-    ]))
+             :flex-direction :row}]))
 
-(defn sidebar-search-css [height]
-  (let [search-margin-horizontal 20
-        search-margin-vertical 25
+(def search-css
+  (let [margin-horizontal (px 10)
+        margin-vertical (px 15)
         search-input-padding 5]
-    [:.search {:height (px height)
-               :position :relative
-               :display :flex
-               :align-items :center
-               :justify-content :space-around}
-     [:input {:margin {:left (px search-margin-horizontal)
-                       :right (px search-margin-horizontal)
-                       :top (px search-margin-vertical)
-                       :bottom (px search-margin-vertical)}
-              :padding (px search-input-padding)
-              :padding-right (px (* 5 search-input-padding))
-              :width "100%"
-              :color default-text             
-              :background {:image (image-url "glass.svg")
-                           :repeat :no-repeat
-                           :position "center right"}
-              :height (px (- height (+ (* 2 search-margin-vertical) (* 2 search-input-padding))))
-              :border-radius (px search-input-padding)}]]))
+    [:form.search {:position :relative
+                   :display :flex
+                   :align-items :center
+                   :justify-content :space-around}
+     [:>input {:margin {:left margin-horizontal
+                        :right margin-horizontal
+                        :top margin-vertical
+                        :bottom margin-vertical}
+               :padding (px search-input-padding)
+               :padding-right (px (* 5 search-input-padding))
+               :width "100%"
+               :color default-text
+               :background {:image (image-url "glass.svg")
+                            :repeat :no-repeat
+                            :position "center right"}
+               :border-radius (px search-input-padding)}]]))
 
 (def sidebar-css
   (let [search-height 80]
@@ -176,13 +168,11 @@
                 :flex-direction :column}
      (draggable-css :right)
      sidebar-header-css
-     (sidebar-search-css search-height)
 
      ;; Sections
      [:nav.workflows (list
                       {:overflow-y :auto}
                       (calc-property :height ["100%"
-                                              - (+ search-height header-height)
                                               - 1 ; border
                                               ]))
       [:ul {:padding-left 0, :margin 0}
@@ -248,7 +238,7 @@
            [:.show-more {:font-weight :bold
                          :font-size (px 10)
                          :cursor :pointer}]]
-          
+
           [:.menu-link
            [:.title {:height (px line-height)}
             [:&:before :&:after {:content (pr-str " ")
@@ -400,7 +390,7 @@
                   :justify-content :center
                   :font-size (pt 10)
                   :flex-grow 10
-                  :overflow :hidden 
+                  :overflow :hidden
                   :margin {:left (px 10)
                            :right (px 10)}}
           [:>.title :>.created {:white-space :nowrap
@@ -456,7 +446,7 @@
         [:&.selected {:background-color dashboard-selection-color}]
 
         page-css
-        
+
         [:.preview {:height (px preview-height)
                     :background-color light-background
                     :position :relative
@@ -635,12 +625,12 @@
    [:.pane {:flex-grow 1
             ;; Firefox workaround. necessry for stuff to shrink below
             ;; their intrinsic width
-            :min-width 0    
+            :min-width 0
             :height "100%"}]
    generic-header-css
    generic-sidebar-css
    generic-editable-css
-   
+
    dashboard-css
    document-css
    inbox-css])
@@ -701,7 +691,7 @@
                      :vertical-align :top}]
         [:&.selected {:background-color tags-selected-background}]
         (let [color-size 8]
-          
+
           [:.color {:display :inline-block
                     :height (px tag-height)
                     :width (px tag-height)
@@ -722,7 +712,7 @@
 (def button-css
   (let [padding (px 15)]
     [:button :a.button
-     {:background "linear-gradient(to bottom, #ffffff 0%,#f5f5f5 100%)"      
+     {:background "linear-gradient(to bottom, #ffffff 0%,#f5f5f5 100%)"
       :color grey-3
       :height (px 25)
       :font {:family default-font
@@ -917,11 +907,12 @@
     clear-a-css
     button-css
     generic-input-css
-    
+
     dropdown-css
     sidebar-css
     tags-css
     upload-css
+    search-css
 
     [:main {:height "100%", :width "100%"
             :overflow-x :hidden}

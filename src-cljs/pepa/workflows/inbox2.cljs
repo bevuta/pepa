@@ -386,18 +386,16 @@
   (render-state [_ {:keys [documents]}]
     [:.column.search
      [:header
-      [:form {:on-submit (fn [e]
-                           (ui/cancel-event e)
-                           (let [text (.-value (om/get-node owner "search"))]
-                             (-> (col/current-columns state)
-                                 (col/replace-column [:search (:search column)] [:search text])
-                                 (col/show-columns!))))}
-       [:input.search {:type "text"
-                       :ref "search"
-                       :placeholder "Search Documents"
-                       :default-value (or (:search column) "")}]
-       [:button {:type "submit"}
-        "Search"]]]
+      [:form.search {:on-submit (fn [e]
+                                  (ui/cancel-event e)
+                                  (let [text (.-value (om/get-node owner "search"))]
+                                    (-> (col/current-columns state)
+                                        (col/replace-column [:search (:search column)] [:search text])
+                                        (col/show-columns!))))}
+       [:input {:type "text"
+                :ref "search"
+                :placeholder "Search Documents"
+                :default-value (or (:search column) "")}]]]
      [:ul.search-results
       (om/build-all search-result-row (map #(get-in state [:documents %]) documents)
                     {:opts {:on-click (fn [document]
