@@ -648,18 +648,18 @@
                :min-height (px tags-min-height)
                :line-height (px (+ 2 tags-min-height))}
      [:&.tag-box (list
-                   {:padding {:left (px tag-icon-box)
-                              :top (px 6)}
-                    :border (str "1px solid " border-dark)
-                    :border-radius (px 3)
-                    :height :auto
-                    :background {:image (image-url "tag-icon.svg")
-                                 :repeat :no-repeat
-                                 :size (px 14)
-                                 :position [[(px 8) (px 8)]]
-                                 :color :white}
-                    :white-space :initial}
-                   (calc-property :width ["100%" -  (px tag-icon-box)]))
+                  {:padding {:left (px tag-icon-box)
+                             :top (px 6)}
+                   :border (str "1px solid " border-dark)
+                   :border-radius (px 3)
+                   :height :auto
+                   :background {:image (image-url "tag-icon.svg")
+                                :repeat :no-repeat
+                                :size (px 14)
+                                :position [[(px 8) (px 8)]]
+                                :color :white}
+                   :white-space :initial}
+                  (calc-property :width ["100%" -  (px tag-icon-box)]))
       [:&:before {:content (pr-str "Tags:")
                   :font-size (em 1.2)
                   :display :block
@@ -904,19 +904,19 @@
                  :background :transparent}]]
     [:&.file-drop
      {:background "red"}]
-    clear-a-css
-    button-css
-    generic-input-css
-
-    dropdown-css
-    sidebar-css
-    tags-css
-    upload-css
-    search-css
 
     [:main {:height "100%", :width "100%"
             :overflow-x :hidden}
-     workflow-css]]))
+     workflow-css]]
+   clear-a-css
+   button-css
+   generic-input-css
+
+   dropdown-css
+   sidebar-css
+   tags-css
+   upload-css
+   search-css))
 
 ;;; Apply the CSS
 
