@@ -170,12 +170,9 @@
      sidebar-header-css
 
      ;; Sections
-     [:nav.workflows (list
-                      {:overflow-y :auto}
-                      (calc-property :height ["100%"
-                                              - 1 ; border
-                                              ]))
-      [:ul {:padding-left 0, :margin 0}
+     [:nav.workflows {:overflow-y :auto
+                      :flex-grow 1}
+      [:>ul {:padding-left 0, :margin 0}
        (let [item-height 50
              padding (/ item-height 8)
              line-height (/ item-height 1.5)
