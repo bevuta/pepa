@@ -12,7 +12,8 @@
     (doseq [page (range 0 (pdf/page-count pdf))]
       (log/info processor "Processing page" page)
       (log/debug processor "Extracting text of page" page)
-      (let [text (-> (pdf/extract-page-text pdf page)
+      (let [text (-> pdf
+                     (pdf/extract-page-text page)
                      ;; Postgres can't handle NULL-bytes in TEXT
                      (s/replace "\0" ""))]
         (log/debug processor "Inserting page" page "into the database")
@@ -70,6 +71,16 @@
       (processor/stop processor))
     (assoc component
            :processor nil)))
+
+(defn ^:private retry-all! [component]
+  (db/with-transaction [db (:db component)]
+   (db/update! db :files
+               {:status :processing-status/pending
+                :report nil}
+               ["status = 'failed'"])
+   ;; TODO: :files/updated would be correct, but the Processor doesn't
+   ;; listens on that channel
+   (db/notify! db :files/new)))
 
 (defn make-component []
   (map->FilePageExtractor {}))

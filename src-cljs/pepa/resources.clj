@@ -10,9 +10,7 @@
 (def +image-path+ (str +public-path+ "img/"))
 
 (defmacro image-resources []
-  (let [files# (->> (io/file +image-path+)
-                   (file-seq)
-                   (remove #(.isDirectory %))
-                   (map str)
-                   (map #(s/replace-first % +public-path+ "")))]
-    (vec files#)))
+  (into [] (comp (remove #(.isDirectory %))
+                 (map str)
+                 (map #(s/replace-first % +public-path+ "")))
+        (file-seq (io/file +image-path+))))

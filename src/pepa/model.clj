@@ -160,7 +160,7 @@
 (defn document-pages
   "Returns a list of pages for the document with ID."
   [db id]
-  (db/query db ["SELECT p.file, p.number, p.rotation
+  (db/query db ["SELECT p.id, p.file, p.number, p.rotation
                  FROM pages AS p
                  JOIN document_pages AS dp on dp.page = p.id
                  WHERE dp.document = ?
@@ -251,13 +251,12 @@
 
 (defn update-document!
   "Updates document with ID. PROPS is a map of changed
-  properties (currently only :title, :document-date), ADDED-TAGS and REMOVED-TAGS are
+  properties (currently only :title, :document-date, :pages), ADDED-TAGS and REMOVED-TAGS are
   lists of added and removed tag-values (strings)."
   [db id props added-tags removed-tags]
-
-  (assert (every? string? added-tags))
-  (assert (every? string? removed-tags))
-  (assert (every? #{:title :document-date} (keys props)))
+  {:pre [(every? string? added-tags)
+         (every? string? removed-tags)
+         (every? #{:title :document-date :pages} (keys props))]}
   (log/info db "Updating document" id (pr-str {:props props
                                                :tags/added added-tags
                                                :tags/removed removed-tags}))
@@ -277,10 +276,18 @@
         (remove-tags*! conn id removed-tags)
         (add-tags*! conn id added-tags)
         ;; Update document title if necessary
-        (when (seq props)
-          (db/update! conn :documents
-                      props
-                      ["id = ?" id]))
+        (when-not (empty? props)
+          (let [pages (:pages props)
+                props (dissoc props :pages)]
+            (db/update! conn :documents
+                        props
+                        ["id = ?" id])
+            (when (and (sequential? pages)
+                       (not= (mapv :id (document-pages db id))
+                             (vec pages)))
+              (when (empty? pages)
+                (log/warn db "Updating document with empty list of pages:" id))
+              (set-pages*! db id (vec pages)))))
         (db/notify! conn :documents/updated {:id id}))
       (throw (ex-info (str "Couldn't find document with id " id)
                       {:document/id id
@@ -317,6 +324,7 @@
   (->> (db/query db ["SELECT t.name, COUNT(dt.document)
                       FROM tags AS t
                       JOIN document_tags AS dt ON dt.tag = t.id
+                      WHERE (SELECT COUNT(*) FROM document_pages WHERE document = dt.document) > 0
                       GROUP BY t.name"])
        (map (juxt :name :count))
        (into {})))
@@ -325,7 +333,7 @@
   (->> (db/query db ["SELECT dt.document
                       FROM document_tags AS dt
                       JOIN tags AS t ON dt.tag = t.id
-                      WHERE t.name = ?
+                      WHERE t.name = ? AND (SELECT COUNT(*) FROM document_pages WHERE document = dt.document) > 0
                       GROUP BY dt.document"
                      tag])
        (mapv :document)))

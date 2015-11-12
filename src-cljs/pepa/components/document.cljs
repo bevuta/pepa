@@ -8,66 +8,71 @@
             [pepa.api :as api]
             [pepa.data :as data]
             [pepa.components.tags :as tags]
+            [pepa.components.editable :as editable]
             [pepa.navigation :as nav]
-            [goog.events.KeyCodes :as keycodes]
 
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:import [goog.i18n DateTimeFormat DateTimeParse]))
 
-(defmulti meta-title (fn [[prop val] owner opts] prop))
-(defmulti meta-value (fn [[prop val] owner opts] prop))
+(defmulti meta-title (fn [[prop document] owner opts] prop))
+(defmulti meta-value (fn [[prop document] owner opts] prop))
 
 (ui/defcomponentmethod meta-title :default [[prop _] _ _]
   (render [_]
     [:span.title {:key "title"}
      (s/capitalize (name prop))]))
 
-(ui/defcomponentmethod meta-value :default [[key value] _ _]
+(ui/defcomponentmethod meta-value :default [[key document] _ _]
   (render [_]
-    [:span.value {:key "value", :title (str value)}
-     value]))
+    (let [val (get document key)]
+     [:span.value {:key "value", :title (str val)}
+      val])))
+
+(ui/defcomponentmethod meta-value :title [[key document] _ _]
+  (render [_]
+    (let [val (get document key)]
+      [:span.value {:key "value", :title (str val)}
+       (editable/editable-title val
+                                (fn [title]
+                                  (api/update-document!
+                                   (assoc document :title (or title ""))))
+                                false)])))
 
 (let [formatter (DateTimeFormat. "dd.MM.yyyy HH:mm")]
   (defn format-datetime [^Date date]
     (when date
       (.format formatter date))))
 
-(ui/defcomponentmethod meta-value :created [[key date] _ _]
+(ui/defcomponentmethod meta-value :created [[key document] _ _]
   (render [_]
-    (let [value (format-datetime date)]
+    (let [value (format-datetime (get document key))]
       [:span.value {:key "value", :title value}
        value])))
 
-(ui/defcomponentmethod meta-value :modified [[key date] _ _]
+(ui/defcomponentmethod meta-value :modified [[key document] _ _]
   (render [_]
-    (let [value (format-datetime date)]
+    (let [value (format-datetime (get document key))]
       [:span.value {:key "value", :title value}
        value])))
 
 ;;; Document Date
 
 (let [parser (DateTimeParse. "yyyy-MM-dd")]
-  (defn string->date [date-string]
-    (when date-string
+  (defn- string->date [date-string]
+    (when-not (s/blank? date-string)
       (let [date (js/Date.)]
         (.parse parser date-string date)
         date))))
 
 (let [formatter (DateTimeFormat. "yyyy-MM-dd")]
-  (defn ^:private date->date-picker-value [^Date date]
+  (defn- date->date-picker-value [^Date date]
     (.format formatter date)))
 
-(defn ^:private document-date-changed [owner e]
-  (let [value e.currentTarget.value
-        date (when-not (s/blank? value) (string->date value))]
-    (om/set-state! owner :date date)))
-
-(defn ^:private store-document-date! [owner date e]
-  (let [callback (om/get-state owner :change-callback)]
-    (when (fn? callback)
-      (callback :document-date date))
-    (om/set-state! owner :editing? false)))
+(defn ^:private store-document-date! [document owner date]
+  (async/take! (api/update-document! (assoc @document :document-date date))
+               (fn [value]
+                 (om/set-state! owner :editing? false))))
 
 (defn ^:private date-input-supported? []
   (-> (doto (js/document.createElement "input")
@@ -75,7 +80,7 @@
       (.-type)
       (= "date")))
 
-(let [formatter (DateTimeFormat. "dd.MM.yyyy")]
+(let [formatter (DateTimeFormat. "yyyy-MM-dd")]
   (defn ^:private format-date [^Date date]
     (when date
       (.format formatter date))))
@@ -84,30 +89,33 @@
   (render [_]
     [:span.title {:key "title"} "Date"]))
 
-(ui/defcomponentmethod meta-value :document-date [[_ date] owner _]
+(ui/defcomponentmethod meta-value :document-date [[_ document] owner _]
   (init-state [_]
-    {:editing? false
-     :date (om/value date)})
-  (will-receive-props [_ [_ next-date]]
-    (when (not= date next-date)
-      (om/set-state! owner :date next-date)))
-  (render-state [_ {:keys [editing? date change-callback]}]
+    {:editing? false})
+  (render-state [_ {:keys [editing?]}]
     (let [supported? (date-input-supported?)
-          value (when date (format-date date))]
+          document-date (:document-date document)
+          str-value (when document-date (format-date document-date))]
       (if-not editing?
-        [:span.value.editable {:key "value", :title (str value)
-                      :on-click (fn [e]
-                                  (when supported?
-                                    (om/set-state! owner :editing? true)))}
-         (or value
+        [:span.value.editable {:key "value", :title str-value
+                               :on-click (fn [e]
+                                           (when supported?
+                                             (om/set-state! owner :editing? true)))}
+         (or str-value
              (when supported? "Click to set"))]
-        (let [on-submit! (partial store-document-date! owner date)]
-          [:form {:on-submit on-submit! :on-blur on-submit!}
+        (let [on-submit! (fn [e]
+                           (ui/cancel-event e)
+                           (->> (om/get-node owner "date-input")
+                                (.-value)
+                                (string->date)
+                                (store-document-date! document owner)))]
+          [:form {:on-submit on-submit!}
            [:input {:type "date"
                     :key "date-input"
-                    :on-change (partial document-date-changed owner)
-                    :value (when date
-                             (date->date-picker-value date))}]])))))
+                    :ref "date-input"
+                    :default-value (when document-date
+                                     (date->date-picker-value document-date))
+                    :on-blur on-submit!}]])))))
 
 ;;; Meta Table Rows
 
@@ -116,21 +124,15 @@
     (let [name (name prop)]
       [:li {:class name, :key name}
        (om/build meta-title [prop "Multiple"])
-       (om/build meta-value [:default "Multiple"])])))
+       (om/build meta-value [:default {:default "Multiple"}])])))
 
-(ui/defcomponent meta-item [[prop value] owner _]
+(ui/defcomponent meta-item [[prop document] owner _]
   (render-state [_ state]
     (let [name (name prop)]
       [:li {:class name, :key name}
-       (om/build meta-title [prop value])
-       (om/build meta-value [prop value]
+       (om/build meta-title [prop document])
+       (om/build meta-value [prop document]
                  {:state state})])))
-
-;;; TODO: Support mass-edit here
-(defn ^:private property-changed! [document property value]
-  (assert (contains? #{:title :document-date} property))
-  (println "Updating property" property "on document" (:id @document) (str "[" (pr-str value) "]"))
-  (api/update-document! (assoc @document property value)))
 
 (ui/defcomponent meta-table [documents]
   (render [_]
@@ -139,8 +141,7 @@
       [:ul.meta
        (for [prop [:title :created :modified :document-date ]] ;:creator :size
          (if single?
-           (om/build meta-item [prop (get document prop)]
-                     {:state {:change-callback (partial property-changed! document)}})
+           (om/build meta-item [prop document])
            (om/build multi-meta-item prop)))])))
 
 ;;; The usual document sidebar, handling a single or multiple documents
@@ -154,10 +155,8 @@
         (prn "got tag change:" change)
         (let [[op tag] change
               documents (om/get-props owner)]
-          (prn documents)
           ;; Deref to get the 'actual' value (might be stale)
           (doseq [document documents]
-            (prn "updating document" document)
             (-> @document
                 (update-in [:tags] (case op
                                      :add data/add-tags
@@ -179,5 +178,7 @@
                                          (str "/documents/" (-> documents first :id) "/download"))
                              :disabled (not single?)}
            "Download"]
-          [:button.delete {:disabled true}
-           "Delete"]])])))
+          [:button.edit {:on-click #(->> (nav/edit-document-route (first documents))
+                                         (nav/navigate!))
+                         :disabled (not single?)}
+           "Edit in Inbox"]])])))

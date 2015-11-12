@@ -64,15 +64,17 @@
                     ;; NOTE: pdftocairo *always* appends .png to the output path. Strip it here.
                     (let [path (.getAbsolutePath tmp-file)]
                       (subs path 0 (.lastIndexOf path ".")))]
-              process (run-process "pdftocairo" args {:type file-type :page page})]
+              process (run-process "pdftocairo" args
+                                   {:ex-data {:type file-type :page page}})]
           (f tmp-file))
         (finally
           (.delete tmp-file)))))
   (extract-page-text [this page]
     (assert (< page (page-count this)))
-    (let [page (inc page) ;; pdftotext starts at idx 1
-          process (run-process "pdftotext" ["-f" page "-l" page file "-"])]
-      (slurp (.getInputStream process)))))
+    (let [page (inc page)               ; pdftotext starts at idx 1
+          ]
+      (run-process "pdftotext" ["-f" page "-l" page file "-"]
+                   {:collect-output? true}))))
 
 (defn poppler-reader [file]
   (PopplerReader. file nil))

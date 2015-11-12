@@ -151,10 +151,21 @@
   (go
     (vec (:response/transit (<! (xhr-request! "/inbox" :get))))))
 
-(defn delete-from-inbox! [pages]
+(defn fetch-inbox! []
   (go
-    (let [res (<! (xhr-request! "/inbox" :delete (map :id pages)))]
-      (:successful? res))))
+    (om/update! (om/root-cursor data/state)
+                [:inbox :pages]
+                (<! (fetch-inbox)))))
+
+(defn add-to-inbox! [page-ids]
+  {:pre [(every? integer? page-ids)]}
+  (go
+    (:successful? (<! (xhr-request! "/inbox" :put page-ids)))))
+
+(defn delete-from-inbox! [page-ids]
+  {:pre [(every? integer? page-ids)]}
+  (go
+    (:successful? (<! (xhr-request! "/inbox" :delete page-ids)))))
 
 (defn ^:private document->api-document [document]
   (-> document
@@ -168,6 +179,8 @@
   "Saves DOCUMENT. Returns a channel. Channel will contain the saved
   document in case of success, nil in case of error."
   ([document origin]
+   {:pre [(every? :id (:pages document))
+          (string? (:title document))]}
    (go
      (when-let [res (<! (xhr-request! "/documents" :post
                                       (assoc (document->api-document document)
@@ -187,6 +200,7 @@
   updates it to match DOCUMENT. Will also update the application
   state (whether DOCUMENT is a cursor or not)."
   [document]
+  {:pre [(:id document)]}
   (go
     (println "saving document" (:id document))
     ;; TODO: Stop fetching the document here
@@ -194,19 +208,29 @@
           title (when-not (= (:title document)
                              (:title server))
                   (:title document))
-          date (not= (:document-date document)
-                     (:document-date server))
-          tags {:added (remove (set (:tags server)) (:tags document))
-                :removed (remove (set (:tags document)) (:tags server))}]
+          date (:document-date document)
+          tags {:added   (remove (set (:tags server))   (:tags document))
+                :removed (remove (set (:tags document)) (:tags server))}
+          pages (if-not (= (:pages document)
+                           (:pages server))
+                  (:pages document)
+                  (:pages server))]
+      (when (empty? (:pages document))
+        (js/console.warn "Setting (:pages document) to an empty list!"))
       (when-not server
         (throw (ex-info (str "Couldn't find document with id " (:id document))
                         {:document document
                          :document/id (:id document)
                          :response server})))
-      (if (or title date (seq (:added tags)) (seq (:removed tags)))
+      (if (or title date pages
+              (seq (:added tags))
+              (seq (:removed tags)))
         (let [response (<! (xhr-request! (str "/documents/" (:id document))
                                          :post
-                                         {:title title, :document-date (:document-date document) :tags tags}))]
+                                         {:title title
+                                          :document-date date
+                                          :tags tags
+                                          :pages (mapv :id pages)}))]
           (if (= 200 (:status response))
             (let [new-document (-> response
                                    :response/transit
@@ -218,7 +242,9 @@
                              :server-document server
                              :title title
                              :changed-tags tags}))))
-        document))))
+        (do
+          (println "[update-document!] Found no difference between server and client")
+          document)))))
 
 ;;; Tag Handling
 
@@ -285,10 +311,8 @@
   (go
     (let [page-ids (:inbox changes)
           pages (mapv fetch-page page-ids)]
-      (doseq [p pages]
-        (let [p (<! p)]
-          ;; TODO: Apply the changes to the Inbox
-          (js/console.warn "Not applying changes to Inbox: Not implemented"))))))
+      ;; Just overwrite the inbox-stuff for now
+      (fetch-inbox!))))
 
 (defmethod entities-changed* :tags [state _ changes]
   (when-let [tags (:tags changes)]

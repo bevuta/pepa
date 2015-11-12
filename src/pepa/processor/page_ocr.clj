@@ -13,15 +13,13 @@
 (defmulti run-ocr (fn [engine & _] engine))
 
 (defmethod run-ocr :cuneiform [_ config lang result-file image-file]
-  (let [timeout (:timeout config)]
-    (run-process "cuneiform" ["-l" lang "-o" result-file image-file]
-                 {} timeout)))
+  (run-process "cuneiform" ["-l" lang "-o" result-file image-file]
+               {:timeout (:timeout config)}))
 
 (defmethod run-ocr :tesseract [_ config lang result-file image-file]
-  (let [outbase (subs result-file 0 (- (.length result-file) 3))
-        timeout (:timeout config)]
+  (let [outbase (subs result-file 0 (- (.length result-file) 3))]
     (run-process "tesseract" [image-file outbase "-l" lang]
-                 {} timeout)))
+                 {:timeout (:timeout config)})))
 
 (defn ^:private run-ocr-fn [ocr config]
   (fn [image-file]

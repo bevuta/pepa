@@ -10,11 +10,12 @@
 (defrecord Page [id rotation render-status dpi])
 (defrecord Document [id title pages created modified document-date notes])
 
-(defrecord State [documents navigation tags upload seqs])
+(defrecord State [documents inbox navigation tags upload seqs])
 
 (defonce state (atom (map->State {:documents {}
                                   :navigation {:route :dashboard}
                                   :tags {}
+                                  :inbox {:pages []}
                                   :upload {}
                                   :ui/sidebars {}
                                   :seqs {}})))
@@ -94,56 +95,21 @@
           (into {}))
      (tag-count-map state))))
 
-;;; Page Movement
+;;; Page Handling
+;; TODO: We could move this to pepa.inbox
 
-(declare move-pages)
-
-(defn add-pages
-  "Adds pages to document. Two argument version inserts them at the
-  back. Four-arg version inserts pages before or after page, depending
-  on position which can be :before or :after."
-  ([document pages position page]
-     (update-in document [:pages]
-                (fn [dpages]
-                  (move-pages dpages pages position page))))
-  ([document pages]
-     (add-pages document pages :before nil)))
-
-(defn remove-pages
-  "Removes pages from document."
-  [document pages]
-  (update-in document [:pages]
-             #(into (empty %) (remove (set pages) %))))
-
-(defn move-pages
-  "Removes pages-to-move (a seq) from pages (a seq) and inserts it
-  before (if position is :before) or after (if position is :after)
-  target (a page). If target is nil, insert at the top."
-  [pages pages-to-move position target]
-  (assert (#{:before :after} position))
-  (assert (not (contains? (set pages-to-move) target)))
-  (let [empty-pages (empty pages)
-        pages (remove (set pages-to-move) pages)
-        [pre x post] (cond
-
-                      (nil? target)
-                      ;; Handle "insert at bottom"
-                      [pages nil nil]
-
-                      (= target (first pages))
-                      [nil [(first pages)] (rest pages)]
-
-                      (= target (last pages))
-                      [(butlast pages) [(last pages)] nil]
-                      
-                      true
-                      (partition-by #{target} pages))]
-    (into empty-pages
-          (concat pre
-                  (when (= :before position) pages-to-move)
-                  x
-                  (when (= :after position) pages-to-move)
-                  post))))
+(defn insert-pages
+  "Split PAGES at IDX, insert NEW-PAGES in-between. If NEW-PAGES
+  contains pages from PAGES they will be moved."
+  [pages new-pages idx]
+  {:pre [(> idx -1)]}
+  (let [idx (min idx (count pages))
+        [before after] (split-at idx pages)
+        ;; Remove pages in `new-pages' from `before' and `after'. This
+        ;; allows us to reorder sequences.
+        before (remove (set new-pages) before)
+        after (remove (set new-pages) after)]
+    (into (empty pages) (concat before new-pages after))))
 
 ;;; Resizable Sidebars
 

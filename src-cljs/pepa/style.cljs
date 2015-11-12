@@ -2,7 +2,7 @@
     (:require [garden.core :refer [css]]
               [garden.units :as u :refer [px em pt]]
               [garden.stylesheet :refer [at-keyframes cssfn]]
-              
+
               [nom.ui :as ui]
               [pepa.navigation :refer [navigation-elements]]
 
@@ -101,10 +101,10 @@
 
 (def generic-header-css
   ;; TODO(mu): Position header buttons here
-  (let [header-height (- header-height 2)] ;handle border
-    [:header {:min-height (px header-height)
-              :max-height (px header-height)
-              :line-height (px header-height)
+  (let [header-height (px (- header-height 2))] ;handle border
+    [:header {:min-height header-height
+              :max-height header-height
+              :line-height header-height
               :z-index 110
               :background-color header-color
               :padding {:left (px header-padding)
@@ -136,36 +136,28 @@
              :font-size (em 1.2)
              :display :flex
              :justify-content :flex-start
-             :flex-direction :row}
-    ;; Logo
-    ;; (let [logo-height 48
-    ;;           logo-width 211]
-    ;;       [:.logo {:width (px logo-width)
-    ;;                :height (px logo-height)}])
-    ]))
+             :flex-direction :row}]))
 
-(defn sidebar-search-css [height]
-  (let [search-margin-horizontal 20
-        search-margin-vertical 25
+(def search-css
+  (let [margin-horizontal (px 10)
+        margin-vertical (px 15)
         search-input-padding 5]
-    [:.search {:height (px height)
-               :position :relative
-               :display :flex
-               :align-items :center
-               :justify-content :space-around}
-     [:input {:margin {:left (px search-margin-horizontal)
-                       :right (px search-margin-horizontal)
-                       :top (px search-margin-vertical)
-                       :bottom (px search-margin-vertical)}
-              :padding (px search-input-padding)
-              :padding-right (px (* 5 search-input-padding))
-              :width "100%"
-              :color default-text             
-              :background {:image (image-url "glass.svg")
-                           :repeat :no-repeat
-                           :position "center right"}
-              :height (px (- height (+ (* 2 search-margin-vertical) (* 2 search-input-padding))))
-              :border-radius (px search-input-padding)}]]))
+    [:form.search {:position :relative
+                   :display :flex
+                   :align-items :center
+                   :justify-content :space-around}
+     [:>input {:margin {:left margin-horizontal
+                        :right margin-horizontal
+                        :top margin-vertical
+                        :bottom margin-vertical}
+               :padding (px search-input-padding)
+               :padding-right (px (* 5 search-input-padding))
+               :width "100%"
+               :color default-text
+               :background {:image (image-url "glass.svg")
+                            :repeat :no-repeat
+                            :position "center right"}
+               :border-radius (px search-input-padding)}]]))
 
 (def sidebar-css
   (let [search-height 80]
@@ -176,16 +168,11 @@
                 :flex-direction :column}
      (draggable-css :right)
      sidebar-header-css
-     (sidebar-search-css search-height)
 
      ;; Sections
-     [:nav.workflows (list
-                      {:overflow-y :auto}
-                      (calc-property :height ["100%"
-                                              - (+ search-height header-height)
-                                              - 1 ; border
-                                              ]))
-      [:ul {:padding-left 0, :margin 0}
+     [:nav.workflows {:overflow-y :auto
+                      :flex-grow 1}
+      [:>ul {:padding-left 0, :margin 0}
        (let [item-height 50
              padding (/ item-height 8)
              line-height (/ item-height 1.5)
@@ -248,7 +235,7 @@
            [:.show-more {:font-weight :bold
                          :font-size (px 10)
                          :cursor :pointer}]]
-          
+
           [:.menu-link
            [:.title {:height (px line-height)}
             [:&:before :&:after {:content (pr-str " ")
@@ -273,23 +260,19 @@
                 :background-color "rgba(255, 255, 255, 0.8)"
                 :margin (px 5)
                 :border-radius (px 4)}
-      [:.left :.right {:float :right
-                       :width (px rotate-height)
-                       :height (px rotate-height)
-                       :line-height (px rotate-height)
-                       :text-align :center
-                       :cursor :pointer
-                       :opacity 0.3
-                       :user-select :none}
+      [:>.left :>.right {:float :right
+                         :width (px rotate-height)
+                         :height (px rotate-height)
+                         :line-height (px rotate-height)
+                         :text-align :center
+                         :cursor :pointer
+                         :opacity 0.3
+                         :user-select :none}
        ;; Give buttons full opacity when hovered
        [:&:hover {:opacity 1}]
        [:&.right {:background-image (image-url "material/page-rotate-right.svg")}]
-       [:&.flip.vertical {:background-image (image-url "material/page-flip-vertical.svg")}]
        [:&.left {:background-image (image-url "material/page-rotate-left.svg")}]]])])
 
-;; [:&.inbox {:background
-;; [:&.active {:background-color blue-background}
-;;         [:&.inbox {:background {:image (image-url "menu-icons/inbox-active.svg")}}]]
 ;;; Workflows
 
 (def document-width 250)
@@ -300,55 +283,126 @@
   [:&.inbox {:overflow :auto
              :display :flex
              :flex-direction :row}
-   [:.pane {:height "100%"
-            :min-width (px document-width), :max-width (px document-width)
-            :display :flex
-            :flex-direction :column
-            :flex-grow 1}
+   [:.column {:height "100%"
+              :min-width (px document-width), :max-width (px document-width)
+              :display :flex
+              :flex-direction :column
+              :flex-grow 1}
     [:header {:display :flex
-              :flex-flow [[:row :wrap]]
+              :flex-direction :row
               :align-items :center
-              :justify-content :space-between}]]
-   ;; Create Document Column
-   [:.create-document {:align-items :center
-                       :justify-content :space-around}
-    [:.note
-     [:.arrow {:background {:image (image-url "drop-arrow.svg")
-                            :repeat :no-repeat
-                            :position :center
-                            :size (px 72)}
-               :height (px 72)}]]]
-   ;; A 'Document' (with pages inside)
-   [:.document
-    [:header {:max-height :initial}
-     [:.tags {:margin-bottom (px 5)}]]
-    
-    [:ul.pages {:margin 0, :padding 0
-                :overflow-y :auto
-                :flex-shrink 999}
-     [:li.page {:width "100%"
-                :list-style-type :none
-                :user-select :none}
-      ;; TODO: Move this into a generic css rule
-      [:&.selected
-       [:.thumbnail {:position :relative}
-        [:&:before {:content (pr-str " ")
-                    :display :block
-                    :width "100%", :height "100%"
-                    :position :absolute
-                    :top 0 :left 0
-                    :background-color "rgba(0,0,1,0.5)"
-                    :z-index 10}]]]
+              :justify-content :space-between}
+     [:.title :.editable {:flex-grow 2}]
+     [:span {:overflow :hidden
+             :text-overflow :ellipsis
+             :white-space :nowrap}]
+     ;; Icons
+     (let [button-height 20]
+       [:.actions {:height button-height
+                   :display :flex
+                   :flex-direction :row}
+        [:a {:width (px button-height)
+             :height (px button-height)
+             :display :block
+             :cursor :pointer
+             :opacity 0.3
+             :user-select :none
+             :background {:repeat :no-repeat
+                          :position :center
+                          :size (px button-height)}}
+         ;; Give buttons full opacity when hovered
+         [:&:hover {:opacity 1}]
+         [:&.show {:background-image (image-url "material/show.svg")}]
+         [:&.close {:background-image (image-url "material/close.svg")}]]])]
+    (let [button-height 32
+          padding 20]
+      [:>.action-bar {:display :flex
+                      :flex-direction :row
+                      :justify-content :space-between
+
+                      :background header-color
+                      :width "100%"}
+       [:.delete {:background {:image (image-url "material/delete.svg")
+                               :size (px (/ button-height 1.5))
+                               :position :center}
+                  :padding-right (px padding)}]
+       [:.rotate {:display :flex
+                  :padding-left (px padding)}]
+       [:.left :.right :.delete {:width (px button-height)
+                                 :height (px button-height)
+                                 :text-align :center
+                                 :cursor :pointer
+                                 :opacity 0.3
+                                 :user-select :none
+                                 :background {:repeat :no-repeat
+                                              :position :center}}
+        ;; Give buttons full opacity when hovered
+        [:&:hover {:opacity 1}]
+        [:&.right {:background-image (image-url "material/page-rotate-right.svg")}]
+        [:&.left {:background-image (image-url "material/page-rotate-left.svg")}]]])
+    [:>ul {:list-style-type :none
+           :margin 0, :padding 0
+           :overflow-y :auto
+           :height "100%"}
+     [:>li {:width "100%"
+            :display :flex
+            :justify-content :space-around}
+      [:&.selected {:background-color "green"}]
+      [:&.dragover {:position :relative}
+       (let [drop-indicator-height 4]
+         [:&:before {:content (pr-str " ")
+                     :position :absolute
+                     :top (px (- (/ drop-indicator-height 2)))
+                     :left 0
+                     :width "100%"
+                     :height (px drop-indicator-height)
+                     :z-index 50
+                     :background-color "black"
+                     :opacity 0.4}])]
+      [:.thumbnail {:width "80%"}]
       page-css
       [:img {:max-width "100%"
              :max-height "100%"}]]]
-    [:barter {:min-height (px 40)
-              :max-height (px 40)
-              :display :flex
-              :flex-direction :row
-              :justify-content :space-around
-              :align-items :center
-              :background-color header-color}]]])
+    [:&.search
+     [:header>form {:display :flex
+                    :max-width "100%"
+                    :overflow :hidden}
+      [:input {:min-width (px 1)}]
+      [:button {:flex-shrink 1}]]
+     (let [result-height 100]
+       [:ul.search-results
+        [:>li {:height (px result-height)
+               :overflow :hidden
+               :display :flex
+               :flex-direction :row
+               :justify-content :space-between
+               :cursor :pointer}
+         [:.thumbnail {:width (px (/ result-height (/ 4 3)))
+                       :height (px result-height)
+                       ;; Exact dimensions
+                       :flex-shrink 0
+                       :flex-grow 0}]
+         [:.meta {:display :flex
+                  :flex-direction :column
+                  :justify-content :center
+                  :font-size (pt 10)
+                  :flex-grow 10
+                  :overflow :hidden
+                  :margin {:left (px 10)
+                           :right (px 10)}}
+          [:>.title :>.created {:white-space :nowrap
+                                :text-overflow :ellipsis
+                                :overflow :hidden}]
+          [:>.title {:font-size (pt 11)}]
+          [:>.created {:color text-color-disabled}]]]])]
+    [:&.new
+     [:>.center {:height "100%"
+                 :display :flex
+                 :flex-direction :column
+                 :justify-content :center
+                 :align-items :center
+                 :text-align :center}
+      [:>button {:margin (px 15)}]]]]])
 
 ;;; Dashboard
 (def dashboard-css
@@ -389,7 +443,7 @@
         [:&.selected {:background-color dashboard-selection-color}]
 
         page-css
-        
+
         [:.preview {:height (px preview-height)
                     :background-color light-background
                     :position :relative
@@ -434,15 +488,7 @@
    [:header {:overflow-x :hidden
              :vertical-align :top
              :white-space :nowrap
-             :text-overflow :ellipsis}
-    [:form {:display :inline-flex
-            :align-items :center
-            :justify-content :space-between
-            :width "100%"
-            :height "100%"}
-     [:input {:flex-grow 999
-              :min-width 0
-              :margin-right (px 10)}]]]
+             :text-overflow :ellipsis}]
    [:.pane
     [:&>div {:height "100%"
              :display :flex
@@ -456,7 +502,6 @@
               :border (str "1px solid " border-light)}]]]]
     ;; Page Thumbnails
     [:.thumbnails {:position :relative} ; :relative for `draggable-css'
-     [:header {:cursor :pointer}]
      (draggable-css :right)
      ;; Counter implementation
      [:ul.pages {:counter-reset "page-counter"}
@@ -495,19 +540,32 @@
      (draggable-css :left)]]])
 
 (def generic-editable-css
-(let [edit-icon-size (px 16)]  [:.editable {:position :relative}
-          [:&:hover {:background editable-background}
-           [:&:after {:content (pr-str " ")
-                      :display :block
-                      :position :absolute
-                      :right (px 5)
-                      :opacity .66
-                      :top "50%"
-                      :transform "translateY( -50%)"
-                      :height edit-icon-size
-                      :width edit-icon-size
-                      :background {:image (image-url "edit.svg")
-                                   :size (px 16)}}]]]))
+  (let [edit-icon-size (px 16)]
+    [:.editable {:overflow :hidden
+                 :white-space :nowrap
+                 :text-overflow :ellipsis}
+     ["&:not(.editing)" {:position :relative
+                         :cursor :pointer}
+      [:&:hover
+       [:&:after {:content (pr-str " ")
+                  :display :block
+                  :position :absolute
+                  :right (px 5)
+                  :opacity .66
+                  :top "50%"
+                  :transform "translateY( -50%)"
+                  :height edit-icon-size
+                  :width edit-icon-size
+                  :background {:image (image-url "edit.svg")
+                               :size (px 16)}}]]]
+     [:form {:display :inline-flex
+             :align-items :center
+             :justify-content :space-between
+             :width "100%"
+             :height "100%"}
+      [:input {:flex-grow 999
+               :min-width 0
+               :margin-right (px 10)}]]]))
 
 (def generic-input-css
   (let [padding (px 5)
@@ -564,12 +622,12 @@
    [:.pane {:flex-grow 1
             ;; Firefox workaround. necessry for stuff to shrink below
             ;; their intrinsic width
-            :min-width 0    
+            :min-width 0
             :height "100%"}]
    generic-header-css
    generic-sidebar-css
    generic-editable-css
-   
+
    dashboard-css
    document-css
    inbox-css])
@@ -587,18 +645,18 @@
                :min-height (px tags-min-height)
                :line-height (px (+ 2 tags-min-height))}
      [:&.tag-box (list
-                   {:padding {:left (px tag-icon-box)
-                              :top (px 6)}
-                    :border (str "1px solid " border-dark)
-                    :border-radius (px 3)
-                    :height :auto
-                    :background {:image (image-url "tag-icon.svg")
-                                 :repeat :no-repeat
-                                 :size (px 14)
-                                 :position [[(px 8) (px 8)]]
-                                 :color :white}
-                    :white-space :initial}
-                   (calc-property :width ["100%" -  (px tag-icon-box)]))
+                  {:padding {:left (px tag-icon-box)
+                             :top (px 6)}
+                   :border (str "1px solid " border-dark)
+                   :border-radius (px 3)
+                   :height :auto
+                   :background {:image (image-url "tag-icon.svg")
+                                :repeat :no-repeat
+                                :size (px 14)
+                                :position [[(px 8) (px 8)]]
+                                :color :white}
+                   :white-space :initial}
+                  (calc-property :width ["100%" -  (px tag-icon-box)]))
       [:&:before {:content (pr-str "Tags:")
                   :font-size (em 1.2)
                   :display :block
@@ -630,7 +688,7 @@
                      :vertical-align :top}]
         [:&.selected {:background-color tags-selected-background}]
         (let [color-size 8]
-          
+
           [:.color {:display :inline-block
                     :height (px tag-height)
                     :width (px tag-height)
@@ -651,7 +709,7 @@
 (def button-css
   (let [padding (px 15)]
     [:button :a.button
-     {:background "linear-gradient(to bottom, #ffffff 0%,#f5f5f5 100%)"      
+     {:background "linear-gradient(to bottom, #ffffff 0%,#f5f5f5 100%)"
       :color grey-3
       :height (px 25)
       :font {:family default-font
@@ -663,8 +721,10 @@
                 :right padding}
       :border-radius (px 2)}
      [:&:hover {:background "linear-gradient(to bottom, #f5f5f5 0%,#e5e5e5 100%)"}]
-     [:&:active {:box-shadow "inset 0 0 3px #000000;"}]
-     [:&:disabled :&.disabled {:opacity .5}]]))
+     [:&:active {:box-shadow "inset 0 0 3px #000000"}]
+     [:&:disabled :&.disabled {:opacity .5}]
+     [:&.pressed {:box-shadow "inset 0 0 2px #000000"
+                  :background-color "#efefef"}]]))
 
 
 (def dropdown-css
@@ -841,18 +901,19 @@
                  :background :transparent}]]
     [:&.file-drop
      {:background "red"}]
-    clear-a-css
-    button-css
-    generic-input-css
-    
-    dropdown-css
-    sidebar-css
-    tags-css
-    upload-css
 
     [:main {:height "100%", :width "100%"
             :overflow-x :hidden}
-     workflow-css]]))
+     workflow-css]]
+   clear-a-css
+   button-css
+   generic-input-css
+
+   dropdown-css
+   sidebar-css
+   tags-css
+   upload-css
+   search-css))
 
 ;;; Apply the CSS
 

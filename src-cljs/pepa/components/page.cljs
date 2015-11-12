@@ -68,7 +68,8 @@
                  (when overlay?
                    (om/build rotate-buttons page))
                  page-image)
-        page-image))))
+        (dom/div #js {:className "thumbnail"}
+                 page-image)))))
 
 (defn full [page owner _]
   (page-image page owner {:size-fn max

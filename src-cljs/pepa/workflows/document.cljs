@@ -14,55 +14,26 @@
             [pepa.components.tags :as tags]
             [pepa.components.document :as document]
             [pepa.components.draggable :as draggable]
-            [goog.events.KeyCodes :as keycodes])
+            [pepa.components.editable :as editable])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [cljs.core.match.macros :refer [match]])
   (:import [goog.i18n DateTimeFormat DateTimeParse]))
 
 ;;; Editable Title Header
 
-(defn ^:private save-title! [document owner e]
-  (.preventDefault e)
+(defn ^:private save-title! [document owner title]
   (go
     (try
       (om/set-state! owner :working? true)
-      (<! (api/update-document! (assoc @document
-                                       :title (om/get-state owner :title))))
-      (om/set-state! owner :editing? false)
+      (<! (api/update-document! (assoc @document :title title)))
       (finally
         (om/set-state! owner :working? false)))))
 
 (ui/defcomponent ^:private thumbnail-pane-header [document owner _]
-  (init-state [_]
-    {:title (om/value (:title document))
-     :editing? false})
-  (did-update [_ _ prev-state]
-    (utils/focus-if owner prev-state :editing? "input" :move-caret))
-  (render-state [_ {:keys [title editing?]}]
-    (let [save-title! (partial save-title! document owner)]
-      [:header {:class (when-not editing? "editable")
-                :on-click (when-not editing?
-                            #(doto owner
-                               (om/update-state! :editing? not)
-                               (om/set-state! :title (-> document :title om/value))))
-                :title (:title document)}
-       (if editing?
-         (list
-          [:form {:on-submit save-title!}
-           [:input.title {:value title
-                          :key "title-input"
-                          :ref "input"
-                          :on-click #(.stopPropagation %)
-                          :on-key-down (fn [e]
-                                         (when (= keycodes/ESC e.keyCode)
-                                           (om/set-state! owner :editing? false)))
-                          :on-change (fn [e]
-                                       (om/set-state! owner :title e.currentTarget.value))}]
-           [:button.save {:type :submit
-                          :key "save-button"
-                          :on-click #(.stopPropagation %)}
-            "Save"]])
-         (:title document))])))
+  (render [_]
+    [:header
+     (editable/editable-title (:title document)
+                              (partial save-title! document owner))]))
 
 (defn ^:private scroll-maybe [page owner prev-state]
   (when (and (= page (om/get-state owner :current-page))
@@ -206,8 +177,10 @@
           tag-changes (:tag-changes state)
           date-changes (:date-changes state)
           sidebars (om/observe owner (data/ui-sidebars))
-          current-page (nth (:pages (om/value document))
-                            (dec (or page-number 1)))]
+          current-page (let [pages (:pages (om/value document))
+                             pagenum (dec (or page-number 1))]
+                         (when (< pagenum (count pages))
+                           (nth pages pagenum)))]
       [:.workflow.document
        ;; Left (thunbmail) pane
        (let [width (get sidebars ::thumbnails

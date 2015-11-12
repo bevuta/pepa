@@ -52,10 +52,8 @@
   :exclusions [org.clojure/data.json
                log4j/log4j
                org.clojure/tools.reader]
-  :plugins [[lein-cljsbuild "1.0.5"]]
-  :jvm-opts ["-XX:+UseConcMarkSweepGC"
-             "-XX:+CMSClassUnloadingEnabled"
-             "-XX:MaxPermSize=128M"]
+  :plugins [[lein-cljsbuild "1.0.5"]
+            [lein-figwheel "0.3.9" :exclusions [cider/cider-nrepl]]]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
   :cljsbuild {:builds {:pepa {:source-paths ["src" "src-cljs"]
@@ -64,7 +62,7 @@
                                          :asset-path "out"
                                          :main pepa.core
                                          :cache-analysis true}}}}
-  :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.0"]]
+  :profiles {:repl {:plugins [[cider/cider-nrepl "0.9.1"]]
                     :repl-options {:timeout 300000
                                    :init-ns user}}
              :dev {:dependencies [[lein-figwheel "0.4.1" :exclusions [cider/cider-nrepl]]]

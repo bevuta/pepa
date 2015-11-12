@@ -25,7 +25,7 @@
           (async/alts!! [control-chan] :default :continue))
       (async/alts!! [notify-chan control-chan]))))
 
-(defn start [component notify-topic]
+(defn start [component notify-topic]    ;TODO: Support multiple topics
   (let [notify-chan (bus/subscribe (:bus component) notify-topic (async/sliding-buffer 1))
         control-chan (async/chan)
         processor (->Processor notify-topic notify-chan control-chan nil)
