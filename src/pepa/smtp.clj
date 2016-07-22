@@ -2,7 +2,8 @@
   (:require [com.stuartsierra.component :as component]
             [pepa.model :as m]
             [pepa.db :as db]
-            [pepa.log :as log])
+            [pepa.log :as log]
+            [clojure.string :as s])
   (:import org.subethamail.smtp.helper.SimpleMessageListener
            org.subethamail.smtp.helper.SimpleMessageListenerAdapter
            org.subethamail.smtp.server.SMTPServer
@@ -29,25 +30,29 @@
                         (deliver [from to data]
                           (db/with-transaction [db (:db component)]
                             ;; TODO: Use proper mail address parser
-                            (if-let [files (seq (m/mime-message->files data))]
-                              (let [[_ origin] (re-find #"(.+)@" to)
-                                    origin (or (and (m/inbox-origin? config origin) origin)
-                                               "email")
-                                    files (m/store-files! db files {:origin origin})]
-                                (when (= origin "email")
-                                  (doseq [file files]
-                                    (let [id (m/create-document! db {:file (:id file)
-                                                                     :title (:name file)})
-                                          tagging (get-in component [:config :tagging])]
-                                      ;; NOTE: auto-tag*! so we don't
-                                      ;; trigger an update on the
-                                      ;; notification bus
-                                      (log/info component "adding tags to created document")
-                                      (m/auto-tag*! db id tagging
-                                                    {:origin origin
-                                                     :mail/from from
-                                                     :mail/to to})))))
-                              (log/warn component "Got mail from" from "without attachments")))))
+                            (let [[files subject] (m/mime-message->files+subject data)]
+                              (if-not files
+                                (log/warn component "Got mail from" from "without attachments")
+                                (let [[_ origin] (re-find #"(.+)@" to)
+                                      origin (or (and (m/inbox-origin? config origin) origin)
+                                                 "email")
+                                      files (m/store-files! db files {:origin origin})]
+                                  (when (= origin "email")
+                                    (doseq [file files]
+                                      (let [title (if-not (s/blank? subject)
+                                                    subject
+                                                    (:name file))
+                                            id (m/create-document! db {:file (:id file)
+                                                                       :title title})
+                                            tagging (get-in component [:config :tagging])]
+                                        ;; NOTE: auto-tag*! so we don't
+                                        ;; trigger an update on the
+                                        ;; notification bus
+                                        (log/info component "adding tags to created document")
+                                        (m/auto-tag*! db id tagging
+                                                      {:origin origin
+                                                       :mail/from from
+                                                       :mail/to to}))))))))))
                       (SimpleMessageListenerAdapter.)
                       (SMTPServer.))]
           (doto server
@@ -57,7 +62,6 @@
             (.start))
           (assoc component
                  :server server)))))
-
   (stop [component]
     (when-let [server (:server component)]
       (log/info component "Stopping SMTP Server")

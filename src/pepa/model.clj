@@ -486,12 +486,18 @@
       ;; Rethrow
       (throw e))))
 
+(defn mime-message->files+subject [input]
+  (let [[parts headers] (mime/message-parts+headers input)
+        subject (get headers "Subject")
+        files   (for [part parts
+                      :when (mime/pdf-part? part)]
+                  {:name         (:filename part)
+                   :data         (slurp-bytes @(:content part))
+                   :content-type "application/pdf"})]
+    [(seq files) subject]))
+
 (defn mime-message->files [input]
-  (->> (mime/message-parts input)
-       (filter mime/pdf-part?)
-       (map #(hash-map :name (:filename %)
-                       :data (slurp-bytes @(:content %))
-                       :content-type "application/pdf"))))
+  (first (mime-message->files+subject input)))
 
 ;;; Sequence Number Stuff
 
