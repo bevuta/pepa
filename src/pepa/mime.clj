@@ -11,7 +11,7 @@
 
 (defn ^:private message-part->map [part]
   {:content-type (.getContentType part)
-   :filename (.getFileName part)
+   :filename     (.getFileName part)
    :content (delay (.getContent part))})
 
 (def ^:private multipart?
@@ -51,12 +51,20 @@
    (remove multipart?)
    (map message-part->map)))
 
-(defn message-parts [input]
-  (let [msg (parse-message input)
-        content (.getContent msg)]
-    (if (multipart? content)
-      (content->parts content)
-      [(message-part->map msg)])))
+(defn ^:private enumeration->map [enumeration]
+  (->> enumeration
+       enumeration-seq
+       (map (fn [x] [(.getName x) (.getValue x)]))
+       (into {})))
+
+(defn message-parts+headers [input]
+  (let [msg     (parse-message input)
+        content (.getContent msg)
+        parts   (if (multipart? content)
+                  (content->parts content)
+                  [(message-part->map msg)])
+        headers (enumeration->map (.getAllHeaders msg))]
+    [parts headers]))
 
 (defn pdf-part? [part]
   (or (.startsWith (.toLowerCase (str (:content-type part))) "application/pdf")

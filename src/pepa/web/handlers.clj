@@ -39,15 +39,16 @@
   :allowed-methods #{:post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
-                (let [req (:request ctx)]
+                (let [req (:request ctx)
+                      {:keys [body content-type]} req]
                   (if-let [files (case (:content-type req)
-                                   "message/rfc822" (m/mime-message->files (:body req))
-                                   "application/pdf" [{:data (slurp-bytes (:body req))
-                                                       :name (get-in req [:headers "x-filename"])
-                                                       :content-type (:content-type req)}]
+                                   "message/rfc822"  (m/mime-message->files body)
+                                   "application/pdf" [{:data         (slurp-bytes body)
+                                                       :name         (get-in req [:headers "x-filename"])
+                                                       :content-type content-type}]
                                    false)]
                     [false {::files files}]
-                    [true {::error (str "Unsupported content type: " (:content-type req))}])))
+                    [true  {::error (str "Unsupported content type: " content-type)}])))
   :handle-malformed ::error
   :handle-ok (fn [ctx]
                "Created")
@@ -60,7 +61,7 @@
   :allowed-methods #{:get}
   :available-media-types ["application/transit+json"]
   :malformed? (fn [ctx]
-                (try [false {::id (Integer/parseInt id)}]
+                (try [false {::id (Integer/parseInt id 10)}]
                      (catch NumberFormatException e
                        true)))
   :exists? (fn [ctx]
@@ -74,10 +75,10 @@
   :allowed-methods #{:get}
   :available-media-types ["image/png"]
   :malformed? (fn [ctx]
-                (try [false {::id (Integer/parseInt id)
+                (try [false {::id   (Integer/parseInt id 10)
                              ::size (if (= ::max size)
                                       size
-                                      (Integer/parseInt size))}]
+                                      (Integer/parseInt size 10))}]
                      (catch NumberFormatException e
                        true)))
   :exists? (fn [ctx]
@@ -102,7 +103,7 @@
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
                 (try
-                  (let [id (Integer/parseInt id)
+                  (let [id (Integer/parseInt id 10)
                         rotation (get-in ctx [:request :body :rotation])]
                     (if (and (integer? rotation)
                              (zero? (mod rotation 90)))
@@ -134,7 +135,7 @@
   :allowed-methods #{:get :post}
   :available-media-types +default-media-types+
   :malformed? (fn [ctx]
-                (try [false {::id (Integer/parseInt id)}]
+                (try [false {::id (Integer/parseInt id 10)}]
                      (catch NumberFormatException e
                        true)))
   :exists? (fn [ctx]
