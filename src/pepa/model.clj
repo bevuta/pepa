@@ -94,11 +94,11 @@
 (defn ^:private get-associated [db sql ids fk]
   (db/query db
             (db/sql+placeholders sql ids)
-            :result-set-fn (fn [result]
-                             (let [grouped (group-by fk result)]
-                               (zipmap (keys grouped)
-                                       (map (partial dissoc-fks fk)
-                                            (vals grouped)))))))
+            {:result-set-fn (fn [result]
+                              (let [grouped (group-by fk result)]
+                                (zipmap (keys grouped)
+                                        (map (partial dissoc-fks fk)
+                                             (vals grouped)))))}))
 
 (defn get-documents [db ids]
   (db/with-transaction [conn db]

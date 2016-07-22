@@ -386,15 +386,17 @@
   [handler]
   (fn [req]
     (if-let [type (transit-request? req)]
-      (let [body (:body req)
-            reader (transit/reader body type)]
-        (try
-          (handler (assoc req :body (transit/read reader)))
-          (catch Exception ex
-            ;; TODO: We might want to log such errors.
-            {:status 400
-             :headers {:content-type "text/plain"}
-             :body "Malformed request."})))
+      (let [body   (:body req)
+            reader (transit/reader body type)
+            body (try
+                   (transit/read reader)
+                   (catch Exception ex ex))]
+        (if (instance? Exception body)
+          {:status 400
+           :headers {"content-type" "text/plain"}
+           :body (str "Malformed request:\n"
+                      (.getMessage body))}
+          (handler (assoc req :body body))))
       (handler req))))
 
 (defn wrap-request-logging [handler]
