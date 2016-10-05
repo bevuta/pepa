@@ -54,11 +54,11 @@
                  ;; ClojureScript
                  [org.clojure/clojurescript "1.9.229"]
                  [com.cognitect/transit-cljs "0.8.239"]
-                 [org.omcljs/om "0.9.0"]
+                 [org.omcljs/om "1.0.0-alpha46"]
                  [org.clojars.the-kenny/nom "0.1.1"]
                  [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"
                   :exclusions [org.clojure/tools.reader]]
-                 [sablono "0.7.5" :exclusions [cljsjs/react]]
+                 [sablono "0.7.5"]
                  [secretary "1.2.3"]
                  [the/parsatron "0.0.7"]]
   :exclusions [org.clojure/data.json
@@ -66,10 +66,21 @@
                org.clojure/tools.reader]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
-  :profiles {:uberjar [:advanced
-                       {:aot [pepa.core
-                              ;; Hack to fix NoClassDefFoundErrors when uberjar-ing
-                              com.stuartsierra.component
-                              com.stuartsierra.dependency]
-                        :hooks [leiningen.cljsbuild]
-                        :jar-exclusions [#"^public/out"]}]})
+  :plugins [[lein-figwheel "0.5.8"]]
+  :cljsbuild {:builds {:pepa {:source-paths ["src/" "src-cljs/"]
+                              :figwheel true
+                              :compiler {:main "pepa.core"
+                                         :output-to "resources/public/pepa.js"
+                                         :output-dir "resources/public/out/"
+                                         ;; Fix paths to scripts used by pepa.js
+                                         :asset-path "out/"
+                                         :source-map true
+                                         :source-map-timestamp true
+                                         :optimizations :none}}}}
+  :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.4-6"]]}
+             :uberjar {:aot [pepa.core
+                             ;; Hack to fix NoClassDefFoundErrors when uberjar-ing
+                             com.stuartsierra.component
+                             com.stuartsierra.dependency]
+                       :hooks [leiningen.cljsbuild]
+                       :jar-exclusions [#"^public/out"]}})

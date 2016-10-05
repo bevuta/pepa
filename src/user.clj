@@ -8,17 +8,20 @@
 
 (defn init []
   (alter-var-root #'system
-                  (constantly (pepa/make-system))))
+                  (constantly (pepa/make-system)))
+  nil)
 
 (defn start []
-  (alter-var-root #'system component/start))
+  (alter-var-root #'system component/start)
+  nil)
 
 (defn stop []
   (alter-var-root #'system
                   (fn [s]
                     (when s
                       (log/info s "======== STOPPING SYSTEM ========")
-                      (component/stop s)))))
+                      (component/stop s))))
+  nil)
 
 (defn go []
   (init)
@@ -26,7 +29,8 @@
 
 (defn reload []
   (stop)
-  (refresh :after 'user/go))
+  (refresh :after 'user/go)
+  nil)
 
 ;; Cljs REPL
 
