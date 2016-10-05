@@ -50,7 +50,7 @@
           images (render-page component dpis page)]
       (db/with-transaction [db db]
         (let [status (if images
-                       (do (db/insert-coll! db :page_images images)
+                       (do (db/insert-multi! db :page_images images)
                            :processing-status/processed)
                        :processing-status/failed)]
           (db/notify! db :pages/updated)

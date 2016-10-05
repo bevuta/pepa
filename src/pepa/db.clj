@@ -42,9 +42,7 @@
 (def delete! jdbc/delete!)
 (def query jdbc/query)
 
-(defn insert-coll! [db table coll]
-  (when (seq coll)
-    (apply insert! db table coll)))
+(def insert-multi! jdbc/insert-multi!)
 
 (defmacro with-transaction [[conn db] & body]
   `(jdbc/with-db-transaction [~conn ~db]
@@ -63,11 +61,11 @@
   [:files/new
    :pages/new
    :documents/new
-   
+
    :files/updated
    :pages/updated
    :documents/updated
-   
+
    :inbox/added
    :inbox/removed])
 

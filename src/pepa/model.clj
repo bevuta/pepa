@@ -170,13 +170,13 @@
 
 (defn add-pages*! [db document page-ids]
   (assert (every? number? page-ids))
-  (db/insert-coll! db :document_pages
-                   (map (fn [page number]
-                          {:document document
-                           :page page
-                           :number number})
-                        page-ids
-                        (range))))
+  (db/insert-multi! db :document_pages
+                    (map (fn [page number]
+                           {:document document
+                            :page page
+                            :number number})
+                         page-ids
+                         (range))))
 
 (defn add-pages! [db document page-ids]
   (log/info db "Adding pages to document" (str document ":") page-ids)
@@ -351,7 +351,7 @@
             new (set/difference tag-values (set (map :name existing)))
             new (mapv tag->db-tag new)
             _ (log/debug db "Transparently creating new tags:" (pr-str new))
-            new (db/insert-coll! conn :tags new)]
+            new (db/insert-multi! conn :tags new)]
         (concat existing new)))))
 
 (defn ^:private add-tags*! [db document-id tags]
@@ -363,9 +363,9 @@
           new-tag-ids (set/difference (set (map :id db-tags))
                                       (set old-tag-ids))]
       (when (seq new-tag-ids)
-        (db/insert-coll! db :document_tags
-                         (for [tag new-tag-ids]
-                           {:document document-id :tag tag}))))))
+        (db/insert-multi! db :document_tags
+                          (for [tag new-tag-ids]
+                            {:document document-id :tag tag}))))))
 
 (defn add-tags! [db document-id tags]
   (log/info db "Adding tags to document" document-id (set tags))
@@ -437,7 +437,7 @@
   (log/info db "Adding pages" page-ids "to inbox")
   (db/with-transaction [db db]
     (db/notify! db :inbox/added {:pages page-ids})
-    (db/insert-coll! db :inbox (for [id page-ids] {:page id}))))
+    (db/insert-multi! db :inbox (for [id page-ids] {:page id}))))
 
 (defn remove-from-inbox! [db page-ids]
   (log/info db "Removing pages" page-ids "from inbox")

@@ -13,7 +13,8 @@
 (defn ^:private next-item* [component processor]
   (db/with-transaction [db (:db component)]
     (db/advisory-xact-lock! db (:notify-topic processor)))
-  (db/query (:db component) (next-item component) :result-set-fn first))
+  (db/query (:db component) (next-item component)
+            {:result-set-fn first}))
 
 (defn ^:private process-next [component processor]
   (let [{:keys [notify-chan control-chan]} processor]
