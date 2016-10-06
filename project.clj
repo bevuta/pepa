@@ -51,6 +51,10 @@
                  [com.bevuta/lpd "0.1.0-SNAPSHOT"]
                  [javax.jmdns/jmdns "3.4.1"]
 
+                 ;; Cljs Repl
+                 [com.cemerick/piggieback "0.2.1"]
+                 [figwheel-sidecar "0.5.8"]
+
                  ;; ClojureScript
                  [org.clojure/clojurescript "1.9.229"]
                  [com.cognitect/transit-cljs "0.8.239"]
@@ -77,8 +81,7 @@
                                          :source-map true
                                          :source-map-timestamp true
                                          :optimizations :none}}}}
-  :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.4-6"]]}
-             :uberjar {:aot [pepa.core
+  :profiles {:uberjar {:aot [pepa.core
                              ;; Hack to fix NoClassDefFoundErrors when uberjar-ing
                              com.stuartsierra.component
                              com.stuartsierra.dependency]

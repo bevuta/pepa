@@ -74,13 +74,13 @@
 
 (defn ^:private retry-all! [component]
   (db/with-transaction [db (:db component)]
-   (db/update! db :files
-               {:status :processing-status/pending
-                :report nil}
-               ["status = 'failed'"])
-   ;; TODO: :files/updated would be correct, but the Processor doesn't
-   ;; listens on that channel
-   (db/notify! db :files/new)))
+    (db/update! db :files
+                {:status :processing-status/pending
+                 :report nil}
+                ["status = 'failed'"])
+    ;; TODO: :files/updated would be correct, but the Processor doesn't
+    ;; listens on that channel
+    (db/notify! db :files/new)))
 
 (defn make-component []
   (map->FilePageExtractor {}))

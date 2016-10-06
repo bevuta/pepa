@@ -126,7 +126,7 @@
                       90 :right
                       180 :down
                       270 :left)
-            
+
                 args ["pdftk" f "cat" (str "1-end" (name rot)) "output" tmp-file]
                 proc (-> (into-array (map str args))
                          (ProcessBuilder.)

@@ -1,13 +1,13 @@
 (ns ^:figwheel-always pepa.core
-    (:require pepa.style
-              pepa.navigation
+  (:require pepa.style
+            pepa.navigation
 
-              [pepa.data :as data]
-              [pepa.preloader :as preloader]
-              [pepa.components.root :refer [root-component]]
-              [pepa.components.draggable :as draggable]
+            [pepa.data :as data]
+            [pepa.preloader :as preloader]
+            [pepa.components.root :refer [root-component]]
+            [pepa.components.draggable :as draggable]
 
-              [om.core :as om :include-macros true]))
+            [om.core :as om :include-macros true]))
 
 (enable-console-print!)
 
