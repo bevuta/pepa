@@ -2,7 +2,9 @@
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh]]
             [pepa.core :as pepa]
-            [pepa.log :as log]))
+            [pepa.log :as log]
+
+            [figwheel-sidecar.repl-api :as fig]))
 
 (defonce system nil)
 
@@ -34,15 +36,9 @@
 
 ;; Cljs REPL
 
-(defn ws-repl []
-  (require 'cemerick.piggieback
-           'weasel.repl.websocket)
-  (let [cljs-repl (ns-resolve 'cemerick.piggieback 'cljs-repl)
-        repl-env (ns-resolve 'weasel.repl.websocket 'repl-env)]
-    (cljs-repl (repl-env
-                :ip "0.0.0.0"
-                :port 9009
-                :working-dir "resources/public/out"))))
+(def start-figwheel! fig/start-figwheel!)
+(def stop-figwheel!  fig/stop-figwheel!)
+(def cljs-repl!      fig/cljs-repl)
 
 (defn set-logback-level! [level]
   (doto (org.slf4j.LoggerFactory/getLogger ch.qos.logback.classic.Logger/ROOT_LOGGER_NAME)

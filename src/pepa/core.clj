@@ -14,8 +14,6 @@
             [pepa.init :as init]
             [pepa.log :refer [wrap-logging]]
 
-            [figwheel-sidecar.system :as fig]
-
             [clojure.core.match :refer [match]])
   (:gen-class))
 
@@ -47,9 +45,7 @@
        :zeroconf (component/using
                   (zeroconf/make-component)
                   [:config])
-       :systemd (systemd/make-component)
-
-       :figwheel-system (fig/figwheel-system (fig/fetch-config)))
+       :systemd (systemd/make-component))
       (wrap-logging)))
 
 (defn -main [& args]
