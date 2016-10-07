@@ -22,7 +22,7 @@
       (do (try
             (process-item component item)
             (catch Exception e
-              (log/error component e "Processor caught exception")))
+              (log/error e "Processor caught exception")))
           (async/alts!! [control-chan] :default :continue))
       (async/alts!! [notify-chan control-chan]))))
 

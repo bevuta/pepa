@@ -30,12 +30,12 @@
             (when (:enable engine-config)
               (doseq [lang (:languages engine-config)]
                 (try
-                  (log/debug ocr "OCR engine" engine "with langauge" lang)
+                  (log/debug "OCR engine" engine "with langauge" lang)
                   (run-ocr engine engine-config lang (str result-file) (str image-file))
                   (io/copy result-file result)
                   (.write result "\n")
                   (catch Exception e
-                    (log/error ocr e "OCR Process Failed")))))))
+                    (log/error e "OCR Process Failed")))))))
         (if (zero? (.length (str result)))
           [:processing-status/failed]
           [:processing-status/processed (str result)])))))
@@ -52,11 +52,11 @@
 
   (process-item [component page]
     (let [db (:db component)]
-      (log/info component "running OCR on page" (:id page))
+      (log/info "running OCR on page" (:id page))
       (pdf/with-reader [pdf (:data page)]
         (let [run-ocr (run-ocr-fn component (get-in component [:config :ocr]))
               [status text] (pdf/call-with-rendered-page-file pdf (:number page) :png 300 run-ocr)]
-          (log/debug component "Got OCR result for page" (:id page)
+          (log/debug "Got OCR result for page" (:id page)
                      {:status status
                       :text-length (count text)})
           (db/with-transaction [db db]
@@ -71,14 +71,14 @@
   (start [component]
     (if (get-in component [:config :ocr :enable])
       (do
-        (log/info component "Starting page OCR processor")
+        (log/info "Starting page OCR processor")
         (assoc component
                :processor (processor/start component :pages/new)))
       component))
 
   (stop [component]
     (when-let [processor (:processor component)]
-      (log/info component "Stopping page OCR processor")
+      (log/info "Stopping page OCR processor")
       (processor/stop processor))
     (assoc component
            :processor nil)))

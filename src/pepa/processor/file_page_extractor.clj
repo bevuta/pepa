@@ -10,13 +10,13 @@
 (defn ^:private extract-pages [processor file-id data]
   (pdf/with-reader [pdf data]
     (doseq [page (range 0 (pdf/page-count pdf))]
-      (log/info processor "Processing page" page)
-      (log/debug processor "Extracting text of page" page)
+      (log/info "Processing page" page)
+      (log/debug "Extracting text of page" page)
       (let [text (-> pdf
                      (pdf/extract-page-text page)
                      ;; Postgres can't handle NULL-bytes in TEXT
                      (s/replace "\0" ""))]
-        (log/debug processor "Inserting page" page "into the database")
+        (log/debug "Inserting page" page "into the database")
         (db/insert! (:db processor) :pages
                     {:file file-id
                      :number page
@@ -29,7 +29,7 @@
 
   (process-item [component file]
     (let [{content-type :content_type :keys [id data origin]} file]
-      (log/info component "Start processing file" id (str "(" (count data) " bytes, origin: " origin ")"))
+      (log/info "Start processing file" id (str "(" (count data) " bytes, origin: " origin ")"))
       (db/with-transaction [db (:db component)]
         (let [update (try
                        (extract-pages component id data)
@@ -37,7 +37,7 @@
                        {:status :processing-status/processed
                         :report "OK"}
                        (catch Exception e
-                         (log/error component e "Exception in `process-item'.")
+                         (log/error e "Exception in `process-item'.")
                          (.printStackTrace e)
                          {:status :processing-status/failed
                           :report (str e)}))]
@@ -45,28 +45,28 @@
           (when (= :processing-status/processed (:status update))
             ;; For every linked document, add all pages
             (doseq [document (m/file-documents db id)]
-              (log/info component "Adding pages from file" id "to document" document)
+              (log/info "Adding pages from file" id "to document" document)
               (m/process-file-link! db document))
             ;; Move to inbox if the file's origin dictates that
             (when (m/inbox-origin? config origin)
-              (log/info component "Moving pages from file" id "to inbox")
+              (log/info "Moving pages from file" id "to inbox")
               (m/add-to-inbox! db (m/page-ids db id))))
           ;; Error Case. For now, log the error & remove all tags from
           ;; the document, effectively hiding it (in an ugly way)
           (when (= :processing-status/failed (:status update))
-            (log/warn component (str "Failed to render file " id))
+            (log/warn (str "Failed to render file " id))
             (doseq [document (m/file-documents db id)]
               (m/remove-all-tags! db document)))))
-      (log/info component "Finished processing of file" id)))
+      (log/info "Finished processing of file" id)))
 
   component/Lifecycle
   (start [component]
-    (log/info component "Starting file page extractor")
+    (log/info "Starting file page extractor")
     (assoc component
            :processor (processor/start component :files/new)))
 
   (stop [component]
-    (log/info component "Stopping file page extractor")
+    (log/info "Stopping file page extractor")
     (when-let [processor (:processor component)]
       (processor/stop processor))
     (assoc component

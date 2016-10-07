@@ -48,11 +48,11 @@
         send! (send-fn content-type)
         timeout (async/timeout (* 1000 (:timeout config)))
         bus-changes (bus/subscribe-all bus (async/sliding-buffer 1))]
-    (log/debug web "Starting poll with remote" (:remote-addr (async-web/originating-request ch)))
+    (log/debug "Starting poll with remote" (:remote-addr (async-web/originating-request ch)))
     (go-loop []
       (if-let [changed (m/changed-entities db seqs)]
         (do
-          (log/debug web "Got changes from DB:" (pr-str changed))
+          (log/debug "Got changes from DB:" (pr-str changed))
           (send! ch changed))
         ;; NOTE: We have to manually close the channels after a timeout,
         ;; else they stay open for forever & hog memory!
@@ -61,15 +61,15 @@
             ;; Something changed
             (and val (= port bus-changes))
             (let [topic (bus/topic val)]
-              (log/debug web "lock-all!")
+              (log/debug "lock-all!")
               (lock-all! db topic)
-              (log/debug web "lock-all! finished")
+              (log/debug "lock-all! finished")
               ;; Recur to trigger the then-part of the if.
               (recur))
             ;; Hit a timeout or channel is closed
             (or (= port timeout) (not (async-web/open? ch)))
             (when (async-web/open? ch)
-              (log/debug web "Closing poll channel to remote" (:remote-addr (async-web/originating-request ch)))
+              (log/debug "Closing poll channel to remote" (:remote-addr (async-web/originating-request ch)))
               (async-web/close ch))))))))
 
 (defn ^:private poll-handler* [req]
@@ -103,7 +103,7 @@
                          (send-seqs! db ch content-type)
                          (handle-poll! ch seqs content-type)))
             :on-error (fn [ch throwable]
-                        (log/error web "Caught exception:" throwable)
+                        (log/error "Caught exception:" throwable)
                         (async-web/close ch))})
           (response/content-type content-type)
           (response/charset +encoding+)))))

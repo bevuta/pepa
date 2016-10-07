@@ -43,7 +43,7 @@
                      (.redirectError java.lang.ProcessBuilder$Redirect/INHERIT)
                      (.start))]
      (try
-       (log/debug log/unsafe-logger "Running process:" command (s/join " " args)
+       (log/debug "Running process:" command (s/join " " args)
                   (str "timeout: " timeout) ", collect-output?: " collect-output? ")") 
        (let [output (when collect-output?
                       (slurp (.getInputStream process)))

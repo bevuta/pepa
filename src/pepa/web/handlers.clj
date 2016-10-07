@@ -129,7 +129,7 @@
   (defn ^:private sanitize-attrs [comp attrs]
     (into {} (remove (fn [[k v]] (when (and (nil? v) (contains? required k))
                                    (do
-                                     (log/warn comp (str "Required attribute is null attr: " k))
+                                     (log/warn (str "Required attribute is null attr: " k))
                                      true))) attrs))))
 
 (defn ^:private parse-document-post [ctx]
@@ -170,10 +170,10 @@
                (or (try
                      (db/with-transaction [db (get-in ctx [:request :pepa/db])]
                        (m/update-document! db id (::attrs ctx) added-tags removed-tags)
-                       (log/debug db "Getting document:" (m/get-document db id))
+                       (log/debug "Getting document:" (m/get-document db id))
                        {::document (m/get-document db id)})
                      (catch SQLException e
-                       (log/warn (get-in ctx [:request :pepa/web]) "SQL Transaction to update document " id " failed."
+                       (log/warn "SQL Transaction to update document " id " failed."
                                  " Retrying... (" retries "left)")
                        nil))
                    (when (pos? retries)
@@ -265,10 +265,10 @@
                               ::results (m/query-documents db query)}]
                       [false {::results (m/query-documents db)}])
                     (catch RuntimeException e
-                      (log/warn web "Failed to parse query string" e)
+                      (log/warn "Failed to parse query string" e)
                       [true {::error "Invalid query string"}])
                     (catch SQLException e
-                      (log/warn web "Generated SQL query failed" e)
+                      (log/warn "Generated SQL query failed" e)
                       [true {::error "Query string generated invalid SQL"}]))))
   :post! (fn [{:keys [request, representation] :as ctx}]
            (db/with-transaction [conn (:pepa/db request)]

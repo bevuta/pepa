@@ -12,41 +12,39 @@
             [pepa.zeroconf :as zeroconf]
             [pepa.systemd :as systemd]
             [pepa.init :as init]
-            [pepa.log :refer [wrap-logging]]
 
             [clojure.core.match :refer [match]])
   (:gen-class))
 
 (defn make-system []
-  (-> (component/system-map
-       :config (config/make-component)
-       :bus (bus/make-component)
-       :db (component/using
-            (db/make-component)
-            [:config :bus])
-       :file-page-extractor (component/using
-                             (fpe/make-component)
-                             [:config :db :bus])
-       :page-renderer (component/using
-                       (page-renderer/make-component)
-                       [:config :db :bus])
-       :page-ocr (component/using
-                  (page-ocr/make-component)
-                  [:config :db :bus])
-       :web (component/using
-             (web/make-component)
-             [:config :db :bus])
-       :smtp (component/using
-              (smtp/make-component)
-              [:config :db])
-       :lpd (component/using
-             (printing/make-lpd-component)
-             [:config :db])
-       :zeroconf (component/using
-                  (zeroconf/make-component)
-                  [:config])
-       :systemd (systemd/make-component))
-      (wrap-logging)))
+  (component/system-map
+   :config (config/make-component)
+   :bus (bus/make-component)
+   :db (component/using
+        (db/make-component)
+        [:config :bus])
+   :file-page-extractor (component/using
+                         (fpe/make-component)
+                         [:config :db :bus])
+   :page-renderer (component/using
+                   (page-renderer/make-component)
+                   [:config :db :bus])
+   :page-ocr (component/using
+              (page-ocr/make-component)
+              [:config :db :bus])
+   :web (component/using
+         (web/make-component)
+         [:config :db :bus])
+   :smtp (component/using
+          (smtp/make-component)
+          [:config :db])
+   :lpd (component/using
+         (printing/make-lpd-component)
+         [:config :db])
+   :zeroconf (component/using
+              (zeroconf/make-component)
+              [:config])
+   :systemd (systemd/make-component)))
 
 (defn -main [& args]
   (match [(vec args)]

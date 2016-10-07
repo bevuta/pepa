@@ -21,7 +21,7 @@
     (pdf/with-reader [pdf (:data page)]
       ;; Render images in all configured DPI settings
       (mapv (fn [dpi]
-              (log/debug renderer "Rendering" (:id page) "with" dpi "dpi")
+              (log/debug "Rendering" (:id page) "with" dpi "dpi")
               (let [image (pdf/render-page pdf (:number page) :png dpi)]
                 {:page (:id page)
                  :dpi dpi
@@ -29,7 +29,7 @@
                  :hash (hash-data image)}))
             dpis))
     (catch Exception e
-      (log/error renderer "Rendering failed:" (str e)))))
+      (log/error "Rendering failed:" (str e)))))
 
 
 (defrecord PageRenderer [config db processor]
@@ -43,7 +43,7 @@
      LIMIT 1")
 
   (process-item [component page]
-    (log/info component "Rendering page" (:id page))
+    (log/info "Rendering page" (:id page))
     (let [db (:db component)
           config (:config component)
           dpis (set (-> config :rendering :png :dpi))
@@ -61,12 +61,12 @@
 
   component/Lifecycle
   (start [component]
-    (log/info component "Starting page renderer")
+    (log/info "Starting page renderer")
     (assoc component
            :processor (processor/start component :pages/new)))
 
   (stop [component]
-    (log/info component "Stopping page renderer")
+    (log/info "Stopping page renderer")
     (when-let [processor (:processor component)]
       (processor/stop processor))
     (assoc component

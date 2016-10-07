@@ -23,7 +23,7 @@
             (assert (or (nil? service) (map? service)))
             (if service
               (map->ServiceInfo service)
-              (log/warn zeroconf (str "Couldn't get service-info for " module)))))
+              (log/warn (str "Couldn't get service-info for " module)))))
         (get-in zeroconf [:config :zeroconf :modules])))
 
 (defrecord Zeroconf [config mdns]
@@ -32,17 +32,17 @@
     (if-not (get-in config [:zeroconf :enable])
       component
       (do
-        (log/info component "Starting Zeroconf Announcements")
+        (log/info "Starting Zeroconf Announcements")
         (let [ip (if-let [ip (get-in config [:zeroconf :ip-address])]
                    (InetAddress/getByName ip)
                    (InetAddress/getLocalHost))
               jmdns (JmDNS/create ip nil)]
           (doseq [service (service-infos component)]
-            (log/info component "Announcing service:" (.getType service))
+            (log/info "Announcing service:" (.getType service))
             (.registerService jmdns service))
           (assoc component :mdns jmdns)))))
   (stop [component]
-    (log/info component "Stopping Zeroconf Announcement Service")
+    (log/info "Stopping Zeroconf Announcement Service")
     (when-let [mdns (:mdns component)]
       (.close mdns))
     (assoc component

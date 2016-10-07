@@ -9,18 +9,18 @@
 (defrecord Web [config db processor server]
   component/Lifecycle
   (start [component]
-    (log/info component "Starting HTTP Server")
+    (log/info "Starting HTTP Server")
     (let [{:keys [host port static-handlers]} (:web config)
           handlers (if static-handlers
                      (make-handlers component)
                      #((make-handlers component) %))]
-      (log/info component (str "Started web server on http://" host ":" port "/"))
+      (log/info (str "Started web server on http://" host ":" port "/"))
       (assoc component
              :server (http-server/run handlers
                        :host host
                        :port port))))
   (stop [component]
-    (log/info component "Stopping HTTP Server")
+    (log/info "Stopping HTTP Server")
     (http-server/stop server)
     (assoc component :server nil)))
 

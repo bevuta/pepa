@@ -36,7 +36,7 @@
 
 (defn store-file! [db attrs]
   (db/with-transaction [db db]
-    (log/info db "Storing file" attrs)
+    (log/info "Storing file" attrs)
     (let [file (store-file*! db attrs)]
       (db/notify! db :files/new {:files [(:id file)]})
       file)))
@@ -45,13 +45,13 @@
   (db/with-transaction [db db]
     (if-let [files (seq files)]
       (do
-        (log/info db "Storing files" files)
+        (log/info "Storing files" files)
         (let [files (mapv (fn [file]
                             (store-file*! db (merge extra-attrs file)))
                           files)]
           (db/notify! db :files/new {:files (mapv :id files)})
           files))
-      (log/warn db "store-files!: `files' is empty!"))))
+      (log/warn "store-files!: `files' is empty!"))))
 
 (defn file-documents
   "Returns a list of document-ids which are linked to FILE."
@@ -63,7 +63,7 @@
 
 (defn rotate-page [db page-id rotation]
   (assert (zero? (mod rotation 90)))
-  (log/info db "Rotating page" page-id "to" rotation "degrees")
+  (log/info "Rotating page" page-id "to" rotation "degrees")
   (db/with-transaction [db db]
     (db/notify! db :pages/updated)
     (db/update! db :pages {:rotation rotation} ["id = ?" page-id])))
@@ -179,7 +179,7 @@
                          (range))))
 
 (defn add-pages! [db document page-ids]
-  (log/info db "Adding pages to document" (str document ":") page-ids)
+  (log/info "Adding pages to document" (str document ":") page-ids)
   (db/with-transaction [db db]
     (add-pages*! db document page-ids)
     (db/notify! db :documents/updated {:id document})))
@@ -190,7 +190,7 @@
     (add-pages*! db document page-ids)))
 
 (defn set-pages! [db document page-ids]
-  (log/info db "Replacing pages for document" (str document ":") page-ids)
+  (log/info "Replacing pages for document" (str document ":") page-ids)
   (db/with-transaction [db db]
     (set-pages*! db document page-ids)
     (db/notify! db :documents/updated {:id document})))
@@ -214,7 +214,7 @@
       (db/update! db :documents {:file file} ["id = ?" document]))))
 
 (defn link-file! [db document file]
-  (log/info db "Linking document" document "to file" file)
+  (log/info "Linking document" document "to file" file)
   (db/with-transaction [db db]
     (link-file*! db document file)
     (db/notify! db :documents/updated {:id document})))
@@ -231,11 +231,11 @@
             ;; XOR
             (and (or p q) (not (and p q))))
           "Can't pass page-ids AND file.")
-  (log/info db "Creating document" {:title title
-                                    :tags tags
-                                    :notes notes
-                                    :page-ids page-ids
-                                    :file file})
+  (log/info "Creating document" {:title title
+                                 :tags tags
+                                 :notes notes
+                                 :page-ids page-ids
+                                 :file file})
   (db/with-transaction [conn db]
     (let [[{:keys [id]}] (db/insert! conn :documents
                                      {:title title
@@ -257,7 +257,7 @@
   {:pre [(every? string? added-tags)
          (every? string? removed-tags)
          (every? #{:title :document-date :pages} (keys props))]}
-  (log/info db "Updating document" id (pr-str {:props props
+  (log/info "Updating document" id (pr-str {:props props
                                                :tags/added added-tags
                                                :tags/removed removed-tags}))
   (db/with-transaction [conn db]
@@ -286,7 +286,7 @@
                        (not= (mapv :id (document-pages db id))
                              (vec pages)))
               (when (empty? pages)
-                (log/warn db "Updating document with empty list of pages:" id))
+                (log/warn "Updating document with empty list of pages:" id))
               (set-pages*! db id (vec pages)))))
         (db/notify! conn :documents/updated {:id id}))
       (throw (ex-info (str "Couldn't find document with id " id)
@@ -350,7 +350,7 @@
             existing (db/query conn (db/sql+placeholders "SELECT id, name FROM tags WHERE name IN (%s)" tag-values))
             new (set/difference tag-values (set (map :name existing)))
             new (mapv tag->db-tag new)
-            _ (log/debug db "Transparently creating new tags:" (pr-str new))
+            _ (log/debug "Transparently creating new tags:" (pr-str new))
             new (db/insert-multi! conn :tags new)]
         (concat existing new)))))
 
@@ -368,7 +368,7 @@
                             {:document document-id :tag tag}))))))
 
 (defn add-tags! [db document-id tags]
-  (log/info db "Adding tags to document" document-id (set tags))
+  (log/info "Adding tags to document" document-id (set tags))
   (db/with-transaction [db db]
     (add-tags*! db document-id tags)
     (db/notify! db :documents/updated {:id document-id, :tags/new tags})))
@@ -385,7 +385,7 @@
                             [document-id]))))))
 
 (defn remove-tags! [db document-id tags]
-  (log/info db "Removing tags from document" document-id (set tags))
+  (log/info "Removing tags from document" document-id (set tags))
   (db/with-transaction [db db]
     (remove-tags*! db document-id tags)
     (db/notify! db :documents/updated {:id document-id, :tags/removed tags})))
@@ -434,13 +434,13 @@
 (defn add-to-inbox!
   "Unconditionally adds PAGES to inbox."
   [db page-ids]
-  (log/info db "Adding pages" page-ids "to inbox")
+  (log/info "Adding pages" page-ids "to inbox")
   (db/with-transaction [db db]
     (db/notify! db :inbox/added {:pages page-ids})
     (db/insert-multi! db :inbox (for [id page-ids] {:page id}))))
 
 (defn remove-from-inbox! [db page-ids]
-  (log/info db "Removing pages" page-ids "from inbox")
+  (log/info "Removing pages" page-ids "from inbox")
   (db/with-transaction [db db]
     (when (seq page-ids)
       (db/notify! db :inbox/removed {:pages page-ids})
@@ -454,7 +454,7 @@
   pointing to the (temporary) file. Caller must make sure to delete
   this file."
   [db document-id]
-  (log/info db "Generating PDF for" document-id)
+  (log/info "Generating PDF for" document-id)
   ;; If the document has an associated file we can short-circuit the split&merge path
   (try
     (let [pages (document-pages db document-id)]
@@ -482,7 +482,7 @@
               (doseq [file page-files]
                 (.delete file)))))))
     (catch IOException e
-      (log/error db e "Couldn't generate PDF")
+      (log/error e "Couldn't generate PDF")
       ;; Rethrow
       (throw e))))
 

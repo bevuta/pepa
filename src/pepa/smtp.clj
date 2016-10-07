@@ -17,7 +17,7 @@
     (if-not (get-in component [:config :smtp :enable])
       component
       (do
-        (log/info component "Starting SMTP Server")
+        (log/info "Starting SMTP Server")
         (let [smtp-config (:smtp config)
               host (:host smtp-config)
               port (:port smtp-config)
@@ -25,14 +25,14 @@
               server (->
                       (proxy [SimpleMessageListener] []
                         (accept [from to]
-                          (log/info component "Accepting mail" (str "(from: " from ", to: " to ")"))
+                          (log/info "Accepting mail" (str "(from: " from ", to: " to ")"))
                           true)
                         (deliver [from to data]
                           (db/with-transaction [db (:db component)]
                             ;; TODO: Use proper mail address parser
                             (let [[files subject] (m/mime-message->files+subject data)]
                               (if-not files
-                                (log/warn component "Got mail from" from "without attachments")
+                                (log/warn "Got mail from" from "without attachments")
                                 (let [[_ origin] (re-find #"(.+)@" to)
                                       origin (or (and (m/inbox-origin? config origin) origin)
                                                  "email")
@@ -48,7 +48,7 @@
                                         ;; NOTE: auto-tag*! so we don't
                                         ;; trigger an update on the
                                         ;; notification bus
-                                        (log/info component "adding tags to created document")
+                                        (log/info "adding tags to created document")
                                         (m/auto-tag*! db id tagging
                                                       {:origin origin
                                                        :mail/from from
@@ -64,7 +64,7 @@
                  :server server)))))
   (stop [component]
     (when-let [server (:server component)]
-      (log/info component "Stopping SMTP Server")
+      (log/info "Stopping SMTP Server")
       (.stop server))
     (assoc component :server nil)))
 

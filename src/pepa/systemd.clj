@@ -30,14 +30,14 @@
     (if-not (systemd? component)
       component
       (do
-        (log/info component "Notifying systemd about startup")
+        (log/info "Notifying systemd about startup")
         ;; HACK: Try notifying every few seconds as it isn't reliable
         (let [sched (sched/schedule #(system-ready! component)
                                     (sched/every 5 :seconds))]
           (assoc component :sched sched)))))
   (stop [component]
     (when-let [s (:sched component)]
-      (log/info component "Shutting down systemd-notify thread")
+      (log/info "Shutting down systemd-notify thread")
       (sched/stop s))
     (assoc component :sched nil)))
 

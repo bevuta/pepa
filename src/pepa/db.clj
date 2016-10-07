@@ -10,7 +10,7 @@
 (defrecord Database [config datasource]
   component/Lifecycle
   (start [component]
-    (log/info component "Starting database")
+    (log/info "Starting database")
     (let [spec (:db config)
           cpds (doto (ComboPooledDataSource.)
                  (.setDriverClass "org.postgresql.Driver")
@@ -24,9 +24,9 @@
       (assoc component :datasource cpds)))
 
   (stop [component]
-    (log/info component "Stopping database")
+    (log/info "Stopping database")
     (when datasource
-      (log/info component "Closing DB connection")
+      (log/info "Closing DB connection")
       (.close datasource))
     (assoc component :datasource nil)))
 

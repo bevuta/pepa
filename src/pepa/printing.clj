@@ -39,7 +39,7 @@
   (reify
     lpd-protocol/IPrintJobHandler
     (accept-job [_ queue job]
-      (log/info lpd "got job on queue" queue
+      (log/info "got job on queue" queue
                 job)
       (db/with-transaction [db (:db lpd)]
         (let [name (or (:source-filename job)
@@ -51,7 +51,7 @@
                       (pdf? data) data
                       (ghostscript? data) (ps->pdf data)
                       true (do
-                             (log/warn lpd "Couldn't determine file type of print job. Interpreting it as Postscript")
+                             (log/warn "Got print job. Interpreting it as Postscript")
                              (ps->pdf data))))
               file-props {:content-type "application/pdf"
                           :name name
@@ -61,11 +61,11 @@
               origin "printer"]
           ;; TODO: Allow printing to inbox
           (when-not false ; (model/inbox-origin? (:config lpd) origin)
-            (log/info lpd "Creating Document for file" (:id file))
+            (log/info "Creating Document for file" (:id file))
             (let [document (model/create-document! db {:title (:name file-props)
                                                        :file (:id file)})
                   tagging-config (get-in lpd [:config :tagging])]
-              (log/info lpd "Auto-tagging document" document)
+              (log/info "Auto-tagging document" document)
               (model/auto-tag! db document tagging-config
                                {:origin origin
                                 :printing/queue (str "printer/" queue)}))))))))
@@ -82,14 +82,14 @@
         lpd
         (do
           (assert (< 0 (:port lpd-config) 65535))
-          (log/info lpd "Starting LPD Server")
+          (log/info "Starting LPD Server")
           (let [server (-> (lpd-server lpd lpd-config)
                            (lpd/start-server))]
             (assoc lpd
                    :server server))))))
   (stop [lpd]
     (when-let [server (:server lpd)]
-      (log/info lpd "Stopping LPD Server")
+      (log/info "Stopping LPD Server")
       (lpd/stop-server server))
     (assoc lpd
            :mdns nil
