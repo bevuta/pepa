@@ -114,7 +114,7 @@
 (defn ^:private db-document->Document [document]
   (-> document
       (model/map->Document)
-      (update-in [:pages] #(vec (map model/map->Page %)))
+      (update-in [:pages] #(mapv model/map->Page %))
       (update-in [:tags] vec)))
 
 (defn fetch-document

@@ -15,13 +15,13 @@
 ;;; File Handling
 
 (defn processing-status [db file]
-  (-> (db/query db ["SELECT status FROM files WHERE id = ?" file])
-      first
-      :status))
+  (db/query db ["SELECT status FROM files WHERE id = ?" file]
+            {:row-fn :status
+             :result-set-fn first}))
 
 (defn page-ids [db file]
-  (->> (db/query db ["SELECT id FROM pages WHERE file = ? ORDER BY number" file])
-       (map :id)))
+  (db/query db ["SELECT id FROM pages WHERE file = ? ORDER BY number" file]
+            {:row-fn :id}))
 
 (defn ^:private store-file*! [db {:keys [content-type origin name data]}]
   (assert content-type)
@@ -56,8 +56,8 @@
 (defn file-documents
   "Returns a list of document-ids which are linked to FILE."
   [db file]
-  (->> (db/query db ["SELECT id from documents WHERE file = ?" file])
-       (map :id)))
+  (db/query db ["SELECT id from documents WHERE file = ?" file]
+            {:row-fn :id}))
 
 ;;; Page Functions
 
@@ -73,16 +73,20 @@
 (defn get-pages [db ids]
   (if-not (seq ids)
     []
-    (->> (pepa.db/query db (db/sql+placeholders
-                            "SELECT id, rotation, number, render_status AS \"render-status\", ocr_status AS \"ocr-status\", array_agg(dpi) AS dpi
-                             FROM pages AS p
-                             LEFT JOIN page_images AS pi ON pi.page = p.id
-                             WHERE id IN (%s)
-                             GROUP BY id
-                             ORDER BY p.file, p.number"
-                            ids))
-         ;; Make a set out of the strange Postgres-Array
-         (mapv #(update-in % [:dpi] pg-array->set)))))
+    (pepa.db/query db (db/sql+placeholders
+                       "SELECT id,
+                               rotation, 
+                               number, 
+                               render_status AS \"render-status\", 
+                               ocr_status AS \"ocr-status\", 
+                               array_agg(dpi) AS dpi
+                        FROM pages AS p
+                        LEFT JOIN page_images AS pi ON pi.page = p.id
+                        WHERE id IN (%s)
+                        GROUP BY id
+                        ORDER BY p.file, p.number"
+                       ids)
+                   {:row-fn #(update-in % [:dpi] pg-array->set)})))
 
 
 
@@ -153,9 +157,9 @@
   "Returns the id of the file associated to document with ID. Might be
   nil."
   [db id]
-  (-> (db/query db ["SELECT file FROM documents WHERE id = ?" id])
-      first
-      :file))
+  (db/query db ["SELECT file FROM documents WHERE id = ?" id]
+            {:row-fn :file
+             :result-set-fn first}))
 
 (defn document-pages
   "Returns a list of pages for the document with ID."
@@ -321,22 +325,23 @@
 (defn tag-document-counts
   "Returns a map from tag-name -> document-count."
   [db]
-  (->> (db/query db ["SELECT t.name, COUNT(dt.document)
-                      FROM tags AS t
-                      JOIN document_tags AS dt ON dt.tag = t.id
-                      WHERE (SELECT COUNT(*) FROM document_pages WHERE document = dt.document) > 0
-                      GROUP BY t.name"])
-       (map (juxt :name :count))
-       (into {})))
+  (db/query db ["SELECT t.name, COUNT(dt.document)
+                 FROM tags AS t
+                 JOIN document_tags AS dt ON dt.tag = t.id
+                 WHERE (SELECT COUNT(*) FROM document_pages WHERE document = dt.document) > 0
+                 GROUP BY t.name"]
+            {:row-fn (juxt :name :count)
+             :result-set-fn (partial into {})}))
 
 (defn tag-documents [db tag]
-  (->> (db/query db ["SELECT dt.document
-                      FROM document_tags AS dt
-                      JOIN tags AS t ON dt.tag = t.id
-                      WHERE t.name = ? AND (SELECT COUNT(*) FROM document_pages WHERE document = dt.document) > 0
-                      GROUP BY dt.document"
-                     tag])
-       (mapv :document)))
+  (db/query db ["SELECT dt.document
+                 FROM document_tags AS dt
+                 JOIN tags AS t ON dt.tag = t.id
+                 WHERE t.name = ? AND (SELECT COUNT(*) FROM document_pages WHERE document = dt.document) > 0
+                 GROUP BY dt.document"
+                tag]
+            {:row-fn :document
+             :result-set-fn vec}))
 
 (defn ^:private get-or-create-tags!
   "Gets tags for TAG-VALUES from DB. Creates them if necessary."
@@ -530,12 +535,13 @@
   {:documents (mapv :id (db/query db ["SELECT id FROM documents WHERE state_seq > ?" seq-num]))})
 
 (defmethod changed-entities* :document_pages [db _ seq-num]
-  {:documents (->> (db/query db ["SELECT DISTINCT d.id
-                                  FROM document_pages AS dp
-                                  LEFT JOIN documents as d
-                                    ON d.id = dp.document
-                                  WHERE dp.state_seq > ?" seq-num])
-                   (mapv :id))})
+  {:documents (db/query db ["SELECT DISTINCT d.id
+                             FROM document_pages AS dp
+                             LEFT JOIN documents as d
+                               ON d.id = dp.document
+                             WHERE dp.state_seq > ?" seq-num]
+                        {:row-fn :id
+                         :result-set-fn vec})})
 
 (defmethod changed-entities* :document_tags [db _ seq-num]
   (let [dts (db/query db ["SELECT t.name, t.id, dt.document
@@ -574,25 +580,27 @@
                (map :id))]
     (when (seq pages)
       {:pages pages
-       :documents (->>
-                   (db/query db (db/sql+placeholders
-                                 "SELECT DISTINCT dp.document
+       :documents (db/query db (db/sql+placeholders
+                                "SELECT DISTINCT dp.document
                                 FROM document_pages AS dp
-                                WHERE dp.page IN (%s)" pages))
-                   (mapv :document))})))
+                                WHERE dp.page IN (%s)" pages)
+                            {:row-fn :document
+                             :result-set-fn vec})})))
 
 (defmethod changed-entities* :files [db _ seq-num]
-  {:files (->> (db/query db ["SELECT id FROM files WHERE state_seq > ?" seq-num])
-               (mapv :id)
-               (set))})
+  {:files (db/query db ["SELECT id FROM files WHERE state_seq > ?" seq-num]
+                    {:row-fn :id
+                     :result-set-fn set})})
 
 (defmethod changed-entities* :inbox [db _ seq-num]
-  {:inbox (->> (db/query db ["SELECT page FROM inbox WHERE state_seq > ?" seq-num])
-               (mapv :page)
-               (set))})
+  {:inbox (db/query db ["SELECT page FROM inbox WHERE state_seq > ?" seq-num]
+                    {:row-fn :page
+                     :result-set-fn set})})
 
 (defn ^:private tag-name [db tag-id]
-  (-> (db/query db ["SELECT name FROM tags WHERE id = ?" tag-id]) first :name))
+  (db/query db ["SELECT name FROM tags WHERE id = ?" tag-id]
+            {:row-fn :name
+             :result-set-fn first}))
 
 (defmethod changed-entities* :deletions [db _ seq-num]
   {:deletions (reduce (fn [deletions {:keys [id entity]}]
