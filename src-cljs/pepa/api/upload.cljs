@@ -15,7 +15,7 @@
 
 (defn data-transfer-files [dt]
   (filterv #(allowed-file-type? (.-type %))
-          (array-seq (.-files dt))))
+           (array-seq (.-files dt))))
 
 (defn file->u8arr [file]
   (let [ch (async/chan)]

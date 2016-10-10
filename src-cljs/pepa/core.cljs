@@ -19,4 +19,3 @@
          {:target (.getElementById js/window.document "app")
           :shared (merge {}
                          (draggable/shared-data))})
-

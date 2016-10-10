@@ -1,7 +1,7 @@
 (ns pepa.printing
   (:require [com.stuartsierra.component :as component]
             [clojure.java.io :as io]
-            
+
             [lpd.server :as lpd]
             [lpd.protocol :as lpd-protocol]
 
@@ -46,7 +46,7 @@
                        (:banner-name job)
                        "Printed File")
               pdf (let [data (:data job)]
-                    ;; Check magic bytes in the job data. 
+                    ;; Check magic bytes in the job data.
                     (cond
                       (pdf? data) data
                       (ghostscript? data) (ps->pdf data)

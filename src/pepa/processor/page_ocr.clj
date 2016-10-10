@@ -6,7 +6,7 @@
             [pepa.processor :as processor :refer [IProcessor]]
             [pepa.util :refer [run-process with-temp-file]]
             [pepa.log :as log]
-            
+
             [clojure.string :as s]
             [clojure.java.io :as io]))
 
@@ -44,7 +44,7 @@
   IProcessor
   (next-item [component]
     "SELECT p.id, p.number, f.data
-     FROM pages AS p 
+     FROM pages AS p
      JOIN files AS f ON p.file = f.id
      WHERE p.ocr_status = 'pending'
      ORDER BY p.number, p.id

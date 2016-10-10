@@ -48,7 +48,7 @@
       (assoc selection
              :selected #{}
              :last-clicked nil)
-      
+
       (empty? modifiers)
       (assoc selection
              :selected (if (= (:selected selection) #{element})

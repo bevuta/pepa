@@ -4,7 +4,7 @@
             [pepa.model :as model]
             [pepa.navigation :as nav]
             [nom.ui :as ui]
-            
+
             [cljs.core.async :as async :refer [<!]]
             [cljs.core.match]
             [clojure.string :as s]

@@ -10,7 +10,7 @@
 
 (defn subscribe
   "Returns a channel with that will receive a value when `notify!' is
-  called for that topic." 
+  called for that topic."
   ([bus topic buf]
    (log/debug "subscribe" {:topic topic :buf/class (class buf)})
    (let [chan (async/chan buf)]
@@ -63,4 +63,3 @@
 
 (defn make-component []
   (map->Bus {}))
-

@@ -6,7 +6,7 @@
             [pepa.api.upload :as upload]
             [pepa.model :as model]
             [pepa.navigation :as nav]
-            
+
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -14,14 +14,14 @@
   (go-loop []
     (when-let [progress (<! ch)]
       (println "progress-event:" (pr-str progress))
-      (cond 
+      (cond
         (number? progress)
         (om/update! row :progress progress))
       (recur))))
 
 (defn ^:private upload-file! [row & [e]]
   (when e
-   (.preventDefault e))
+    (.preventDefault e))
   (when-not (:working? row)
     (go
       (try
@@ -33,13 +33,13 @@
               upload-blob {:blob (<! (upload/file->u8arr file))
                            :content-type content-type
                            :filename name}
-              progress (async/chan (async/sliding-buffer 1)) 
+              progress (async/chan (async/sliding-buffer 1))
               id-ch (upload/upload-document! document upload-blob
                                              progress)]
           (update-progress-loop row progress)
           (let [id (<! id-ch)]
-           (println "Successfully uploaded document with id" id)
-           (om/update! row :document-id id)))
+            (println "Successfully uploaded document with id" id)
+            (om/update! row :document-id id)))
         (finally
           (om/update! row :working? false))))))
 
@@ -72,8 +72,8 @@
        (when valid?
          [:span.size {:key "size"}
           (str (byte->kb size) "kB")])
-       
-       
+
+
        (if (or (not valid?) document-id)
          [:.hide {:on-click (fn [e]
                               (when (fn? hide-fn)
@@ -83,7 +83,7 @@
                                 (.stopPropagation)))
                   :key "hide"}
           "Hide"]
-         
+
          (om/build progress-bar (or (:progress row) 0)
                    {:react-key "progress-bar"}))])))
 

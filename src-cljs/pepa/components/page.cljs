@@ -5,7 +5,7 @@
             [nom.ui :as ui]
             [pepa.model :as model]
             [pepa.api :as api]
-            
+
             [goog.style :as style]))
 
 (defn ^:private rotate [deg]

@@ -2,6 +2,7 @@
   (:require [om.core :as om]
             [clojure.set :as set]
             [clojure.string :as str]
+            [clojure.spec :as s]
 
             [cljs.core.async :as async :refer [<!]])
   (:require-macros
@@ -118,4 +119,3 @@
       (om/root-cursor)
       :ui/sidebars
       (om/ref-cursor)))
-

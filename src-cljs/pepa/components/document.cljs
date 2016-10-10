@@ -26,8 +26,8 @@
 (ui/defcomponentmethod meta-value :default [[key document] _ _]
   (render [_]
     (let [val (get document key)]
-     [:span.value {:key "value", :title (str val)}
-      val])))
+      [:span.value {:key "value", :title (str val)}
+       val])))
 
 (ui/defcomponentmethod meta-value :title [[key document] _ _]
   (render [_]

@@ -61,18 +61,18 @@
 
 (defn nav->route [navigation]
   (let [{:keys [route query-params]} (om/value navigation)]
-   (match [route]
-     [:dashboard]
-     (dashboard-route query-params)
+    (match [route]
+      [:dashboard]
+      (dashboard-route query-params)
 
-     [[:document id]]
-     (document-route {:id id, :query-params query-params})
+      [[:document id]]
+      (document-route {:id id, :query-params query-params})
 
-     [[:search [:tag tag]]]
-     (tag-search tag query-params)
+      [[:search [:tag tag]]]
+      (tag-search tag query-params)
 
-     [[:search [:query query]]]
-     (full-search query query-params))))
+      [[:search [:query query]]]
+      (full-search query query-params))))
 
 ;;; Routes
 
@@ -118,4 +118,3 @@
   [["Inbox"     :inbox     #{:inbox}     (workflow-route :inbox)]
    ["Documents" :dashboard #{:dashboard :search} (dashboard-route)]
    ["Tags"      :tags      #{}           nil]])
-

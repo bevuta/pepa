@@ -4,11 +4,15 @@
 ((clojure-mode
   (eval put-clojure-indent 'match 1)
   (eval put-clojure-indent 'record 1)
+  (eval put-clojure-indent 'let->> 1))
+ (clojurescript-mode
+  (eval put-clojure-indent 'match 1)
+  (eval put-clojure-indent 'record 1)
   (eval put-clojure-indent 'let->> 1)
   
-  (eval put 'defcomponent 'clojure-backtracking-indent '(4 (2)))
-  (eval put 'ui/defcomponent 'clojure-backtracking-indent '(4 (2)))
+  (eval put-clojure-indent 'defcomponent '(nil (:defn)))
+  (eval put-clojure-indent 'ui/defcomponent '(nil (:defn)))
 
-  (eval put 'defcomponentmethod 'clojure-backtracking-indent '(4 (2)))
-  (eval put 'ui/defcomponentmethod 'clojure-backtracking-indent '(4 (2)))))
+  (eval put-clojure-indent 'defcomponentmethod '(nil (:defn)))
+  (eval put-clojure-indent 'ui/defcomponentmethod '(nil (:defn)))))
 

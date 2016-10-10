@@ -44,7 +44,7 @@
                      (.start))]
      (try
        (log/debug "Running process:" command (s/join " " args)
-                  (str "timeout: " timeout) ", collect-output?: " collect-output? ")") 
+                  (str "timeout: " timeout) ", collect-output?: " collect-output? ")")
        (let [output (when collect-output?
                       (slurp (.getInputStream process)))
              fut (future (.waitFor process))

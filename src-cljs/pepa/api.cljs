@@ -16,22 +16,22 @@
 
 (let [reader (transit/reader :json)]
   (defn ^:private parse-xhr-response
-  "Takes a finished googl.net.XhrIo, returns a map with :status, :response/text, etc."
-  [xhr]
-  (let [text (.getResponseText xhr)
-        transit (try
-                  ;; Only parse body when it's transit
-                  (when (and (seq text)
-                             (re-find #"application/transit\+json"
-                                      (or (.getResponseHeader xhr "content-type") "")))
-                    (transit/read reader text))
-                  (catch js/Error e
-                    (js/console.error "Couldn't parse Transit" text)
-                    nil))]
-    {:status (.getStatus xhr)
-     :response/transit transit
-     :response/text (when-not transit text)
-     :successful? (.isSuccess xhr)})))
+    "Takes a finished googl.net.XhrIo, returns a map with :status, :response/text, etc."
+    [xhr]
+    (let [text (.getResponseText xhr)
+          transit (try
+                    ;; Only parse body when it's transit
+                    (when (and (seq text)
+                               (re-find #"application/transit\+json"
+                                        (or (.getResponseHeader xhr "content-type") "")))
+                      (transit/read reader text))
+                    (catch js/Error e
+                      (js/console.error "Couldn't parse Transit" text)
+                      nil))]
+      {:status (.getStatus xhr)
+       :response/transit transit
+       :response/text (when-not transit text)
+       :successful? (.isSuccess xhr)})))
 
 
 ;;; HACK: Because the current release of Google Closure doesn't
@@ -55,45 +55,45 @@
 
 (let [writer (transit/writer :json)]
   (defn xhr-request!
-  "Performs an XmlHttpRequest to uri using method and payload data.
+    "Performs an XmlHttpRequest to uri using method and payload data.
 
   Returns a channel containing something."
-  ([uri method content-type data timeout & [progress]]
-   {:pre [(string? uri)
-          (keyword? method)
-          (string? content-type)]}
-   (let [ch (async/chan)
-         factory (xhr-factory-dummy)
-         xhr (XhrIo. factory)]
-     ;; Request load/error/abort requests
-     (let [upload (.-upload (.createInstance factory))
-           put! (fn [d] (when progress (async/put! progress d)))]
-       (doseq [[type f] [[EventType.PROGRESS #(put! (/ (.-loaded %) (.-total %)))]
-                         [EventType.LOAD     #(put! :loaded)]
-                         [EventType.ERROR    #(put! :error)]
-                         [EventType.ABORT    #(put! :abort)]]]
-         (.addEventListener upload type f)))
-     (doto xhr
-       (.setTimeoutInterval timeout)
-       (event/listen EventType.COMPLETE
-                     (fn [e]
-                       (when progress (async/close! progress))
-                       (async/put! ch (parse-xhr-response e.target))))
-       (.send uri
-              (s/upper-case (name method))
-              (if (= "application/transit+json" content-type)
-                (transit/write writer data)
-                data)
-              (clj->js
-               (merge {"Accept" "application/transit+json"}
-                      (when data {"Content-Type" (when data content-type)}))) ))
-     ch))
-  ([uri method content-type data]
-   (xhr-request! uri method content-type data +xhr-timeout+))
-  ([uri method data]
-   (xhr-request! uri method "application/transit+json" data))
-  ([uri method]
-   (xhr-request! uri method nil))))
+    ([uri method content-type data timeout & [progress]]
+     {:pre [(string? uri)
+            (keyword? method)
+            (string? content-type)]}
+     (let [ch (async/chan)
+           factory (xhr-factory-dummy)
+           xhr (XhrIo. factory)]
+       ;; Request load/error/abort requests
+       (let [upload (.-upload (.createInstance factory))
+             put! (fn [d] (when progress (async/put! progress d)))]
+         (doseq [[type f] [[EventType.PROGRESS #(put! (/ (.-loaded %) (.-total %)))]
+                           [EventType.LOAD     #(put! :loaded)]
+                           [EventType.ERROR    #(put! :error)]
+                           [EventType.ABORT    #(put! :abort)]]]
+           (.addEventListener upload type f)))
+       (doto xhr
+         (.setTimeoutInterval timeout)
+         (event/listen EventType.COMPLETE
+                       (fn [e]
+                         (when progress (async/close! progress))
+                         (async/put! ch (parse-xhr-response e.target))))
+         (.send uri
+                (s/upper-case (name method))
+                (if (= "application/transit+json" content-type)
+                  (transit/write writer data)
+                  data)
+                (clj->js
+                 (merge {"Accept" "application/transit+json"}
+                        (when data {"Content-Type" (when data content-type)}))) ))
+       ch))
+    ([uri method content-type data]
+     (xhr-request! uri method content-type data +xhr-timeout+))
+    ([uri method data]
+     (xhr-request! uri method "application/transit+json" data))
+    ([uri method]
+     (xhr-request! uri method nil))))
 
 (defn fetch-document-ids
   "Fetches all document-ids from the server."

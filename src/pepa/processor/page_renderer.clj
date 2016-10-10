@@ -35,9 +35,9 @@
 (defrecord PageRenderer [config db processor]
   IProcessor
   (next-item [component]
-    "SELECT p.id, p.number, f.data 
-     FROM pages AS p 
-     JOIN files AS f ON p.file = f.id 
+    "SELECT p.id, p.number, f.data
+     FROM pages AS p
+     JOIN files AS f ON p.file = f.id
      WHERE p.render_status = 'pending'
      ORDER BY p.number, p.id
      LIMIT 1")

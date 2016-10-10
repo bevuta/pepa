@@ -112,8 +112,8 @@
         (<! (api/update-document! (update document :pages
                                           (fn [pages]
                                             (model/insert-pages pages
-                                                               new-pages
-                                                               target-idx)))))
+                                                                new-pages
+                                                                target-idx)))))
         (println "Saved!")
         ;; indicate successful drop
         true)))

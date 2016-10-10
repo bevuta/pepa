@@ -12,7 +12,7 @@
             [pepa.workflows.dashboard :as dashboard]
             [pepa.workflows.document :as document]
             [pepa.workflows.upload :refer [upload-dialog] :as upload-list]
-            
+
             [cljs.core.async :as async :refer [<! >!]]
             [cljs.core.match])
   (:require-macros

@@ -1,6 +1,6 @@
 (ns pepa.mime
   (:require [pepa.util :refer [slurp-bytes]])
-  (:import 
+  (:import
    [javax.mail.internet MimeMessage MimeMultipart MimeBodyPart]
    javax.mail.Session
    java.util.Properties))
@@ -41,7 +41,7 @@
 
     (and (body-part? part) (multipart? (.getContent part)))
     (recur (.getContent part))
-    
+
     (multipart? part)
     (map #(.getBodyPart part %) (range (.getCount part)))))
 

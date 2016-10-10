@@ -1,13 +1,13 @@
 (ns ^:figwheel-always pepa.style
-    (:require [garden.core :refer [css]]
-              [garden.units :as u :refer [px em pt]]
-              [garden.stylesheet :refer [at-keyframes cssfn]]
+  (:require [garden.core :refer [css]]
+            [garden.units :as u :refer [px em pt]]
+            [garden.stylesheet :refer [at-keyframes cssfn]]
 
-              [nom.ui :as ui]
-              [pepa.navigation :refer [navigation-elements]]
+            [nom.ui :as ui]
+            [pepa.navigation :refer [navigation-elements]]
 
-              [clojure.string :as s]
-              [goog.string :as gstring]))
+            [clojure.string :as s]
+            [goog.string :as gstring]))
 
 ;;; Colors
 

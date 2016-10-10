@@ -5,7 +5,7 @@
             [pepa.mime :as mime]
             [pepa.util :refer [slurp-bytes with-temp-file]]
             [pepa.log :as log]
-            
+
             [clojure.string :as s]
             [clojure.set :as set]
             [clojure.java.io :as io])
@@ -75,10 +75,10 @@
     []
     (pepa.db/query db (db/sql+placeholders
                        "SELECT id,
-                               rotation, 
-                               number, 
-                               render_status AS \"render-status\", 
-                               ocr_status AS \"ocr-status\", 
+                               rotation,
+                               number,
+                               render_status AS \"render-status\",
+                               ocr_status AS \"ocr-status\",
                                array_agg(dpi) AS dpi
                         FROM pages AS p
                         LEFT JOIN page_images AS pi ON pi.page = p.id
@@ -117,10 +117,10 @@
                                         WHERE dp.document IN (%s)
                                         ORDER BY dp.number"
                                   ids :document)
-            tags (get-associated conn "SELECT dt.document, t.name 
+            tags (get-associated conn "SELECT dt.document, t.name
                                        FROM document_tags AS dt
                                        JOIN tags AS t ON t.id = dt.tag
-                                       WHERE dt.document IN (%s) 
+                                       WHERE dt.document IN (%s)
                                        ORDER BY dt.seq"
                                  ids :document)]
         (map (fn [{:keys [id] :as document}]
@@ -262,8 +262,8 @@
          (every? string? removed-tags)
          (every? #{:title :document-date :pages} (keys props))]}
   (log/info "Updating document" id (pr-str {:props props
-                                               :tags/added added-tags
-                                               :tags/removed removed-tags}))
+                                            :tags/added added-tags
+                                            :tags/removed removed-tags}))
   (db/with-transaction [conn db]
     (if-let [document (get-document conn id)]
       (let [added-tags (set added-tags)

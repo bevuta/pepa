@@ -222,9 +222,10 @@
                       :key "documents"
                       :on-scroll (partial on-documents-scroll state owner)
                       :class [(when working? "working")]}
-         (let [documents (->> document-ids
-                              (map (partial get (:documents state)))
-                              (remove nil?))]
+         (let [documents (into []
+                               (comp (map (partial get (:documents state)))
+                                     (remove nil?))
+                               document-ids)]
            (om/build-all document-preview documents
                          {:key :id
                           ;; This is way more performant than passing
@@ -237,4 +238,3 @@
 (defmethod draggable/pos->width ::sidebar [_ sidebar [x _]]
   (draggable/limit
    (- (draggable/viewport-width) x)))
-
