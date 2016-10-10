@@ -3,7 +3,7 @@
             [om.dom :as dom]
 
             [nom.ui :as ui]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.api :as api]
             
             [goog.style :as style]))

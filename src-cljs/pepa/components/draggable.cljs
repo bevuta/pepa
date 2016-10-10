@@ -3,7 +3,7 @@
             [cljs.core.async :as async]
 
             [nom.ui :as ui]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.style :as css]
 
             [clojure.browser.event :as bevent]
@@ -85,7 +85,7 @@
 
 (defn resize-handle-loop [root-owner]
   ;; Read sizes from local storage
-  (om/update! (data/ui-sidebars) (or (read-sidebar-state) {}))
+  (om/update! (model/ui-sidebars) (or (read-sidebar-state) {}))
   (go-loop [changed? false]
     (let [resizes (om/get-shared root-owner ::events)
           timeout (async/timeout +save-timeout+)
@@ -93,12 +93,12 @@
       (cond
         (and event (= port resizes))
         (let [[sidebar pos] event]
-          (om/transact! (data/ui-sidebars)
+          (om/transact! (model/ui-sidebars)
                         (fn [sidebars]
                           (assoc sidebars sidebar
                                  (pos->width sidebars sidebar pos))))
           (recur true))
         (= port timeout)
         (do
-          (when changed? (save-sidebar-state! @(data/ui-sidebars)))
+          (when changed? (save-sidebar-state! @(model/ui-sidebars)))
           (recur false))))))

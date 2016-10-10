@@ -2,7 +2,7 @@
   (:require pepa.style
             pepa.navigation
 
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.preloader :as preloader]
             [pepa.components.root :refer [root-component]]
             [pepa.components.draggable :as draggable]
@@ -15,7 +15,7 @@
 (defonce preloaded-images (preloader/preload))
 
 (om/root root-component
-         data/state
+         model/state
          {:target (.getElementById js/window.document "app")
           :shared (merge {}
                          (draggable/shared-data))})

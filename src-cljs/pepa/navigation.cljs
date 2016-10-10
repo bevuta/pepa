@@ -6,7 +6,7 @@
             [cljs.reader :as reader]
 
             [om.core :as om]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [goog.string :as gstring]
 
             cljs.core.match)
@@ -24,7 +24,7 @@
           (secretary/dispatch! (.substring route 1))))))
 
 (defn navigation-ref []
-  (some-> data/state
+  (some-> model/state
           (om/root-cursor)
           :navigation
           (om/ref-cursor)))

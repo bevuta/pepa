@@ -7,7 +7,7 @@
             [clojure.string :as s]
 
             [pepa.api :as api]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.search :as search]
             [pepa.navigation :as nav]
             [pepa.style :as css]
@@ -24,7 +24,7 @@
 (defn ^:private handle-tags-drop [document e]
   (when-let [tags (tags/data-transfer-tags e.dataTransfer)]
     (api/update-document! (update-in document [:tags]
-                                     #(data/add-tags % tags)))
+                                     #(model/add-tags % tags)))
     (.preventDefault e)))
 
 (ui/defcomponent ^:private page-count [pages]
@@ -63,7 +63,7 @@
 
 (ui/defcomponent ^:private sidebar-pane [[state selected-documents] owner _]
   (render [_]
-    (let [sidebar-width (get (om/observe owner (data/ui-sidebars)) ::sidebar
+    (let [sidebar-width (get (om/observe owner (model/ui-sidebars)) ::sidebar
                              css/default-sidebar-width)]
       [:.pane {:key "sidebar-pane"
                :style {:min-width sidebar-width :max-width sidebar-width}}

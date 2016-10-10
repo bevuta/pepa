@@ -6,7 +6,7 @@
             [nom.ui :as ui]
 
             [pepa.api :as api]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.components.tags :as tags]
             [pepa.components.editable :as editable]
             [pepa.navigation :as nav]
@@ -159,8 +159,8 @@
           (doseq [document documents]
             (-> @document
                 (update-in [:tags] (case op
-                                     :add data/add-tags
-                                     :remove data/remove-tags)
+                                     :add model/add-tags
+                                     :remove model/remove-tags)
                            [tag])
                 (api/update-document!))))
         (recur))))

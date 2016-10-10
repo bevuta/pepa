@@ -8,7 +8,7 @@
 
             [nom.ui :as ui]
             [pepa.api :as api]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.selection :as selection]
             [pepa.navigation :as nav]
             [pepa.search :as search]
@@ -111,7 +111,7 @@
       (let [document (om/value (get-in state [:documents document-id]))]
         (<! (api/update-document! (update document :pages
                                           (fn [pages]
-                                            (data/insert-pages pages
+                                            (model/insert-pages pages
                                                                new-pages
                                                                target-idx)))))
         (println "Saved!")

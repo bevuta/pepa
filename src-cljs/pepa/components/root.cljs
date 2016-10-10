@@ -4,7 +4,7 @@
             [nom.ui :as ui]
             [pepa.api :as api]
             [pepa.api.upload :as upload]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.search :as search]
             [pepa.components.sidebar :refer [sidebar-component]]
             [pepa.components.draggable :as draggable]

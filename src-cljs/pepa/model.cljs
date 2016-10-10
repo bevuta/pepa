@@ -1,7 +1,7 @@
-(ns pepa.data
+(ns pepa.model
   (:require [om.core :as om]
             [clojure.set :as set]
-            [clojure.string :as s]
+            [clojure.string :as str]
 
             [cljs.core.async :as async :refer [<!]])
   (:require-macros
@@ -37,7 +37,7 @@
   (into (empty documents)
         (filter stale-document? documents)))
 
-;;; Storage of Pages/Documents
+;;; Storage of Pagestr/Documents
 
 (defn store-document! [document]
   ;; TODO: Better validation
@@ -60,8 +60,8 @@
 (defn normalize-tag [tag]
   (assert (string? tag))
   (-> tag
-      (s/lower-case)
-      (s/trim)))
+      (str/lower-case)
+      (str/trim)))
 
 (defn add-tags [tags new-tags]
   (->> new-tags

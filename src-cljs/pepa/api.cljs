@@ -6,7 +6,7 @@
             [goog.string :as gstring]
 
             [om.core :as om]
-            [pepa.data :as data]
+            [pepa.model :as model]
 
             [clojure.browser.event :as event])
   (:import [goog.net XhrIo XmlHttp XmlHttpFactory EventType])
@@ -113,8 +113,8 @@
 
 (defn ^:private db-document->Document [document]
   (-> document
-      (data/map->Document)
-      (update-in [:pages] #(vec (map data/map->Page %)))
+      (model/map->Document)
+      (update-in [:pages] #(vec (map model/map->Page %)))
       (update-in [:tags] vec)))
 
 (defn fetch-document
@@ -143,7 +143,7 @@
                            (get documents id)
                            (db-document->Document)
                            (with-meta {:last-update (js/Date.)}))]
-          (om/update! (om/root-cursor data/state) [:documents id]
+          (om/update! (om/root-cursor model/state) [:documents id]
                       document)
           (js/console.warn "Failed to fetch document for ID" id))))))
 
@@ -153,7 +153,7 @@
 
 (defn fetch-inbox! []
   (go
-    (om/update! (om/root-cursor data/state)
+    (om/update! (om/root-cursor model/state)
                 [:inbox :pages]
                 (<! (fetch-inbox)))))
 
@@ -188,7 +188,7 @@
        (when (:successful? res)
          (let [document (-> (:response/transit res)
                             (db-document->Document))]
-           (om/update! (om/root-cursor data/state)
+           (om/update! (om/root-cursor model/state)
                        [:documents (:id document)]
                        document)
            document)))))
@@ -235,7 +235,7 @@
             (let [new-document (-> response
                                    :response/transit
                                    (db-document->Document))]
-              (data/store-document! new-document)
+              (model/store-document! new-document)
               new-document)
             (throw (ex-info (str "Failed to update document with id " (:id document))
                             {:document (om/value document)
@@ -284,7 +284,7 @@
     (some-> (xhr-request! (str "/pages/" id) :get)
             (<!)
             (:response/transit)
-            (data/map->Page))))
+            (model/map->Page))))
 
 (defn rotate-page! [page rotation]
   (go

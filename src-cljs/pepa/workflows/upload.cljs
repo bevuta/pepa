@@ -4,7 +4,7 @@
 
             [nom.ui :as ui]
             [pepa.api.upload :as upload]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.navigation :as nav]
             
             [cljs.core.async :as async])
@@ -29,7 +29,7 @@
         (let [file (:file row)
               name (.-name file)
               content-type (.-type file)
-              document (data/map->Document {:title name})
+              document (model/map->Document {:title name})
               upload-blob {:blob (<! (upload/file->u8arr file))
                            :content-type content-type
                            :filename name}

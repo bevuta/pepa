@@ -4,7 +4,7 @@
             [clojure.string :as s]
 
             [pepa.api :as api]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.navigation :as nav]
             [pepa.style :as css]
             [nom.ui :as ui]
@@ -159,8 +159,8 @@
               ;; Deref to get the 'actual' value (might be stale)
               (-> @document
                   (update-in [:tags] (case op
-                                       :add data/add-tags
-                                       :remove data/remove-tags)
+                                       :add model/add-tags
+                                       :remove model/remove-tags)
                              [tag])
                   (api/update-document!)))
 
@@ -176,7 +176,7 @@
           page-events (:pages state)
           tag-changes (:tag-changes state)
           date-changes (:date-changes state)
-          sidebars (om/observe owner (data/ui-sidebars))
+          sidebars (om/observe owner (model/ui-sidebars))
           current-page (let [pages (:pages (om/value document))
                              pagenum (dec (or page-number 1))]
                          (when (< pagenum (count pages))

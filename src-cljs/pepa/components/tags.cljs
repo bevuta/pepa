@@ -1,7 +1,7 @@
 (ns pepa.components.tags
   (:require [om.core :as om :include-macros true]
 
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.navigation :as nav]
             [nom.ui :as ui]
             
@@ -102,7 +102,7 @@
     (if-let [chan (om/get-state owner :tag-changes)]
       (async/put! chan [:remove tag])
       (doseq [document documents]
-        (om/transact! document :tags #(data/remove-tags % #{tag}))))))
+        (om/transact! document :tags #(model/remove-tags % #{tag}))))))
 
 (defn ^:private add-tag!
   "Adds TAG. Might alter DOCUMENT or put [:add TAG] into the :tag-changes
@@ -112,7 +112,7 @@
     (if-let [chan (om/get-state owner :tag-changes)]
       (async/put! chan [:add tag])
       (doseq [document documents]
-        (om/transact! document :tags #(data/add-tags % #{tag}))))))
+        (om/transact! document :tags #(model/add-tags % #{tag}))))))
 
 (defn ^:private sseq
   "like seq but for strings"

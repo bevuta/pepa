@@ -5,7 +5,7 @@
             [cljs.core.async :as async]
 
             [nom.ui :as ui]
-            [pepa.data :as data]
+            [pepa.model :as model]
             [pepa.navigation :as nav]
             [pepa.api.upload :as upload]
             [pepa.components.logo :refer [logo]]
@@ -84,7 +84,7 @@
   (render-state [_ {:keys [show-all?]}]
     [:.menu-link
      [:.title title]
-     (let [tags (sort-by val > (data/tag-count-map state true))
+     (let [tags (sort-by val > (model/tag-count-map state true))
            ;; tags (if-not show-all? (take +tag-limit+ tags) tags)
            ]
        (om/build tags/tags-list tags))
@@ -107,7 +107,7 @@
 (ui/defcomponent sidebar-component [state owner opts]
   (render [_]
     (let [route (om/value (get-in state [:navigation :route]))
-          width (get (om/observe owner (data/ui-sidebars)) ::sidebar
+          width (get (om/observe owner (model/ui-sidebars)) ::sidebar
                      css/default-sidebar-width)]
       [:#sidebar {:style {:min-width width :max-width width}}
        (om/build resize-draggable nil
