@@ -347,12 +347,14 @@
 (ui/defcomponent search-result-row [document owner {:keys [on-click]}]
   (render [_]
     [:li {:on-click (fn [e] (on-click (om/value document)))}
-     (om/build page/thumbnail (first (:pages document)))
+     (om/build page/thumbnail (first (:pages document))
+               {:react-key "thumbnail"})
      [:.meta
       [:.title (:title document)]
       (when-let [modified (:created document)]
         [:.created (document/format-datetime modified)])
-      (om/build tags/tags-list (:tags document))]]))
+      (om/build tags/tags-list (:tags document)
+                {:react-key "tags-list"})]]))
 
 (defn- run-search! [search owner]
   (if-let [query (search/parse-query-string search)]
@@ -384,7 +386,7 @@
         ;; TODO: Only fetch documents we don't have locally
         (api/fetch-documents! documents))))
   (render-state [_ {:keys [documents]}]
-    [:.column.search
+    [:.column.search {:key "search-column"}
      [:header {:key "header"}
       [:form.search {:key "form"
                      :on-submit (fn [e]
@@ -499,6 +501,7 @@
     (let [page-cache (make-page-cache state columns)]
       [:.workflow.inbox
        (map-indexed (fn [i x]
+                      (prn x)
                       (om/build (if (special-column? x)
                                   (special-column-ui x)
                                   inbox-column)
@@ -506,5 +509,5 @@
                                 {:fn (fn [column]
                                        [state (assoc column ::page-cache page-cache)])
                                  :state {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}
-                                 :react-key i}))
+                                 :key :id}))
                     columns)])))
