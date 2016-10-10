@@ -68,6 +68,8 @@
   :exclusions [org.clojure/data.json
                log4j/log4j
                org.clojure/tools.reader]
+  :jvm-opts ["-Duser.timezone=UTC"
+             "-Dclojure.spec.check-asserts=true"]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
   :plugins [[lein-figwheel "0.5.8"]]
