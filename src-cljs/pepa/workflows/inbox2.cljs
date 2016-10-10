@@ -385,24 +385,27 @@
         (api/fetch-documents! documents))))
   (render-state [_ {:keys [documents]}]
     [:.column.search
-     [:header
-      [:form.search {:on-submit (fn [e]
+     [:header {:key "header"}
+      [:form.search {:key "form"
+                     :on-submit (fn [e]
                                   (ui/cancel-event e)
                                   (let [text (.-value (om/get-node owner "search"))]
                                     (-> (col/current-columns state)
                                         (col/replace-column [:search (:search column)] [:search text])
                                         (col/show-columns!))))}
-       [:input {:type "text"
+       [:input {:key "search-input"
+                :type "text"
                 :ref "search"
                 :placeholder "Search Documents"
                 :default-value (or (:search column) "")}]]]
-     [:ul.search-results
+     [:ul.search-results {:key "results"}
       (om/build-all search-result-row (map #(get-in state [:documents %]) documents)
                     {:opts {:on-click (fn [document]
                                         (-> (col/current-columns state)
                                             (col/replace-column [:search (:search column)]
                                                                 [:document (:id document)])
-                                            (col/show-columns!)))}})]]))
+                                            (col/show-columns!)))}
+                     :key-fn :id})]]))
 
 (defn ^:private inbox-handle-drop! [state owner page-cache target source page-ids target-idx copy?]
   (let [columns (om/get-state owner :columns)
@@ -495,13 +498,13 @@
     ;; contains IDs)
     (let [page-cache (make-page-cache state columns)]
       [:.workflow.inbox
-       (map (fn [x i]
-              (om/build (if (special-column? x)
-                          (special-column-ui x)
-                          inbox-column)
-                        (assoc x :om.fake/index i)
-                        {:fn (fn [column]
-                               [state (assoc column ::page-cache page-cache)])
-                         :state {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}}))
-            columns
-            (range))])))
+       (map-indexed (fn [i x]
+                      (om/build (if (special-column? x)
+                                  (special-column-ui x)
+                                  inbox-column)
+                                (assoc x :om.fake/index i)
+                                {:fn (fn [column]
+                                       [state (assoc column ::page-cache page-cache)])
+                                 :state {:handle-drop! (partial inbox-handle-drop! state owner page-cache)}
+                                 :react-key i}))
+                    columns)])))

@@ -139,10 +139,10 @@
     (let [single? (= 1 (count documents))
           document (when single? (first documents))]
       [:ul.meta
-       (for [prop [:title :created :modified :document-date ]] ;:creator :size
+       (for [prop [:title :created :modified :document-date]] ;:creator :size
          (if single?
-           (om/build meta-item [prop document])
-           (om/build multi-meta-item prop)))])))
+           (om/build meta-item [prop document] {:react-key (name prop)})
+           (om/build multi-meta-item prop      {:react-key (name prop)})))])))
 
 ;;; The usual document sidebar, handling a single or multiple documents
 
