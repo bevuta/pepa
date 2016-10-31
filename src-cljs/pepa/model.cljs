@@ -10,33 +10,15 @@
 
 (defrecord Page [id rotation render-status dpi])
 (defrecord Document [id title pages created modified document-date notes])
-
 (defrecord State [documents inbox navigation tags upload seqs])
 
-(defonce state (atom (map->State {:documents {}
-                                  :navigation {:route :dashboard}
-                                  :tags {}
-                                  :inbox {:pages []}
-                                  :upload {}
+(defonce state (atom (map->State {:documents   {}
+                                  :navigation  {:route :dashboard}
+                                  :tags        {}
+                                  :inbox       {:pages []}
+                                  :upload      {}
                                   :ui/sidebars {}
-                                  :seqs {}})))
-
-;;; Document Staleness
-
-(def +staleness-threshold+ (* 60 30))
-
-(defn last-update [document]
-  (-> document meta :last-update))
-
-(defn stale-document? [document]
-  (when-let [update (last-update document)]
-    (> (/ (- (.getTime (js/Date.)) (.getTime update))
-          1000)
-       +staleness-threshold+)))
-
-(defn stale-documents [documents]
-  (into (empty documents)
-        (filter stale-document? documents)))
+                                  :seqs        {}})))
 
 ;;; Storage of Pagestr/Documents
 
@@ -65,14 +47,14 @@
       (str/trim)))
 
 (defn add-tags [tags new-tags]
-  (->> new-tags
-       (remove (set tags))
-       (into tags)))
+  (into tags
+        (remove (set tags))
+        new-tags))
 
 (defn remove-tags [tags removed-tags]
-  (->> tags
-       (remove (set removed-tags))
-       (into (empty tags))))
+  (into (empty tags)
+        (remove (set removed-tags))
+        tags))
 
 (defn all-tags [state]
   (-> state :tags keys set))
@@ -86,14 +68,12 @@
 
 (defn tag-count-map
   ([state]
-   (-> (:tags state)
-       (om/value)))
+   (om/value (:tags state)))
   ([state only-positive?]
    (if only-positive?
-     (->> (:tags state)
-          (om/value)
-          (filterv (comp pos? val))
-          (into {}))
+     (into {}
+           (filter (comp pos? val))
+           (om/value (:tags state)))
      (tag-count-map state))))
 
 ;;; Page Handling
@@ -110,7 +90,8 @@
         ;; allows us to reorder sequences.
         before (remove (set new-pages) before)
         after (remove (set new-pages) after)]
-    (into (empty pages) (concat before new-pages after))))
+    (into (empty pages)
+          (concat before new-pages after))))
 
 ;;; Resizable Sidebars
 
