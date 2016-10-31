@@ -62,7 +62,7 @@
                  [org.clojars.the-kenny/nom "0.1.1"]
                  [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"
                   :exclusions [org.clojure/tools.reader]]
-                 [sablono "0.7.5"]
+                 [de.tarn-vedra/sablono "0.7.6-SNAPSHOT"]
                  [secretary "1.2.3"]
                  [the/parsatron "0.0.7"]]
   :exclusions [org.clojure/data.json
