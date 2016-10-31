@@ -223,8 +223,7 @@
                       :on-scroll (partial on-documents-scroll state owner)
                       :class [(when working? "working")]}
          (let [documents (into []
-                               (comp (map (partial get (:documents state)))
-                                     (remove nil?))
+                               (keep (partial get (:documents state)))
                                document-ids)]
            (om/build-all document-preview documents
                          {:key :id

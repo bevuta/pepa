@@ -8,9 +8,25 @@
   (:require-macros
    [cljs.core.async.macros :refer [go-loop]]))
 
-(defrecord Page [id rotation render-status dpi])
-(defrecord Document [id title pages created modified document-date notes])
-(defrecord State [documents inbox navigation tags upload seqs])
+(defrecord Page [id
+                 rotation
+                 render-status
+                 dpi])
+
+(defrecord Document [id
+                     title
+                     pages
+                     created
+                     modified
+                     document-date
+                     notes])
+
+(defrecord State [documents
+                  inbox
+                  navigation
+                  tags
+                  upload
+                  seqs])
 
 (defonce state (atom (map->State {:documents   {}
                                   :navigation  {:route :dashboard}
@@ -20,23 +36,18 @@
                                   :ui/sidebars {}
                                   :seqs        {}})))
 
-;;; Storage of Pagestr/Documents
+
+
+;;; Storage of Pages/Documents
 
 (defn store-document! [document]
   ;; TODO: Better validation
   (assert (:id document))
   (assert (vector? (:pages document)))
-  (om/update! (om/root-cursor state)
-              [:documents (:id document)]
-              document))
-
-(defn store-page! [page]
-  ;; TODO: Better validation
-  (assert (:id page))
-  (assert (:image page))
-  (om/update! (om/root-cursor state)
-              [:pages (:id page)]
-              page))
+  (swap! state
+         assoc-in
+         [:documents (:id document)]
+         document))
 
 ;;; Tag Handling
 
