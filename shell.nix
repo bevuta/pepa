@@ -7,11 +7,12 @@ in rec {
     version = "1.2.3.4";
     src = ".";
     buildInputs = with pkgs; [ 
-      leiningen
-      jdk8
       cuneiform
       ghostscript
+      jdk8
+      leiningen
       pdftk 
+      phantomjs
       poppler_utils
       tesseract
     ];
