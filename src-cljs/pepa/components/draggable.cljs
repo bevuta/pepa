@@ -83,22 +83,24 @@
       (catch js/Error e
         (println "Couldn't read sidebar state from local storage.")))))
 
-(defn resize-handle-loop [root-owner]
-  ;; Read sizes from local storage
-  (om/update! (model/ui-sidebars) (or (read-sidebar-state) {}))
-  (go-loop [changed? false]
-    (let [resizes (om/get-shared root-owner ::events)
-          timeout (async/timeout +save-timeout+)
-          [event port] (alts! [resizes timeout])]
-      (cond
-        (and event (= port resizes))
-        (let [[sidebar pos] event]
-          (om/transact! (model/ui-sidebars)
-                        (fn [sidebars]
-                          (assoc sidebars sidebar
-                                 (pos->width sidebars sidebar pos))))
-          (recur true))
-        (= port timeout)
-        (do
-          (when changed? (save-sidebar-state! @(model/ui-sidebars)))
-          (recur false))))))
+;; TODO/rewrite
+(comment
+  (defn resize-handle-loop [root-owner]
+    ;; Read sizes from local storage
+    (om/update! (model/ui-sidebars) (or (read-sidebar-state) {}))
+    (go-loop [changed? false]
+      (let [resizes (om/get-shared root-owner ::events)
+            timeout (async/timeout +save-timeout+)
+            [event port] (alts! [resizes timeout])]
+        (cond
+          (and event (= port resizes))
+          (let [[sidebar pos] event]
+            (om/transact! (model/ui-sidebars)
+                          (fn [sidebars]
+                            (assoc sidebars sidebar
+                                   (pos->width sidebars sidebar pos))))
+            (recur true))
+          (= port timeout)
+          (do
+            (when changed? (save-sidebar-state! @(model/ui-sidebars)))
+            (recur false)))))))

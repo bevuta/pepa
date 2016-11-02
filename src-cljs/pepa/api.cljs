@@ -128,7 +128,7 @@
                 :response/transit)
             (db-document->Document))))
 
-(defn fetch-documents!
+(defn fetch-documents
   "Fetches all documents in IDs and stores them in the application
   state."
   [ids]
@@ -137,15 +137,12 @@
                          (xhr-request! "/documents/bulk" :post
                                        "application/transit+json")
                          (<!)
-                         (:response/transit))]
-      (doseq [id ids]
-        (if-let [document (some->
-                           (get documents id)
-                           (db-document->Document)
-                           (with-meta {:last-update (js/Date.)}))]
-          (om/update! (om/root-cursor model/state) [:documents id]
-                      document)
-          (js/console.warn "Failed to fetch document for ID" id))))))
+                         :response/transit)]
+      (map #(some->
+             (get documents %)
+             (db-document->Document)
+             (with-meta {:last-update (js/Date.)}))
+           ids))))
 
 (defn fetch-inbox []
   (go
@@ -256,13 +253,6 @@
       (when (= 200 (:status response))
         (:response/transit response)))))
 
-(defn ^:private store-tags! [state tags]
-  (om/transact! state :tags #(merge % tags)))
-
-(defn fetch-tags! [state]
-  (go
-    (store-tags! state (<! (fetch-tags true)))))
-
 ;;; TODO: We might want to store all document-ids for a tag. That
 ;;; would allow us to skip querying the server when doing a tag
 ;;; search. This should work as tags are always up-to-date (via push).
@@ -365,3 +355,4 @@
 
 (defn stop-polling! [control]
   (async/close! control))
+

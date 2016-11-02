@@ -176,15 +176,18 @@
           page-events (:pages state)
           tag-changes (:tag-changes state)
           date-changes (:date-changes state)
-          sidebars (om/observe owner (model/ui-sidebars))
+          ;; TODO/rewrite
+          ;; sidebars (om/observe owner (model/ui-sidebars))
           current-page (let [pages (:pages (om/value document))
                              pagenum (dec (or page-number 1))]
                          (when (< pagenum (count pages))
                            (nth pages pagenum)))]
       [:.workflow.document
        ;; Left (thunbmail) pane
-       (let [width (get sidebars ::thumbnails
-                        css/default-sidebar-width)]
+       (let [width css/default-sidebar-width
+             ;; TODO/rewrite
+             #_(get sidebars ::thumbnails
+                    css/default-sidebar-width)]
          [:.pane {:style {:min-width width :max-width width}
                   :key "thumbnail-pane"}
           (om/build thumbnails document
@@ -195,17 +198,21 @@
                   {:init-state {:events page-events}
                    :state {:current-page current-page}})]
        ;; Right (meta) pane
-       (let [width (get sidebars ::meta
-                        css/default-sidebar-width)]
+       (let [width css/default-sidebar-width
+             ;; TODO/rewrite
+             #_(get sidebars ::meta
+                    css/default-sidebar-width)]
          [:.pane {:style {:min-width width :max-width width}
                   :key "meta-pane"}
           (om/build meta-pane document
                     {:init-state {:tags tag-changes
                                   :date date-changes}})])])))
 
+;; TODO/rewrite
 (defmethod draggable/pos->width ::thumbnails [sidebars sidebar [x _]]
   (draggable/limit
-   (- x (get sidebars :pepa.components.sidebar/sidebar
+   (- x css/default-sidebar-width
+      #_(get sidebars :pepa.components.sidebar/sidebar
              css/default-sidebar-width))
    100 400))
 

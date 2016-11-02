@@ -9,7 +9,7 @@
   (:require-macros [cljs.core.match.macros :refer [match]]
                    [cljs.core.async.macros :refer [go go-loop]]))
 
-(defrecord Search [query results])
+(defrecord Search [query result-chan results])
 
 (defn parse-query-string
   "Tries to parse S as a search query. Returns nil in case of
@@ -37,54 +37,41 @@
     [[:search [:query query]]] query
     :else nil))
 
-(defn current-search [state]
-  (::search state))
-
 (defn search-active? [search]
   ;; {:pre [(= Search (type search))]}
-  (::chan search))
+  (:result-chan search))
 
 (defn ^:private cancel-search! [search]
   {:pre [(om/transactable? search)]}
-  (when-let [ch (::chan search)]
+  (when-let [ch (::result-chan search)]
     (async/close! ch)
     (println "Canceling previous search:" search)
-    (om/transact! search dissoc ::chan)))
+    (om/transact! search dissoc ::result-chan)))
+
+(defn search-results [search]
+  (:result-chan search))
 
 ;;; TODO: We might want to introduce a search-result-cache.
 
-(defn search! [state query]
-  (go
-    (let [query (if (= query ::all)
-                  query
-                  (cond
-                    (list? query)
-                    query
+(defn start-search! [query]
+  (let [query (cond
+                (= query ::all)
+                query
+                
+                (list? query)
+                query
 
-                    (string? query)
-                    (parse-query-string query)))
-          ch (if (= query ::all)
-               (api/fetch-document-ids)
-               (api/search-documents query))
-          ;; NOTE: We keep the old results here
-          old-search (current-search state)
-          search (map->Search {:query query
-                               :results (:results old-search)
-                               ::chan ch})]
-      (println "Running search:" query)
-      ;; Cancel old search
-      (when old-search
-        (cancel-search! old-search))
-
-      ;; Store search in the app state
-      (om/update! state ::search search)
-      (when-let [results (<! ch)]
-        (doto state
-          (om/update! [::search ::chan] nil)
-          (om/update! [::search :results] results))))))
+                (string? query)
+                (parse-query-string query))
+        ch (if (= query ::all)
+             ;; TODO: Close chan
+             (api/fetch-document-ids)
+             (api/search-documents query))]
+    (println "Running search:" query)
+    (map->Search {:query query, :result-chan ch})))
 
 (defn all-documents? [search]
   (= ::all (:query search)))
 
-(defn all-documents! [state]
-  (search! state ::all))
+(defn all-documents! []
+  (start-search! ::all))

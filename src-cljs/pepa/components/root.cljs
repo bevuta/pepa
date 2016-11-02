@@ -7,7 +7,7 @@
             [pepa.model :as model]
             [pepa.search :as search]
             [pepa.components.sidebar :refer [sidebar-component]]
-            [pepa.components.draggable :as draggable]
+            ;; [pepa.components.draggable :as draggable]
             [pepa.workflows.inbox2 :as inbox2]
             [pepa.workflows.dashboard :as dashboard]
             [pepa.workflows.document :as document]
@@ -18,24 +18,6 @@
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]]
    [cljs.core.match.macros :refer [match]]))
-
-(defn ^:private fetch-initial-data!
-  "Fetches initial data (all tags etc.) to initialize the
-  application."
-  [state route]
-  (go
-    (<! (api/fetch-tags! state))))
-
-(defn ^:private transition-to! [state route query-params]
-  (println "route" (pr-str route)
-           "query-params" (pr-str query-params))
-  (match [route]
-    [[:document id]] (api/fetch-documents! #{id})
-    [[:search search]] (->> search
-                            (search/route->query)
-                            (search/search! state))
-    [:dashboard] (search/all-documents! state)
-    :else nil))
 
 ;;; Drag/Drop Handling
 
@@ -59,24 +41,6 @@
 
 (ui/defcomponent root-component [state owner]
   om/ICheckState
-  (will-mount [_]
-    (let [{:keys [route query-params]} (-> state :navigation om/value)]
-      (fetch-initial-data! state route)
-      (transition-to! state route query-params)
-
-      ;; Handle all (global) resize events for sidebars
-      (draggable/resize-handle-loop owner)
-
-      ;; Start Polling
-      (om/set-state! owner :poll-control (api/start-polling! state))))
-  (will-unmount [_]
-    (println "Stopping polling...")
-    (api/stop-polling! (om/get-state owner :poll-control)))
-  (will-update [_ next-props next-state]
-    (when-not (= (get-in (om/get-props owner) [:navigation :route])
-                 (get-in next-props [:navigation :route]))
-      (let [{:keys [route query-params]} (-> next-props :navigation om/value)]
-        (transition-to! state route query-params))))
   (render-state [_ {:keys [file-drop?]}]
     (let [{:keys [route query-params]} (:navigation state)]
       [:div.container {:on-drag-over (partial root-drag-over state owner)

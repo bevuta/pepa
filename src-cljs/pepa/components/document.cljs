@@ -178,7 +178,10 @@
                                          (str "/documents/" (-> documents first :id) "/download"))
                              :disabled (not single?)}
            "Download"]
-          [:button.edit {:on-click #(->> (nav/edit-document-route (first documents))
+          [:button.edit {:on-click #(->> documents
+                                         first
+                                         :id
+                                         (nav/edit-document-route)
                                          (nav/navigate!))
                          :disabled (not single?)}
            "Edit in Inbox"]])])))

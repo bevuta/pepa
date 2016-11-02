@@ -40,7 +40,7 @@
 
 (ui/defcomponent ^:private document-preview [document owner]
   (render [_]
-    (let [href (nav/document-route document)]
+    (let [href (nav/document-route (:id document))]
       ;; NOTE: We can't wrap the <a> around all those divs. It's
       ;; forbidden to put a <div> inside <a> if there are other
       ;; <a>s and other stuff inside it. If we try it nonetheless,
@@ -63,8 +63,10 @@
 
 (ui/defcomponent ^:private sidebar-pane [[state selected-documents] owner _]
   (render [_]
-    (let [sidebar-width (get (om/observe owner (model/ui-sidebars)) ::sidebar
-                             css/default-sidebar-width)]
+    (let [sidebar-width css/default-sidebar-width
+          ;; TODO/rewrite
+          #_(get (om/observe owner (model/ui-sidebars)) ::sidebar
+                 css/default-sidebar-width)]
       [:.pane {:key "sidebar-pane"
                :style {:min-width sidebar-width :max-width sidebar-width}}
        [:.sidebar
@@ -77,7 +79,7 @@
                          (map #(get-in state [:documents %]) ids))})]])))
 
 (defn ^:private document-ids [state]
-  (:results (search/current-search state)))
+  (:results (:search state)))
 
 (def +initial-elements+ 50)
 (def +to-load+ 50)
@@ -100,17 +102,6 @@
 (defn ^:private page-ids [state]
   (let [[n _] (parse-count-scroll state)]
     (take n (document-ids state))))
-
-(defn ^:private fetch-missing-documents!
-  "Fetches all missing documents which will be visible in the
-  documents-overview."
-  [state owner]
-  (go
-    (let [ids (page-ids state)
-          missing (remove (set (keys (:documents state))) ids)]
-      (when (seq missing)
-        (println "fetching missing documents:" missing)
-        (<! (api/fetch-documents! missing))))))
 
 (ui/defcomponent ^:private document-count [document-ids]
   (render [_]
@@ -182,7 +173,7 @@
   (go-loop []
     (when-let [click (<! (om/get-state owner :clicks))]
       (if (= :double (::type click))
-        (nav/navigate! (nav/document-route {:id (:element click)}))
+        (nav/navigate! (nav/document-route (:element click)))
         (om/update-state! owner :selection (fn [selection]
                                              (selection/click selection click))))
       (recur))))
@@ -195,24 +186,17 @@
     {:selection (selection/make-selection (document-ids state))
      :clicks (async/chan)})
   (will-mount [_]
-    (click-loop! state owner)
-    (go
-      (ui/with-working owner
-        (<! (fetch-missing-documents! state owner)))))
+    (click-loop! state owner))
   (will-receive-props [_ new-state]
     (when (not= (document-ids (om/get-props owner))
                 (document-ids new-state))
       (om/set-state! owner :selection
-                     (selection/make-selection (document-ids new-state))))
-
-    (go
-      (ui/with-working owner
-        (<! (fetch-missing-documents! new-state owner)))))
+                     (selection/make-selection (document-ids new-state)))))
   (did-update [_ _ _]
     (scroll-to-offset! state owner))
   (render-state [_ {:keys [working? selection clicks]}]
     (let [document-ids (page-ids state)
-          search (search/current-search state)
+          search (:search state)
           working? (or working? (search/search-active? search))]
       [:.workflow.dashboard
        [:.pane {:key "documents-pane"}

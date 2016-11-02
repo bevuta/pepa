@@ -63,7 +63,7 @@
                      "This file type isn't supported.")}
        (if document-id
          [:a.title {:href (when document-id
-                            (nav/document-route {:id document-id}))
+                            (nav/document-route document-id))
                     :title name
                     :key "title"}
           name]

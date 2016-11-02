@@ -26,28 +26,18 @@
                   navigation
                   tags
                   upload
+                  search
                   seqs])
 
-(defonce state (atom (map->State {:documents   {}
-                                  :navigation  {:route :dashboard}
-                                  :tags        {}
-                                  :inbox       {:pages []}
-                                  :upload      {}
-                                  :ui/sidebars {}
-                                  :seqs        {}})))
-
-
-
-;;; Storage of Pages/Documents
-
-(defn store-document! [document]
-  ;; TODO: Better validation
-  (assert (:id document))
-  (assert (vector? (:pages document)))
-  (swap! state
-         assoc-in
-         [:documents (:id document)]
-         document))
+(defn new-state []
+  (map->State {:documents   {}
+               :navigation  {:route :dashboard}
+               :tags        {}
+               :inbox       {:pages []}
+               :upload      {}
+               :ui/sidebars {}
+               :search      nil
+               :seqs        {}}))
 
 ;;; Tag Handling
 
@@ -106,8 +96,17 @@
 
 ;;; Resizable Sidebars
 
-(defn ui-sidebars []
-  (-> state
-      (om/root-cursor)
-      :ui/sidebars
-      (om/ref-cursor)))
+;; TODO/rewrite
+(comment
+  (defn ui-sidebars []
+    (-> state
+        (om/root-cursor)
+        :ui/sidebars
+        (om/ref-cursor))))
+
+;;; Storing Entities
+
+(defn store-tags [model tags]
+  (assert (every? string? (keys tags)))
+  (assert (every? number? (vals tags)))
+  (update model :tags #(into % tags)))

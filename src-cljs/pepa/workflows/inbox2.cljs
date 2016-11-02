@@ -90,7 +90,7 @@
     (get-in state [:documents document-id :title]
             "Untitled Document"))
   (column-header-url [_]
-    (nav/document-route {:id document-id}))
+    (nav/document-route document-id))
   (column-pages [_ state]
     (get-in state
             [:documents document-id :pages]
@@ -123,11 +123,7 @@
             (get-in [:documents document-id])
             (om/value)
             (assoc :title title)
-            (api/update-document!)))
-  om/IWillMount
-  (will-mount [_]
-    (assert (number? document-id))
-    (api/fetch-documents! [document-id])))
+            (api/update-document!))))
 
 (declare new-document-ui)
 
@@ -381,10 +377,12 @@
       (when-not (= search (:search column))
         (run-search! search owner)))
     ;; Fetch documents after the results of the search arrive
-    (when-let [documents (:documents next-state)]
-      (when-not (= documents (om/get-render-state owner :documents))
-        ;; TODO: Only fetch documents we don't have locally
-        (api/fetch-documents! documents))))
+    ;; TODO/rewrite
+    ;; (when-let [documents (:documents next-state)]
+    ;;   (when-not (= documents (om/get-render-state owner :documents))
+    ;;     ;; TODO: Only fetch documents we don't have locally
+    ;;     (api/fetch-documents! documents)))
+    )
   (render-state [_ {:keys [documents]}]
     [:.column.search {:key "search-column"}
      [:header {:key "header"}

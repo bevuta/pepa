@@ -107,8 +107,11 @@
 (ui/defcomponent sidebar-component [state owner opts]
   (render [_]
     (let [route (om/value (get-in state [:navigation :route]))
-          width (get (om/observe owner (model/ui-sidebars)) ::sidebar
-                     css/default-sidebar-width)]
+          width css/default-sidebar-width
+          ;; TODO/rewrite
+          #_(get (om/observe owner (model/ui-sidebars)) ::sidebar
+                 css/default-sidebar-width)
+          ]
       [:#sidebar {:style {:min-width width :max-width width}}
        (om/build resize-draggable nil
                  {:opts {:sidebar ::sidebar}

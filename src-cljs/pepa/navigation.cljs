@@ -23,11 +23,12 @@
         (when-not no-dispatch
           (secretary/dispatch! (.substring route 1))))))
 
-(defn navigation-ref []
-  (some-> model/state
-          (om/root-cursor)
-          :navigation
-          (om/ref-cursor)))
+;; TODO/rewrite
+;; (defn navigation-ref []
+;;   (some-> model/state
+;;           (om/root-cursor)
+;;           :navigation
+;;           (om/ref-cursor)))
 
 (defn dashboard-route [& [query-params]]
   (secretary/render-route "/" {:query-params query-params}))
@@ -36,10 +37,9 @@
   (secretary/render-route (str "/" (name workflow))
                           {:query-params query-params}))
 
-(secretary/defroute document-route "/document/:id" [id query-params]
-  (om/update! (navigation-ref)
-              {:route [:document (js/parseInt id)]
-               :query-params query-params}))
+(defn document-route [id & [query-params]]
+  (secretary/render-route (str "/documents/" id)
+                          {:query-params query-params}))
 
 (defn tag-search [tag & [query-params]]
   (->
@@ -66,7 +66,7 @@
       (dashboard-route query-params)
 
       [[:document id]]
-      (document-route {:id id, :query-params query-params})
+      (document-route id {:query-params query-params})
 
       [[:search [:tag tag]]]
       (tag-search tag query-params)
@@ -76,32 +76,39 @@
 
 ;;; Routes
 
-(secretary/defroute "/" [query-params]
-  (om/update! (navigation-ref)
-              {:route :dashboard
-               :query-params query-params}))
+;; TODO/rewrite
+(comment
+  (secretary/defroute "/document/:id" [id query-params]
+    (om/update! (navigation-ref)
+                {:route [:document (js/parseInt id)]
+                 :query-params query-params}))
+  
+  (secretary/defroute "/" [query-params]
+    (om/update! (navigation-ref)
+                {:route :dashboard
+                 :query-params query-params}))
 
 ;;; Default Route
-(secretary/defroute "" [query-params]
-  (om/update! (navigation-ref)
-              {:route :dashboard
-               :query-params query-params}))
+  (secretary/defroute "" [query-params]
+    (om/update! (navigation-ref)
+                {:route :dashboard
+                 :query-params query-params}))
 
-(secretary/defroute "/:workflow" [workflow query-params]
-  ;; TODO: Check for available workflows
-  (om/update! (navigation-ref)
-              {:route (keyword workflow)
-               :query-params query-params}))
+  (secretary/defroute "/:workflow" [workflow query-params]
+    ;; TODO: Check for available workflows
+    (om/update! (navigation-ref)
+                {:route (keyword workflow)
+                 :query-params query-params}))
 
-(secretary/defroute "/search/tag/:tag" [tag query-params]
-  (om/update! (navigation-ref)
-              {:route [:search [:tag (gstring/urlDecode tag)]]
-               :query-params query-params}))
+  (secretary/defroute "/search/tag/:tag" [tag query-params]
+    (om/update! (navigation-ref)
+                {:route [:search [:tag (gstring/urlDecode tag)]]
+                 :query-params query-params}))
 
-(secretary/defroute "/search/:query" [query query-params]
-  (om/update! (navigation-ref)
-              {:route [:search [:query query]]
-               :query-params query-params}))
+  (secretary/defroute "/search/:query" [query query-params]
+    (om/update! (navigation-ref)
+                {:route [:search [:query query]]
+                 :query-params query-params})))
 
 (secretary/set-config! :prefix "#")
 
