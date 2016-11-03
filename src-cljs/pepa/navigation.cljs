@@ -6,7 +6,7 @@
   (:require-macros [cljs.core.match.macros :refer [match]]))
 
 (def routes ["/" [[[]                               :dashboard]
-                  [["inbox/" :columns]              :inbox]
+                  [["inbox/" [#".+" :columns]]      :inbox]
                   [["document/" :id "/page/" :page] :document-page]
                   [["document/" :id]                :document]
                   [["search/tag/" :tag]             :tag-search]
