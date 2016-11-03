@@ -23,8 +23,9 @@
 
 (defn ^:private handle-tags-drop [document e]
   (when-let [tags (tags/data-transfer-tags e.dataTransfer)]
-    (api/update-document! (update-in document [:tags]
-                                     #(model/add-tags % tags)))
+    (js/console.error "Unimplemented")
+    ;; (api/update-document! (update-in document [:tags]
+    ;;                                  #(model/add-tags % tags)))
     (.preventDefault e)))
 
 (ui/defcomponent ^:private page-count [pages]

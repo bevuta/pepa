@@ -72,16 +72,15 @@
   ;; TODO: Handle TARGET-IDX
   ColumnDropTarget
   (accept-drop! [_ state new-pages target-idx]
-    (go
-      (let [page-ids (map :id new-pages)]
-        (println "dropping" (pr-str page-ids) "on inbox (at index" target-idx ")")
-        ;; TODO: Error-Handling
-        (<! (api/add-to-inbox! page-ids)))
-      ;; Return true, indicating successful drop
-      true))
-  om/IWillMount
-  (will-mount [_]
-    (api/fetch-inbox!)))
+    (throw (ex-info "Unimplemented" {}))
+    ;; (go
+    ;;   (let [page-ids (map :id new-pages)]
+    ;;     (println "dropping" (pr-str page-ids) "on inbox (at index" target-idx ")")
+    ;;     ;; TODO: Error-Handling
+    ;;     (<! (api/add-to-inbox! page-ids)))
+    ;;   ;; Return true, indicating successful drop
+    ;;   true)
+    ))
 
 (defrecord DocumentColumnSource [id document-id]
   ClosableColumn

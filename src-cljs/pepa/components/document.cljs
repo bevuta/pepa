@@ -33,11 +33,13 @@
   (render [_]
     (let [val (get document key)]
       [:span.value {:key "value", :title (str val)}
-       (editable/editable-title val
-                                (fn [title]
-                                  (api/update-document!
-                                   (assoc document :title (or title ""))))
-                                false)])))
+       val
+       ;; (editable/editable-title val
+       ;;                          (fn [title]
+       ;;                            (api/update-document!
+       ;;                             (assoc document :title (or title ""))))
+       ;;                          false)
+       ])))
 
 (let [formatter (DateTimeFormat. "dd.MM.yyyy HH:mm")]
   (defn format-datetime [^Date date]
@@ -69,10 +71,11 @@
   (defn- date->date-picker-value [^Date date]
     (.format formatter date)))
 
-(defn ^:private store-document-date! [document owner date]
-  (async/take! (api/update-document! (assoc @document :document-date date))
-               (fn [value]
-                 (om/set-state! owner :editing? false))))
+(comment
+  (defn ^:private store-document-date! [document owner date]
+    (async/take! (api/update-document! (assoc @document :document-date date))
+                 (fn [value]
+                   (om/set-state! owner :editing? false)))))
 
 (defn ^:private date-input-supported? []
   (-> (doto (js/document.createElement "input")
@@ -103,19 +106,21 @@
                                              (om/set-state! owner :editing? true)))}
          (or str-value
              (when supported? "Click to set"))]
-        (let [on-submit! (fn [e]
-                           (ui/cancel-event e)
-                           (->> (om/get-node owner "date-input")
-                                (.-value)
-                                (string->date)
-                                (store-document-date! document owner)))]
-          [:form {:on-submit on-submit!}
-           [:input {:type "date"
-                    :key "date-input"
-                    :ref "date-input"
-                    :default-value (when document-date
-                                     (date->date-picker-value document-date))
-                    :on-blur on-submit!}]])))))
+        (comment
+          "UNIMPLEMENTED"
+          (let [on-submit! (fn [e]
+                             (ui/cancel-event e)
+                             (->> (om/get-node owner "date-input")
+                                  (.-value)
+                                  (string->date)
+                                  (store-document-date! document owner)))]
+            [:form {:on-submit on-submit!}
+             [:input {:type "date"
+                      :key "date-input"
+                      :ref "date-input"
+                      :default-value (when document-date
+                                       (date->date-picker-value document-date))
+                      :on-blur on-submit!}]]))))))
 
 ;;; Meta Table Rows
 
@@ -149,21 +154,22 @@
 (ui/defcomponent document-sidebar [documents owner _]
   (init-state [_]
     {:tag-changes (async/chan)})
-  (will-mount [_]
-    (go-loop []
-      (when-let [change (<! (om/get-state owner :tag-changes))]
-        (prn "got tag change:" change)
-        (let [[op tag] change
-              documents (om/get-props owner)]
-          ;; Deref to get the 'actual' value (might be stale)
-          (doseq [document documents]
-            (-> @document
-                (update-in [:tags] (case op
-                                     :add model/add-tags
-                                     :remove model/remove-tags)
-                           [tag])
-                (api/update-document!))))
-        (recur))))
+  ;; TODO/refactor
+  ;; (will-mount [_]
+  ;;   (go-loop []
+  ;;     (when-let [change (<! (om/get-state owner :tag-changes))]
+  ;;       (prn "got tag change:" change)
+  ;;       (let [[op tag] change
+  ;;             documents (om/get-props owner)]
+  ;;         ;; Deref to get the 'actual' value (might be stale)
+  ;;         (doseq [document documents]
+  ;;           (-> @document
+  ;;               (update-in [:tags] (case op
+  ;;                                    :add model/add-tags
+  ;;                                    :remove model/remove-tags)
+  ;;                          [tag])
+  ;;               (api/update-document!))))
+  ;;       (recur))))
   (render-state [_ {:keys [tag-changes]}]
     (when (seq documents)
       [:aside
