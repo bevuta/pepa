@@ -21,38 +21,48 @@
 
 ;;; Editable Title Header
 
-(defn ^:private save-title! [document owner title]
-  (go
-    (try
-      (om/set-state! owner :working? true)
-      (<! (api/update-document! (assoc @document :title title)))
-      (finally
-        (om/set-state! owner :working? false)))))
+;;; TODO/refactor
+(comment
+ (defn ^:private save-title! [document owner title]
+   (go
+     (try
+       (om/set-state! owner :working? true)
+       (<! (api/update-document! (assoc @document :title title)))
+       (finally
+         (om/set-state! owner :working? false))))))
 
 (ui/defcomponent ^:private thumbnail-pane-header [document owner _]
   (render [_]
+    ;; TODO/refactor
     [:header
-     (editable/editable-title (:title document)
-                              (partial save-title! document owner))]))
+     (:title document)
+     ;; (editable/editable-title (:title document)
 
-(defn ^:private scroll-maybe [page owner prev-state]
-  (when (and (= page (om/get-state owner :current-page))
-             ;; Don't scroll if we have the same ID
-             (not= (:id page) (:id (:current-page prev-state))))
-    (let [el (om/get-node owner)]
-      (.scrollIntoView el))))
+     ;;                          ;; (partial save-title! document owner)
+     ;;                          )
+     ]))
+
+(comment
+  (defn ^:private scroll-maybe [page owner prev-state]
+    (when (and (= page (om/get-state owner :current-page))
+               ;; Don't scroll if we have the same ID
+               (not= (:id page) (:id (:current-page prev-state))))
+      (let [el (om/get-node owner)]
+        (.scrollIntoView el)))))
 
 (ui/defcomponent ^:private page-cell [page owner opts]
-  (did-mount [_]
-    (scroll-maybe (om/value page) owner nil))
-  (did-update [_ _ prev-state]
-    (scroll-maybe (om/value page) owner prev-state))
+  ;; (did-mount [_]
+  ;;   (scroll-maybe (om/value page) owner nil))
+  ;; (did-update [_ _ prev-state]
+  ;;   (scroll-maybe (om/value page) owner prev-state))
   (render-state [_ {:keys [current-page events]}]
     (assert (:view opts))
     [:li {:class [(when (= page current-page) "current")]
-          :on-click (fn [e]
-                      (async/put! events (om/value page))
-                      (.preventDefault e))}
+          ;; TODO/refactor
+          ;; :on-click (fn [e]
+          ;;             (async/put! events (om/value page))
+          ;;             (.preventDefault e))
+          }
      (om/build (:view opts) page {:opts opts})]))
 
 (ui/defcomponent ^:private thumbnail-list [pages owner]
@@ -115,61 +125,64 @@
      ;; TODO: handle channels to set document tags
      (om/build document/document-sidebar [document])]))
 
-(defn ^:private next-page [pages page]
-  (->> pages
-       (drop-while #(not= % page))
-       (second)))
+(comment
+  (defn ^:private next-page [pages page]
+    (->> pages
+         (drop-while #(not= % page))
+         (second)))
 
-(defn ^:private prev-page [pages page]
-  (next-page (reverse pages) page))
+  (defn ^:private prev-page [pages page]
+    (next-page (reverse pages) page))
 
-(defn ^:private page-idx [pages page]
-  (some (fn [[idx p]] (when (= page p) idx))
-        (map-indexed vector pages)))
+  (defn ^:private page-idx [pages page]
+    (some (fn [[idx p]] (when (= page p) idx))
+          (map-indexed vector pages)))
 
-(defn ^:private handle-page-click! [document owner event]
-  (let [pages (:pages document)
-        page (om/get-state owner :page-number)
-        page (case event
-               :next (min (inc page) (count pages))
-               :prev (max (dec page) 1)
-               (inc (page-idx pages event)))]
-    (-> (nav/document-route (:id document) {:page page})
-        (nav/navigate! :ignore-history))))
+  (defn ^:private handle-page-click! [document owner event]
+    (let [pages (:pages document)
+          page (om/get-state owner :page-number)
+          page (case event
+                 :next (min (inc page) (count pages))
+                 :prev (max (dec page) 1)
+                 (inc (page-idx pages event)))]
+      (-> (nav/document-route (:id document) {:page page})
+          (nav/navigate! :ignore-history)))))
 
 (ui/defcomponent document [document owner]
   (init-state [_]
     {:page-number 1
-     :pages (async/chan)
-     :tag-changes (async/chan)
-     :date-changes (async/chan)})
-  (will-mount [_]
-    ;; Start handling tag change events etc.
-    (go-loop []
-      (let [{:keys [pages tag-changes date-changes]} (om/get-state owner)
-            [event port] (alts! [pages tag-changes date-changes])]
-        (when (and event port)
-          (condp = port
-            pages
-            (handle-page-click! @document owner event)
+     ;; TODO/refactor
+     ;; :pages (async/chan)
+     ;; :tag-changes (async/chan)
+     ;; :date-changes (async/chan)
+     })
+  ;; (will-mount [_]
+  ;;   ;; Start handling tag change events etc.
+  ;;   (go-loop []
+  ;;     (let [{:keys [pages tag-changes date-changes]} (om/get-state owner)
+  ;;           [event port] (alts! [pages tag-changes date-changes])]
+  ;;       (when (and event port)
+  ;;         (condp = port
+  ;;           pages
+  ;;           (handle-page-click! @document owner event)
 
-            tag-changes
-            (let [[op tag] event]
-              ;; Deref to get the 'actual' value (might be stale)
-              (-> @document
-                  (update-in [:tags] (case op
-                                       :add model/add-tags
-                                       :remove model/remove-tags)
-                             [tag])
-                  (api/update-document!)))
+  ;;           tag-changes
+  ;;           (let [[op tag] event]
+  ;;             ;; Deref to get the 'actual' value (might be stale)
+  ;;             (-> @document
+  ;;                 (update-in [:tags] (case op
+  ;;                                      :add model/add-tags
+  ;;                                      :remove model/remove-tags)
+  ;;                            [tag])
+  ;;                 (api/update-document!)))
 
-            date-changes
-            (let [date (js/Date.)]
-              (.parse (DateTimeParse. "yyyy-MM-dd") event date)
-              (-> @document
-                  (assoc :document-date date)
-                  (api/update-document!))))
-          (recur)))))
+  ;;           date-changes
+  ;;           (let [date (js/Date.)]
+  ;;             (.parse (DateTimeParse. "yyyy-MM-dd") event date)
+  ;;             (-> @document
+  ;;                 (assoc :document-date date)
+  ;;                 (api/update-document!))))
+  ;;         (recur)))))
   (render-state [_ state]
     (let [{:keys [page-number]} state
           page-events (:pages state)

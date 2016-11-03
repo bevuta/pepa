@@ -31,7 +31,7 @@
   (render [_]
     [:.page-count (count pages)]))
 
-(defn ^:private document-click [click-type document owner e]
+(defn- document-click [click-type document owner e]
   {:pre [(contains? #{:single :double} click-type)]}
   (when-let [clicks (om/get-state owner :clicks)]
     (async/put! clicks (assoc (selection/event->click (:id document) e)
