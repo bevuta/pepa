@@ -15,12 +15,10 @@
 ;;; Preload Images
 (defonce preloaded-images (preloader/preload))
 
-(defonce controller (doto (controller/new-controller)
-                      (controller/fetch-initial-data!)))
-
+(defonce controller (controller/start! (controller/new-controller)))
 
 (om/root root-component
-         (:state controller)
+         (:!state controller)
          {:target (.getElementById js/window.document "app")
           :shared (merge {}
                          (draggable/shared-data))})

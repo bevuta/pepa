@@ -134,8 +134,7 @@
                :next (min (inc page) (count pages))
                :prev (max (dec page) 1)
                (inc (page-idx pages event)))]
-    (-> (nav/nav->route {:route [:document (:id document)]
-                         :query-params {:page page}})
+    (-> (nav/document-route (:id document) {:page page})
         (nav/navigate! :ignore-history))))
 
 (ui/defcomponent document [document owner]

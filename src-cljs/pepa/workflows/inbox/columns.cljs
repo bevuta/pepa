@@ -76,9 +76,7 @@
   {:pre [(every? vector? columns)]}
   (prn "navigating to" columns)
   (let [columns (serialize-column-params columns)]
-    (nav/navigate! (nav/workflow-route
-                    :inbox
-                    {:columns columns}))))
+    (nav/navigate! (nav/inbox-route {:columns columns}))))
 
 (defn add-search-column [columns]
   (if-not (some (fn [[k _]] (= :search k)) columns)

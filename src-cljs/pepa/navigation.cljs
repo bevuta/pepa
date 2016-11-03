@@ -1,127 +1,83 @@
 (ns pepa.navigation
-  (:require [secretary.core :as secretary :include-macros true]
-            [goog.events :as events]
-            [cljs.core.async :as async]
-            [clojure.string :as s]
-            [cljs.reader :as reader]
-
-            [om.core :as om]
-            [pepa.model :as model]
+  (:require [clojure.string :as s]
+            [bidi.bidi :as bidi]
             [goog.string :as gstring]
-
             cljs.core.match)
-  (:require-macros [cljs.core.match.macros :refer [match]])
-  (:import goog.History
-           goog.history.EventType
-           goog.crypt
-           goog.crypt.base64))
+  (:require-macros [cljs.core.match.macros :refer [match]]))
 
-(defn navigate! [route & [ignore-history no-dispatch]]
-  (if-not ignore-history
-    (set! (-> js/window .-location .-hash) route)
-    (do (js/window.history.replaceState nil "" route)
-        (when-not no-dispatch
-          (secretary/dispatch! (.substring route 1))))))
+(def routes ["/" [[[]                               :dashboard]
+                  [["inbox/" :columns]              :inbox]
+                  [["document/" :id "/page/" :page] :document-page]
+                  [["document/" :id]                :document]
+                  [["search/tag/" :tag]             :tag-search]
+                  [["search/" [#".+" :query]]       :search]]])
 
-;; TODO/rewrite
-;; (defn navigation-ref []
-;;   (some-> model/state
-;;           (om/root-cursor)
-;;           :navigation
-;;           (om/ref-cursor)))
+(defn dashboard-route []
+  (str "/#" (bidi/path-for routes :dashboard)))
 
-(defn dashboard-route [& [query-params]]
-  (secretary/render-route "/" {:query-params query-params}))
+(defn inbox-route
+  ([]
+   (inbox-route "i"))
+  ([columns]
+   (str "/#" (bidi/path-for routes :inbox :columns columns))))
 
-(defn workflow-route [workflow & [query-params]]
-  (secretary/render-route (str "/" (name workflow))
-                          {:query-params query-params}))
-
-(defn document-route [id & [query-params]]
-  (secretary/render-route (str "/documents/" id)
-                          {:query-params query-params}))
-
-(defn tag-search [tag & [query-params]]
-  (->
-   (str "/search/tag/" (gstring/urlEncode (s/lower-case tag)))
-   (secretary/render-route {:query-params query-params})))
-
-(defn full-search [query & [query-params]]
-  (assert (string? query))
-  (->
-   (str "/search/" (gstring/urlEncode query))
-   (secretary/render-route {:query-params query-params})))
-
-(defn edit-document-route [document]
-  {:pre [(:id document)]}
+(defn edit-document-route [document-id]
   (->>
    ;; TODO: This strings needs to be generated from pepa.inbox2
-   {:columns (str "i,d:" (:id document) ",n")}
-   (workflow-route :inbox)))
+   (str "i,d:" document-id ",n")
+   (inbox-route)))
 
-(defn nav->route [navigation]
-  (let [{:keys [route query-params]} (om/value navigation)]
-    (match [route]
-      [:dashboard]
-      (dashboard-route query-params)
+(defn document-route
+  ([document-id page]
+   (assert document-id page)
+   (str "/#" (bidi/path-for routes :document-page :id document-id :page page)))
+  ([document-id]
+   (assert document-id)
+   (str "/#" (bidi/path-for routes :document :id document-id))))
 
-      [[:document id]]
-      (document-route id {:query-params query-params})
+(defn tag-search-route [tag]
+  (assert (string? tag))
+  (str "/#" (bidi/path-for routes :tag-search :tag tag)))
 
-      [[:search [:tag tag]]]
-      (tag-search tag query-params)
+(defn search-route [query]
+  (assert (string? query))
+  (str "/#" (bidi/path-for routes :search :query (js/encodeURIComponent query))))
 
-      [[:search [:query query]]]
-      (full-search query query-params))))
+(defn parse-route [route]
+  (assert (string? route))
+  (when-let [matched (->> (s/replace-first route "/#" "")
+                          (bidi/match-route routes))]
+    (cond-> matched
+      (= :search (:handler matched))
+      (update-in [:route-params :query] js/encodeURIComponent))))
 
-;;; Routes
+(defn navigate! [route & [ignore-history no-dispatch]]
+  (if ignore-history
+    (do (js/window.history.replaceState nil "" route)
+        (when-not no-dispatch
+          ;; TODO/refactor
+          (throw (ex-info "Unimplemented" {}))
+          #_(secretary/dispatch! (.substring route 1))))
+    (set! (.-location js/window) route)))
 
-;; TODO/rewrite
-(comment
-  (secretary/defroute "/document/:id" [id query-params]
-    (om/update! (navigation-ref)
-                {:route [:document (js/parseInt id)]
-                 :query-params query-params}))
-  
-  (secretary/defroute "/" [query-params]
-    (om/update! (navigation-ref)
-                {:route :dashboard
-                 :query-params query-params}))
+(defn nav->route [{:keys [handler query-params]}]
+  (match [handler]
+    [:dashboard]
+    (dashboard-route)
 
-;;; Default Route
-  (secretary/defroute "" [query-params]
-    (om/update! (navigation-ref)
-                {:route :dashboard
-                 :query-params query-params}))
+    ;; TODO/rewrite
+    ;; [[:document id]]
+    ;; (document-route id query-params)
 
-  (secretary/defroute "/:workflow" [workflow query-params]
-    ;; TODO: Check for available workflows
-    (om/update! (navigation-ref)
-                {:route (keyword workflow)
-                 :query-params query-params}))
+    ;; [[:search [:tag tag]]]
+    ;; (tag-search-route tag query-params)
 
-  (secretary/defroute "/search/tag/:tag" [tag query-params]
-    (om/update! (navigation-ref)
-                {:route [:search [:tag (gstring/urlDecode tag)]]
-                 :query-params query-params}))
+    ;; [[:search [:query query]]]
+    ;; (search-route query query-params)
+    ))
 
-  (secretary/defroute "/search/:query" [query query-params]
-    (om/update! (navigation-ref)
-                {:route [:search [:query query]]
-                 :query-params query-params})))
-
-(secretary/set-config! :prefix "#")
-
-(defonce ^:private history
-  (let [h (History.)]
-    (goog.events/listen h EventType.NAVIGATE #(secretary/dispatch! (.-token %)))
-    (doto h
-      (.setEnabled true))))
-
-;;; Slight HACK: This is used in pepa.components.sidebar to generate
-;;; the navigation items
-
+;;; TODO/refactor: Move to sidebar
 (def navigation-elements
-  [["Inbox"     :inbox     #{:inbox}     (workflow-route :inbox)]
-   ["Documents" :dashboard #{:dashboard :search} (dashboard-route)]
-   ["Tags"      :tags      #{}           nil]])
+    [["Inbox"     :inbox     #{:inbox}             (inbox-route)]
+     ["Documents" :dashboard #{:dashboard :search} (dashboard-route)]
+     ["Tags"      :tags      #{}           nil]])

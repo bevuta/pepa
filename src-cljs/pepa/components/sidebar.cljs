@@ -23,7 +23,7 @@
   (render-state [_ {:keys [query]}]
     [:form.search {:on-submit (fn [e]
                                 (-> (if (seq query)
-                                      (nav/full-search query)
+                                      (nav/search-route query)
                                       (nav/dashboard-route))
                                     (nav/navigate!))
                                 (.preventDefault e))

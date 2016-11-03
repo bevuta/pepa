@@ -84,7 +84,7 @@
                 :draggable true
                 :on-drag-start (partial handle-drag-start tag)}
        [:a {:href (when-not (om/get-state owner :events)
-                    (nav/tag-search tag))}
+                    (nav/tag-search-route tag))}
         [:span.color {:style {:background-color (tag-color tag)}}]
         [:span.tag-name tag]
         (when (number? document-count)

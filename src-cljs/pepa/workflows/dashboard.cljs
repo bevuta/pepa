@@ -129,45 +129,47 @@
          (om/build document-count documents
                    {:react-key "document-count"}))])))
 
+;;; TODO/refactor
+(comment
 ;;; Should be twice the document-height or so.
-(def +scroll-margin+ 500)
+  (def +scroll-margin+ 500)
 
-(defn ^:private on-documents-scroll [state owner e]
-  (let [container e.currentTarget
-        scroll-top (.-scrollTop container)
-        scroll-height (.-scrollHeight container)
-        outer-height (.-clientHeight container)
-        bottom-distance (Math/abs (- scroll-height
-                                     (+ scroll-top outer-height)))
-        progress (/ scroll-top scroll-height)
-        elements (document-ids state)]
-    (let [[num scroll] (parse-count-scroll state)
-          scroll (Math/ceil (* progress num))
-          num (if (< bottom-distance +scroll-margin+)
-                (+ num +to-load+)
-                num)
-          num (min num (count elements))]
-      (-> (:navigation state)
-          (assoc-in [:query-params :count] (str num))
-          (assoc-in [:query-params :scroll] (str scroll))
-          (nav/nav->route)
-          (nav/navigate! :ignore-history :no-dispatch))
-      (om/update! state [:navigation :query-params :count] num))))
+  (defn ^:private on-documents-scroll [state owner e]
+    (let [container e.currentTarget
+          scroll-top (.-scrollTop container)
+          scroll-height (.-scrollHeight container)
+          outer-height (.-clientHeight container)
+          bottom-distance (Math/abs (- scroll-height
+                                       (+ scroll-top outer-height)))
+          progress (/ scroll-top scroll-height)
+          elements (document-ids state)]
+      (let [[num scroll] (parse-count-scroll state)
+            scroll (Math/ceil (* progress num))
+            num (if (< bottom-distance +scroll-margin+)
+                  (+ num +to-load+)
+                  num)
+            num (min num (count elements))]
+        (-> (:navigation state)
+            (assoc-in [:query-params :count] (str num))
+            (assoc-in [:query-params :scroll] (str scroll))
+            (nav/nav->route)
+            (nav/nnavigate! :ignore-history :no-dispatch))
+        (om/update! state [:navigation :query-params :count] num))))
 
-(defn ^:private scroll-to-offset! [state owner]
-  (let [el (om/get-node owner "documents")
-        scroll-height (.-scrollHeight el)
-        [num scroll] (parse-count-scroll state)
-        elements (page-ids state)]
-    (cond
-      (= 0 (.-scrollTop el))
-      (set! (.-scrollTop el) (* scroll-height
-                                (/ scroll (count elements))))
-      ;; TODO: :count isn't always nil (the query-params won't get
-      ;; updated). Need another way to change the url without changing
-      ;; history
-      (every? nil? ((juxt :count :scroll) (get-in state [:navigation :query-params])))
-      (set! (.-scrollTop el) 0))))
+  (defn ^:private scroll-to-offset! [state owner]
+    (let [el (om/get-node owner "documents")
+          scroll-height (.-scrollHeight el)
+          [num scroll] (parse-count-scroll state)
+          elements (page-ids state)]
+      (cond
+        (= 0 (.-scrollTop el))
+        (set! (.-scrollTop el) (* scroll-height
+                                  (/ scroll (count elements))))
+        ;; TODO: :count isn't always nil (the query-params won't get
+        ;; updated). Need another way to change the url without changing
+        ;; history
+        (every? nil? ((juxt :count :scroll) (get-in state [:navigation :query-params])))
+        (set! (.-scrollTop el) 0)))))
 
 (defn ^:private click-loop! [state owner]
   (go-loop []
@@ -192,8 +194,9 @@
                 (document-ids new-state))
       (om/set-state! owner :selection
                      (selection/make-selection (document-ids new-state)))))
-  (did-update [_ _ _]
-    (scroll-to-offset! state owner))
+  ;; TODO/refactor
+  ;; (did-update [_ _ _]
+  ;;   (scroll-to-offset! state owner))
   (render-state [_ {:keys [working? selection clicks]}]
     (let [document-ids (page-ids state)
           search (:search state)
@@ -204,7 +207,8 @@
          (om/build dashboard-title search {:react-key "title"})]
         [:.documents {:ref "documents"
                       :key "documents"
-                      :on-scroll (partial on-documents-scroll state owner)
+                      ;; TODO/refactor
+                      ;; :on-scroll (partial on-documents-scroll state owner)
                       :class [(when working? "working")]}
          (let [documents (into []
                                (keep (partial get (:documents state)))
