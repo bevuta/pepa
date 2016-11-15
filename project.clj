@@ -70,7 +70,8 @@
                org.clojure/tools.reader]
   :source-paths ["src/" "src-cljs/"]
   :main pepa.core
-  :plugins [[lein-figwheel "0.5.8"]]
+  :plugins [[lein-figwheel "0.5.8"]
+            [lein-cljsbuild "1.1.4"]]
   :cljsbuild {:builds {:pepa {:source-paths ["src/" "src-cljs/"]
                               :figwheel true
                               :compiler {:main "pepa.core"
