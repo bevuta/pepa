@@ -4,13 +4,13 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha12"]
-                 [com.stuartsierra/component "0.3.1"]
+                 [com.stuartsierra/component "0.3.2"]
                  [org.clojure/tools.namespace "0.2.10"]
 
                  ;; DB
                  [org.clojure/java.jdbc "0.6.1"]
                  [com.mchange/c3p0 "0.9.5.2"]
-                 [org.postgresql/postgresql "9.4.1211"]
+                 [org.postgresql/postgresql "9.4.1212"]
 
                  ;; Web
                  [ring/ring-core "1.5.0"]
@@ -23,12 +23,12 @@
                  [compojure "1.5.1"]
                  [hiccup "1.0.5"]
                  
-                 [com.cognitect/transit-clj "0.8.290"]
-                 [io.clojure/liberator-transit "0.3.0"]
+                 [com.cognitect/transit-clj "0.8.297"]
+                 [io.clojure/liberator-transit "0.3.1"]
                  [org.clojure/data.json "0.2.6"]
 
                  ;; Utility
-                 [org.clojure/core.async "0.2.391"]
+                 [org.clojure/core.async "0.2.395"]
                  [org.clojure/core.match "0.2.2"]
 
                  ;; HACK: Include tools.reader as we're excluding it
@@ -39,7 +39,7 @@
 
                  ;; Logging
                  [org.clojure/tools.logging "0.3.1"]
-                 [ch.qos.logback/logback-classic "1.1.7"]
+                 [ch.qos.logback/logback-classic "1.1.8"]
 
                  ;; E-Mail
                  [javax.mail/mail "1.4.7"
@@ -56,14 +56,14 @@
                  [figwheel-sidecar "0.5.8"]
 
                  ;; ClojureScript
-                 [org.clojure/clojurescript "1.9.229"]
+                 [org.clojure/clojurescript "1.9.293"]
                  [com.cognitect/transit-cljs "0.8.239"]
                  [org.omcljs/om "1.0.0-alpha46"]
                  [org.clojars.the-kenny/nom "0.1.1"]
                  [org.clojars.the-kenny/garden "1.3.0-SNAPSHOT"
                   :exclusions [org.clojure/tools.reader]]
                  [de.tarn-vedra/sablono "0.7.6-SNAPSHOT"]
-                 [bidi "2.0.13"]
+                 [bidi "2.0.14"]
                  [the/parsatron "0.0.7"]]
   :exclusions [org.clojure/data.json
                log4j/log4j
