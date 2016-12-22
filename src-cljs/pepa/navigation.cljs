@@ -15,8 +15,8 @@
                   [["inbox/" [#".+" :columns]]      :inbox]
                   [["document/" :id "/page/" :page] :document-page]
                   [["document/" :id]                :document]
-                  [["search/tag/" :tag]             :tag-search]
-                  [["search/" [#".+" :query]]       :search]]])
+                  [["search/tag/"  [#".+" :tag]]    :tag-search]
+                  [["search/term/" [#".+" :query]]  :search]]])
 
 (defn dashboard-route []
   (str "/#" (bidi/path-for routes :dashboard)))

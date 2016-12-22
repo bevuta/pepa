@@ -50,7 +50,6 @@
 ;;; Event Handling
 
 (defn route-changed! [controller]
-  ;; TODO: Check if this needs to be in a go-block
   ;; TODO: Simply return a set of side effects to perform
   (let [!state (:!state controller)
         state @!state
@@ -68,10 +67,10 @@
                   (api/fetch-inbox))
           search-results (-> state :search :result-chan)]
       (go
-        (let [documents      (when documents      (<! documents))
-              tags           (when tags           (<! tags))
-              inbox          (when inbox          (<! inbox))
-              search-results (when search-results (<! search-results))]
+        (let [documents      (some-> documents      <!)
+              tags           (some-> tags           <!)
+              inbox          (some-> inbox          <!)
+              search-results (some-> search-results <!)]
           (prn documents tags inbox search-results)
           (swap! !state (fn [state]
                           (cond-> state
@@ -106,16 +105,17 @@
 (defn start! [controller]
   (log "Starting")
   (let [navigation-events (start-navigation!)]
-    (go-loop []2
-             (let [[value ch] (alts! [navigation-events])]
-               (when (and value ch)
-                 (log "Got event:" (pr-str value))
-                 (match [value ch]
-                   [route navigation-events]
-                   (do
-                     (swap! (:!state controller) into route)
-                     (<! (#'route-changed! controller))))
-                 (recur)))
-             (println "controller/loop: exiting"))
+    (go-loop []
+      (let [[value ch] (alts! [navigation-events])]
+        (when (and value ch)
+          (log "Got event:" (pr-str value))
+          (match [value ch]
+            [route navigation-events]
+            (do
+              ;; TODO
+              (swap! (:!state controller) into route)
+              (<! (#'route-changed! controller))))
+          (recur)))
+      (println "controller/loop: exiting"))
     (assoc controller
            :navigation-events navigation-events)))

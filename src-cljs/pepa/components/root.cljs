@@ -63,7 +63,8 @@
        [:main {:key "main"}
         (match [handler]
           [:dashboard]     (om/build dashboard/dashboard state)
-          [[:search _]]    (om/build dashboard/dashboard state)
+          [:search]        (om/build dashboard/dashboard state)
+          [:tag-search]    (om/build dashboard/dashboard state)
           [:inbox]         (om/build inbox2/inbox state)
           [:document]      (document-component state)
           [:document-page] (document-component state) 
