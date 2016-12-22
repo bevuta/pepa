@@ -4,6 +4,8 @@
             [clojure.string :as str]
             [clojure.spec :as s]
 
+            [pepa.model.route :as route]
+
             [cljs.core.async :as async :refer [<!]])
   (:require-macros
    [cljs.core.async.macros :refer [go-loop]]))
@@ -31,13 +33,15 @@
 
 (defn new-state []
   (map->State {:documents   {}
-               :navigation  {:route :dashboard}
                :tags        {}
                :inbox       {:pages []}
                :upload      {}
                :ui/sidebars {}
                :search      nil
-               :seqs        {}}))
+               :seqs        {}
+               
+               ::route/query-params {}
+               ::route/handler :dashboard}))
 
 ;;; Tag Handling
 

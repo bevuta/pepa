@@ -1,10 +1,14 @@
 (ns pepa.controller
   (:require [pepa.api :as api]
             [pepa.model :as model]
+            [pepa.model.route :as route]
+
             [pepa.search :as search]
             [pepa.navigation :as nav]
 
-            [cljs.core.async :as async :refer [<! >!]]
+            [clojure.spec :as s]
+
+            [cljs.core.async :as async :refer [alts! <! >!]]
             [cljs.core.match]
 
             [goog.events :as events])
@@ -14,38 +18,79 @@
   (:import goog.History
            goog.history.EventType))
 
-(defrecord Controller [!state history navigation-events])
+(defrecord Controller [!state navigation-events])
 
 (defn new-controller []
   (->Controller (atom (model/new-state))
-                nil
                 nil))
 
-(defn fetch-initial-data! [{:keys [!state]}]
-  (println "controller: Fetching initial data")
-  ;; Fetch Tags
-  (async/take! (api/fetch-tags true)
-               (fn [tags]
-                 (swap! !state model/store-tags tags)))
+;;; Utils
 
-  ;; Run search to get document-ids
-  ;; TODO: Handle `route`
-  (go
-    (let [search (search/all-documents!)
-          ids (<! (search/search-results search))
-          documents (<! (api/fetch-documents ids))]
-      (swap! !state (fn [state]
-                      (-> state
-                          (assoc-in [:search :results] ids)
-                          (update :documents #(into % (map (juxt :id identity)) documents))))))))
+;;; TODO: Move to dedicate NS
+(def log (partial println "controller:"))
 
-(defn handle-transition! [controller new-route]
-  (println "controller: Transitioning to new route:" new-route)
-  (js/console.error "unimplemented"))
+;;; Data Fetching
 
-(defn start! [controller]
-  (println "controller: Starting")
-  (fetch-initial-data! controller)
+(s/def ::document-ids (s/coll-of integer? :into #{}))
+
+(defn required-documents [state]
+  {:post [(s/valid? (s/nilable ::document-ids) %)]}
+  (let [{::route/keys [handler route-params]} state]
+    (match [handler]
+      [:dashboard]     (set (get-in state [:search :results]))
+      ;; TODO: `pepa.inbox2` needs a function to tell us which documents it needs
+      [:inbox]         #{}
+      [:document]      #{(:id route-params)}
+      [:document-page] #{(:id route-params)}
+      :else (js/console.warn "Unimplemented `necessary-data`:" (pr-str handler)))))
+
+(defn needs-inbox? [state]
+  (= :inbox (::handler state)))
+
+;;; Event Handling
+
+(defn route-changed! [controller]
+  ;; TODO: Check if this needs to be in a go-block
+  ;; TODO: Simply return a set of side effects to perform
+  (let [!state (:!state controller)
+        state @!state
+        required-documents (required-documents state)
+        inbox-required? (needs-inbox? state)
+        tags-required? (empty? (:tags state))]
+    (log "transitioning to new route:" ((juxt ::route/handler ::route/query-params) state))
+    (let [documents (some->> (seq required-documents)
+                             (set)
+                             (remove (set (keys (:documents state))))
+                             (api/fetch-documents))
+          tags (when tags-required?
+                 (api/fetch-tags true))
+          inbox (when inbox-required?
+                  (api/fetch-inbox))
+          search-results (-> state :search :result-chan)]
+      (go
+        (let [documents      (when documents      (<! documents))
+              tags           (when tags           (<! tags))
+              inbox          (when inbox          (<! inbox))
+              search-results (when search-results (<! search-results))]
+          (prn documents tags inbox search-results)
+          (swap! !state (fn [state]
+                          (cond-> state
+                            (seq documents)
+                            (update :documents merge documents)
+
+                            (seq tags)
+                            (model/store-tags tags)
+
+                            (seq inbox)
+                            (assoc-in [:inbox :pages] inbox)
+
+                            (seq search-results)
+                            (assoc-in [:search :results] search-results)))))))
+    ;; TODO Handle pending search
+    ;; ()
+    ))
+
+(defn start-navigation! []
   (let [navigation-events (async/chan (async/dropping-buffer 1))
         history (doto (History.)
                   (goog.events/listen EventType.NAVIGATE
@@ -54,12 +99,23 @@
                                           (println "Got navigation event:" token)
                                           (async/put! navigation-events token))))
                   (.setEnabled true))]
-    (go-loop []
-      (when-let [route (<! navigation-events)]
-        (let [route (nav/parse-route route)]
-          (swap! (:!state controller) assoc :navigation route))
-        (recur))
-      (println "controller/navigation-loop: exiting"))
+    ;; Put current route into ch
+    ;;(async/put! navigation-events js/window.location.hash)
+    (async/map nav/parse-route [navigation-events])))
+
+(defn start! [controller]
+  (log "Starting")
+  (let [navigation-events (start-navigation!)]
+    (go-loop []2
+             (let [[value ch] (alts! [navigation-events])]
+               (when (and value ch)
+                 (log "Got event:" (pr-str value))
+                 (match [value ch]
+                   [route navigation-events]
+                   (do
+                     (swap! (:!state controller) into route)
+                     (<! (#'route-changed! controller))))
+                 (recur)))
+             (println "controller/loop: exiting"))
     (assoc controller
-           :history history
            :navigation-events navigation-events)))

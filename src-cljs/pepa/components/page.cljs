@@ -39,7 +39,9 @@
 
 (defn ^:private rotate-clicked [page rotation e]
   (ui/cancel-event e)
-  (api/rotate-page! page rotation))
+  (assert false "unimplemented")
+  ;; (api/rotate-page! page rotation)
+  )
 
 (ui/defcomponent ^:private rotate-buttons [page owner]
   (render [_]

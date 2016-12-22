@@ -1,7 +1,13 @@
 (ns pepa.navigation
   (:require [clojure.string :as s]
+            [clojure.set :refer [rename-keys]]
+            
             [bidi.bidi :as bidi]
             [goog.string :as gstring]
+
+            [pepa.model.route :as route]
+            [pepa.utils :refer [string->int]]
+            
             cljs.core.match)
   (:require-macros [cljs.core.match.macros :refer [match]]))
 
@@ -44,12 +50,27 @@
   (str "/#" (bidi/path-for routes :search :query (js/encodeURIComponent query))))
 
 (defn parse-route [route]
-  (assert (string? route))
-  (when-let [matched (->> (s/replace-first route "/#" "")
-                          (bidi/match-route routes))]
+  {:pre [(or (nil? route) (string? route))]
+   :post [(some? %)]}
+  (let [route (some-> route
+                      (s/replace-first "/#" ""))
+        ;; Match route, default to dashboard
+        ;; TODO: We might want to show a 404 page
+        matched (or (rename-keys (bidi/match-route routes route)
+                                 {:handler      ::route/handler
+                                  :route-params ::route/route-params})
+                    {::route/handler :dashboard
+                     ::route/route-params {}})
+        {:route/keys [handler]} matched]
     (cond-> matched
-      (= :search (:handler matched))
-      (update-in [:route-params :query] js/encodeURIComponent))))
+      (= :search handler)
+      (update-in [::route/route-params :query] js/encodeURIComponent)
+
+      (contains? #{:document :document-page} handler)
+      (update-in [::route/route-params :id] string->int)
+
+      (= :document-page handler)
+      (update-in [::route/route-params :page] string->int))))
 
 (defn navigate! [route & [ignore-history no-dispatch]]
   (if ignore-history
@@ -60,20 +81,20 @@
           #_(secretary/dispatch! (.substring route 1))))
     (set! (.-location js/window) route)))
 
-(defn nav->route [{:keys [handler query-params]}]
+(defn nav->route [{:keys [handler route-params]}]
   (match [handler]
     [:dashboard]
     (dashboard-route)
 
     ;; TODO/rewrite
     ;; [[:document id]]
-    ;; (document-route id query-params)
+    ;; (document-route id route-params)
 
     ;; [[:search [:tag tag]]]
-    ;; (tag-search-route tag query-params)
+    ;; (tag-search-route tag route-params)
 
     ;; [[:search [:query query]]]
-    ;; (search-route query query-params)
+    ;; (search-route query route-params)
     ))
 
 ;;; TODO/refactor: Move to sidebar

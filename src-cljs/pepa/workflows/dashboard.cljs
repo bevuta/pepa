@@ -23,7 +23,7 @@
 
 (defn ^:private handle-tags-drop [document e]
   (when-let [tags (tags/data-transfer-tags e.dataTransfer)]
-    (js/console.error "Unimplemented")
+    (assert false "Unimplemented")
     ;; (api/update-document! (update-in document [:tags]
     ;;                                  #(model/add-tags % tags)))
     (.preventDefault e)))

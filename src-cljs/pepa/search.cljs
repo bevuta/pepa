@@ -1,6 +1,8 @@
 (ns pepa.search
   (:require [pepa.search.parser :as parser]
             [pepa.api :as api]
+            [pepa.model.route :as route]
+            
             [clojure.string :as s]
             [om.core :as om]
 
@@ -32,10 +34,12 @@
   "If current :route is a search query, return it as a string, nil
   otherwise."
   [state]
-  (match [(-> state om/value :navigation :route)]
-    [[:search [:tag tag]]] (str "tag:" (pr-str tag))
-    [[:search [:query query]]] query
-    :else nil))
+  (let [{::route/keys [handler route-params]} state]
+    (prn handler route-params)
+    (match [handler route-params]
+      [:search {:tag tag}]     (str "tag:" (pr-str tag))
+      [:search {:query query}] query
+      :else nil)))
 
 (defn search-active? [search]
   ;; {:pre [(= Search (type search))]}

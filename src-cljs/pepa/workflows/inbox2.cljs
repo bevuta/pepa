@@ -97,9 +97,10 @@
   (remove-pages! [_ state page-ids]
     (go
       (if-let [document (om/value (get-in state [:documents document-id]))]
-        (<! (api/update-document! (update document
-                                          :pages
-                                          #(remove (comp (set page-ids) :id) %))))
+        (assert false "Unimplemented")
+        ;; (<! (api/update-document! (update document
+        ;;                                   :pages
+        ;;                                   #(remove (comp (set page-ids) :id) %))))
         (js/console.error (str "[DocumentColumnSource] Failed to get document " document-id)
                           {:document-id document-id}))))
   ColumnDropTarget
@@ -108,21 +109,24 @@
       (println "dropping" (pr-str (map :id new-pages)) "on document" (pr-str document-id)
                (str "(at index " (pr-str target-idx) ")"))
       (let [document (om/value (get-in state [:documents document-id]))]
-        (<! (api/update-document! (update document :pages
-                                          (fn [pages]
-                                            (model/insert-pages pages
-                                                                new-pages
-                                                                target-idx)))))
+        (assert false "unimplemented")
+        ;; (<! (api/update-document! (update document :pages
+        ;;                                   (fn [pages]
+        ;;                                     (model/insert-pages pages
+        ;;                                                         new-pages
+        ;;                                                         target-idx)))))
         (println "Saved!")
         ;; indicate successful drop
         true)))
   EditableTitle
   (set-title! [_ state title]
-    (some-> state
-            (get-in [:documents document-id])
-            (om/value)
-            (assoc :title title)
-            (api/update-document!))))
+    (assert false "unimplemented")
+    ;; (some-> state
+    ;;         (get-in [:documents document-id])
+    ;;         (om/value)
+    ;;         (assoc :title title)
+    ;;         (api/update-document!))
+    ))
 
 (declare new-document-ui)
 
@@ -133,14 +137,16 @@
   (accept-drop! [_ state new-pages _]
     (go
       (println "Dropping pages on unsaved document...")
-      (let [document (<! (api/save-new-document! {:title "New Document"
-                                                  :pages new-pages}
-                                                 "inbox"))]
-        (when document
-          (-> (col/current-columns state)
-              (col/add-column [:document (:id document)])
-              (col/show-columns!))
-          true)))))
+      (assert false "Unimplemented")
+      ;; (let [document (<! (api/save-new-document! {:title "New Document"
+      ;;                                             :pages new-pages}
+      ;;                                            "inbox"))]
+      ;;   (when document
+      ;;     (-> (col/current-columns state)
+      ;;         (col/add-column [:document (:id document)])
+      ;;         (col/show-columns!))
+      ;;     true))
+      )))
 
 (declare search-ui)
 
@@ -199,7 +205,9 @@
                        (doseq [page-id selected-pages]
                          (let [page (some #(when (= (:id %) page-id) %) all-pages)
                                rotation (+ rotation (:rotation page))]
-                           (<! (api/rotate-page! page rotation)))))))]
+                           (assert false "unimplemented")
+                           ;; (<! (api/rotate-page! page rotation))
+                           )))))]
       [:.action-bar
        [:.rotate
         [:.left {:on-click (partial rotate -90)
@@ -452,7 +460,6 @@
 
 (defn- make-columns [props state owner]
   (let [columns (col/current-columns props)]
-    (println "columns: " (pr-str columns))
     (when-not (= columns (::column-spec state))
       (om/set-state! owner ::column-spec columns)
       (let [gen (IdGenerator.getInstance)
@@ -498,7 +505,6 @@
     (let [page-cache (make-page-cache state columns)]
       [:.workflow.inbox
        (map-indexed (fn [i x]
-                      (prn x)
                       (om/build (if (special-column? x)
                                   (special-column-ui x)
                                   inbox-column)

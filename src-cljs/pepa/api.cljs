@@ -128,21 +128,18 @@
                 :response/transit)
             (db-document->Document))))
 
-(defn fetch-documents
-  "Fetches all documents in IDs and stores them in the application
-  state."
-  [ids]
+(defn fetch-documents [ids]
   (go
     (let [documents (->> ids
                          (xhr-request! "/documents/bulk" :post
                                        "application/transit+json")
                          (<!)
                          :response/transit)]
-      (map #(some->
-             (get documents %)
-             (db-document->Document)
-             (with-meta {:last-update (js/Date.)}))
-           ids))))
+      (mapv #(some->
+              (get documents %)
+              (db-document->Document)
+              (with-meta {:last-update (js/Date.)}))
+            ids))))
 
 (defn fetch-inbox []
   (go

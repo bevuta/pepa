@@ -5,7 +5,9 @@
             [cljs.core.async :as async]
 
             [nom.ui :as ui]
+
             [pepa.model :as model]
+            [pepa.model.route :as route]
             [pepa.navigation :as nav]
             [pepa.api.upload :as upload]
             [pepa.components.logo :refer [logo]]
@@ -96,18 +98,14 @@
      ;;    "More ▼")]
      ]))
 
-(defn ^:private route-matches? [route workflows]
-  (let [route (if (seqable? route)
-                (first route)
-                route)]
-    (or (= route workflows)
-        (and (set? workflows) (contains? workflows route))
-        (and (fn? workflows) (workflows route)))))
+(defn- route-matches? [state workflows]
+  (let [handler (::route/handler state)]
+    (or (contains? (set workflows) handler)
+        (and (fn? workflows) (workflows handler)))))
 
 (ui/defcomponent sidebar-component [state owner opts]
   (render [_]
-    (let [route (om/value (get-in state [:navigation :route]))
-          width css/default-sidebar-width
+    (let [width css/default-sidebar-width
           ;; TODO/rewrite
           #_(get (om/observe owner (model/ui-sidebars)) ::sidebar
                  css/default-sidebar-width)
@@ -128,7 +126,7 @@
            (let [[title ident routes href] element
                  ident (name ident)]
              [:li {:class [ident
-                           (when (route-matches? route routes) "active")]
+                           (when (route-matches? state routes) "active")]
                    :key ident}
               (om/build navigation-element state {:opts element
                                                   :react-key ident})]))]]])))
