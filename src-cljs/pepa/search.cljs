@@ -20,16 +20,7 @@
   (when-not (s/blank? s)
     (parser/parse-string s)))
 
-(defn route->query
-  "Extract a search query from the current navigation route. Returns
-  nil if not possible."
-  [route]
-  {:pre [(vector? route)]}
-  (match [route]
-    [[:tag tag]]     (list 'tag tag)
-    [[:query query]] query
-    :else nil))
-
+;;; TODO: Belongs to backend.model (or so)
 (defn query-string
   "If current :route is a search query, return it as a string, nil
   otherwise."
@@ -41,22 +32,17 @@
       [:search {:query query}] query
       :else nil)))
 
+;;; TODO: Remove
 (defn search-active? [search]
   ;; {:pre [(= Search (type search))]}
   (:result-chan search))
 
-(defn ^:private cancel-search! [search]
-  {:pre [(om/transactable? search)]}
-  (when-let [ch (::result-chan search)]
-    (async/close! ch)
-    (println "Canceling previous search:" search)
-    (om/transact! search dissoc ::result-chan)))
-
-(defn search-results [search]
-  (:result-chan search))
+(defn cancel! [search]
+  {:pre [(:result-chan search)]}
+  (async/close! (:result-chan search)))
 
 ;;; TODO: We might want to introduce a search-result-cache.
-
+;;; TODO: Rename `start-search!` and create a separate function for requiring all documents
 (defn start-search! [query]
   (let [query (cond
                 (= query ::all)
@@ -68,7 +54,6 @@
                 (string? query)
                 (parse-query-string query))
         ch (if (= query ::all)
-             ;; TODO: Close chan
              (api/fetch-document-ids)
              (api/search-documents query))]
     (println "Running search:" query)

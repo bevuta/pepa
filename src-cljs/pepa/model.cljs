@@ -114,3 +114,9 @@
   (assert (every? string? (keys tags)))
   (assert (every? number? (vals tags)))
   (update model :tags #(into % tags)))
+
+(defn store-documents [model document-list]
+  (update model :documents
+          #(into %
+                 (map (juxt :id identity))
+                 document-list)))
