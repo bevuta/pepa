@@ -87,4 +87,6 @@
                              com.stuartsierra.component
                              com.stuartsierra.dependency]
                        :hooks [leiningen.cljsbuild]
-                       :jar-exclusions [#"^public/out"]}})
+                       ;; Commented out till advanced build is reinstated
+                       ;; :jar-exclusions [#"^public/out"]
+                       }})
