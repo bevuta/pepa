@@ -1,10 +1,11 @@
-(ns leiningen.pepa
-  (:require [leiningen.pepa.schema :as schema]))
+(ns pepa.tasks
+  (:require [pepa.tasks.schema :as schema])
+  (:gen-class))
 
 (def tasks
   {"schema" schema/run})
 
-(defn pepa [project & [task & args]]
+(defn -main [task & args]
   (if-let [run-task (get tasks task)]
     (run-task args)
     (binding [*out* *err*]

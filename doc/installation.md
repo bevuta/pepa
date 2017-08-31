@@ -28,9 +28,9 @@ the necessary dependencies as well as PostgreSQL:
 ### Schema Import
 
 After starting PostgreSQL, you have to import the database schema. If
-the postgres-user is called `pepa`, you can run the following:
+the postgres user is called `pepa`, you can run the following:
 
-    lein pepa schema | psql -U pepa pepa
+    lein run -m pepa.tasks schema | psql -U pepa pepa
 
 ### Generating Javascript
 

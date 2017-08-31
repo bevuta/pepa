@@ -83,6 +83,7 @@
                                          :source-map-timestamp true
                                          :optimizations :none}}}}
   :profiles {:uberjar {:aot [pepa.core
+                             pepa.tasks
                              ;; Hack to fix NoClassDefFoundErrors when uberjar-ing
                              com.stuartsierra.component
                              com.stuartsierra.dependency]

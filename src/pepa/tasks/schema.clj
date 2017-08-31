@@ -1,4 +1,4 @@
-(ns leiningen.pepa.schema
+(ns pepa.tasks.schema
   (:require [clojure.string :as s]))
 
 (def prologue "
@@ -227,7 +227,7 @@ CREATE TRIGGER delete_%1$s_track_trigger
 
 (defn run [args]
   (println "-- NOTE: DON'T EDIT")
-  (println "-- This file is generated via `lein pepa schema` which is defined in tasks/leiningen/pepa/schema.clj")
+  (println "-- This file is generated via `lein run -m pepa.tasks schema` which is defined in src/pepa/tasks/schema.clj")
   (newline)
   (println "BEGIN;")
   (doseq [[table spec] tables]
