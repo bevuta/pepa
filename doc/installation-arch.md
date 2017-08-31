@@ -61,4 +61,4 @@ Now, restart postgres (as root):
 
     systemctl restart postgresql.service
 
-Now, you can follow the installation-pepa.md for further instructions.
+Now, you can follow `installation.md` for further instructions.
