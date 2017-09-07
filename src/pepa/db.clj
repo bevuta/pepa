@@ -14,7 +14,13 @@
     (let [spec (:db config)
           cpds (doto (ComboPooledDataSource.)
                  (.setDriverClass "org.postgresql.Driver")
-                 (.setJdbcUrl (.toASCIIString (java.net.URI. "jdbc:postgresql" (:host spec) (str "/" (:dbname spec)) nil)))
+                 (.setJdbcUrl (.toASCIIString (java.net.URI. "jdbc:postgresql"
+                                                             nil
+                                                             (:host spec)
+                                                             (:port spec)
+                                                             (str "/" (:dbname spec))
+                                                             nil
+                                                             nil)))
                  (.setUser (:user spec))
                  (.setPassword (:password spec))
                  ;; TODO: Make configurable
