@@ -26,11 +26,11 @@ RUN git clone https://github.com/bevuta/pepa /pepa/build/src
 WORKDIR /pepa/build/src
 
 ARG pepa_commit
-ENV pepa_commit ${pepa_commit:-3540253f8e8fbdb5ea1dffe230a27df624032713}
+ENV PEPA_COMMIT ${pepa_commit:-3540253f8e8fbdb5ea1dffe230a27df624032713}
 
-RUN echo Building Pepa commit $pepa_commit \
+RUN echo Building Pepa commit $PEPA_COMMIT \
         && git fetch \
-        && git checkout $pepa_commit
+        && git checkout $PEPA_COMMIT
 
 RUN ../bin/lein uberjar \
         && mv target/pepa-*-standalone.jar /pepa \
