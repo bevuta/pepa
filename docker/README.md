@@ -38,7 +38,7 @@ for more details on how to operate this setup.
 The default setup will put Pepa's database in Docker's internal
 storage. To provide an external volume, run a command like this:
 
-    PEPA_DB_VOLUME=/some/path/for/pepa/db docker-compose -f docker-compose.yml -f docker-compose.db-volume.yml up
+    PEPA_DB_VOLUME=/some/path/for/pepa/db docker-compose -f docker-compose.yml -f docker-compose.db-volume.yml up -d
 
 That will mount the path given in `PEPA_DB_VOLUME` as the storage
 volume of the database container.
