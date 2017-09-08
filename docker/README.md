@@ -59,6 +59,16 @@ number as the `PEPA_LPD_PORT` environment variable, e.g.:
 
     PEPA_LPD_PORT=6213 docker-compose up -d
 
+## Building a different Pepa version
+
+Since there is no release version of Pepa so far, the `Dockerfile`
+builds directly from the `git` repository. The commit that is built by
+default is declared as `ENV PEPA_COMMIT` in the `Dockerfile`. If you
+want to override this for `docker-compose`, you can pass a different
+commit via the `PEPA_COMMIT` environment variable, e.g.:
+
+    PEPA_COMMIT=2556f34ddca86e6b005d7eef334eae52fd28c28d docker-compose up -d
+
 # Using Docker directly
 
 The `Dockerfile` provided in this repository builds a Docker image
@@ -85,3 +95,12 @@ functions, indices, etc.). It will do so automatically on startup in
 case the database is empty. If it's not empty, it assumes that the
 schema is already loaded. Pepa's web interface will then be available
 on http://127.0.0.1:8080 once the service has started up.
+
+
+## Building a different Pepa version
+
+Just as with `docker-compose` you can override the commit to be
+built. However, here you need to pass it via the `pepa_commit` build
+arg to `docker build` like so:
+
+    docker build -t pepa:latest --build-arg pepa_commit=2556f34ddca86e6b005d7eef334eae52fd28c28d .
