@@ -68,7 +68,14 @@ that only contains the Pepa service, i.e. it relies on a PostgreSQL
 on port 4035 inside the container and needs to be exposed to the host
 in order to be useful. Example:
 
-    docker run -e DB_USER=pepa -e DB_PASS=foobar -e DB_NAME=pepa -e DB_HOST=10.10.10.123 -e DB_PORT=5432 -p 127.0.0.1:8080:4035 -d pepa
+    docker build -t pepa:latest .
+    docker run -e DB_USER=pepa \
+               -e DB_PASS=foobar \
+               -e DB_NAME=pepa \
+               -e DB_HOST=10.10.10.123 \
+               -e DB_PORT=5432 \
+               -p 127.0.0.1:8080:4035 \
+               -d pepa
 
 This will build and start a container named `pepa` which will connect
 to a PostgreSQL server at `10.10.10.123:5432` with the user `pepa`
