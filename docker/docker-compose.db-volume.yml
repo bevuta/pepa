@@ -1,0 +1,6 @@
+version: '3'
+
+services:
+  db:
+    volumes:
+      - ${PEPA_DB_VOLUME}:/var/lib/postgresql

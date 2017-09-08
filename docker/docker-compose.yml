@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  db:
+    image: sameersbn/postgresql:9.6-2
+    environment:
+      - DEBUG=false
+
+      - DB_USER=${PEPA_DB_USER}
+      - DB_PASS=${PEPA_DB_PASS}
+      - DB_NAME=${PEPA_DB_NAME}
+      - DB_TEMPLATE=
+
+      - DB_EXTENSION=
+
+      - REPLICATION_MODE=
+      - REPLICATION_USER=
+      - REPLICATION_PASS=
+      - REPLICATION_SSLMODE=
+  web:
+    build:
+      context: .
+      args:
+        - pepa_commit=${PEPA_COMMIT}
+    ports:
+      - "${PEPA_WEB_PORT}:4035"
+      - "${PEPA_LPD_PORT}:6332"
+    depends_on:
+      - db
+    environment:
+      - DB_USER=${PEPA_DB_USER}
+      - DB_PASS=${PEPA_DB_PASS}
+      - DB_NAME=${PEPA_DB_NAME}
+      - DB_PORT=${PEPA_DB_PORT}
+      - DB_HOST=${PEPA_DB_HOST}
+
