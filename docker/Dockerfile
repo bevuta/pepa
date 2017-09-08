@@ -36,6 +36,8 @@ RUN ../bin/lein uberjar \
         && mv target/pepa-*-standalone.jar /pepa \
         && rm -rf /root/.m2
 
+EXPOSE 4035 6332
+
 WORKDIR /pepa
 RUN rm -rf build
 
