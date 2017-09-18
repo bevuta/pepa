@@ -17,9 +17,9 @@
             [pepa.search.parser :as parser])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(ui/defcomponent ^:private search-field [_ owner opts]
+(ui/defcomponent ^:private search-field [state owner opts]
   (init-state [_]
-    {:query nil})
+    {:query (query-string state)})
   (render-state [_ {:keys [query]}]
     [:form.search {:on-submit (fn [e]
                                 (-> (if (seq query)
@@ -115,9 +115,9 @@
                   :react-key "draggable"})
        (om/build logo nil {:react-key "logo"})
 
-       (om/build search-field nil
-                 {:state {:query (query-string state)}
-                  :react-key "search-field"})
+       (om/build search-field
+                 state
+                 {:react-key "search-field"})
        [:nav.workflows {:key "workflows"}
         [:ul
          ;; TODO: Use build-all
