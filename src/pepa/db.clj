@@ -17,7 +17,7 @@
                  (.setJdbcUrl (.toASCIIString (java.net.URI. "jdbc:postgresql"
                                                              nil
                                                              (:host spec)
-                                                             (:port spec)
+                                                             (:port spec -1)
                                                              (str "/" (:dbname spec))
                                                              nil
                                                              nil)))
